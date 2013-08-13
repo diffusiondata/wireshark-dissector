@@ -10,6 +10,7 @@ local f_tcp_dstport = Field.new("tcp.dstport")
 local f_tcp_srcport = Field.new("tcp.srcport")
 local f_ip_dsthost  = Field.new("ip.dst_host")
 local f_ip_srchost  = Field.new("ip.src_host")
+local f_frame_number = Field.new("frame.number")
 
 function dump(o)
 	if type(o) == 'table' then
@@ -24,7 +25,48 @@ function dump(o)
 	end
 end
 
+-- -----------------------------------
+-- Create and register a listener for TCP connections
+
+local tcpConnections = {}
+
+function tcpConnections:len()
+	local result = 0
+	local i,v
+	for i,v in pairs( self ) do result = result +1 end
+	return result
+end
+
+function tcpConnections:isClient( tcpStream, host, port )
+	local record = self[tcpStream]
+	
+	-- Is there a record of this TCP stream?
+	if record == nil then return false end
+	
+	return record.client.ip == host and 
+		record.client.port == port
+end
+
+local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
+function tcpTap.packet( pinfo )
+	local streamNumber = f_tcp_stream().value
+	local fNumber = f_frame_number().value
+
+	tcpConnections[streamNumber] = { 
+		client = { ip = f_ip_dsthost().value, port = pinfo.dst_port }, 
+		server = { ip = f_ip_srchost().value, port = pinfo.src_port } }
+		
+	info( dump( tcpConnections ) )
+end
+
+function tcpTap.reset()
+	info( "resetting tcpConnections" )
+--	tcpConnections = {}
+end
+
+-- -----------------------------------
 -- The Alias Table
+
 AliasTable = {}
 
 function AliasTable:new()
@@ -51,6 +93,7 @@ end
 
 local aliasTable = AliasTable:new()
 
+-- -----------------------------------
 -- A 'class' to process message types
 
 MessageType = {}
@@ -71,7 +114,7 @@ function MessageType.index( typeArray )
 	return result
 end
 
--- Populate the headers tree with seperate fixed headers and user headers
+-- Populate the headers tree with separate fixed headers and user headers
 function MessageType:markupHeaders( treeNode, headerRange )
 	-- Find the RD marking the fixed|user boundary
 	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
@@ -200,7 +243,7 @@ local encodingTypesByValue = {
 }
 
 local clientTypesByValue = {
-	--TODO: Generate these values from the central XML
+	--TODO: Generate these values from ConnectionTypes.xml
 	[1] = "Event Publisher",
 	[2] = "External Publisher",
 	
@@ -215,24 +258,21 @@ local clientTypesByValue = {
 	[0x1b] = "Android",
 	[0x1c] = "Blackberry",
 	[0x1d] = "C",
-	[0x1e] = "Perl"
+	[0x1e] = "Perl",
+	[0x1f] = "Introspector"
 }
-
 
 -- Find the delimeterCount-th occurance of ch in this, or -1. delimeterCount indexes from zero.
 function ByteArray:indexn(ch, delimiterCount)
 	for i = 0, self:len()-1 do
---			info( string.format( "ByteArray:index( '" .. ch .. "', ".. delimiterCount.." ), i=" .. i.. ", self:len()=" .. self:len() ) )
 		if self:get_index( i ) == ch then 
 			-- Found a match, but is it the right one?
 			if delimiterCount == 0 then
---					info( "ByteArray:index() returning " .. i )
 				return i
 			end
 			delimiterCount = delimiterCount -1
 		end
 	end
---		info( "ByteArray:indexn() returning -1" )
 	return -1
 end
 
@@ -263,12 +303,15 @@ function string:split(sep)
 end
 
 -- Dissect the connection negotiation messages
---TODO: need to be able to tell which peer is speaking, so I can interpret accordingly
-local function dissect_connection( tvb, pinfo, tree )
+local function dissectConnection( tvb, pinfo, tree )
 	local messageTree = tree:add( dptProto, tvb() )
 	local offset = 0
 	
-	-- Get the magic number
+	-- Is this a client or server packet?
+	local tcpStream, host, port = f_tcp_stream().value, f_ip_srchost().value, f_tcp_srcport().value
+	local isClient = tcpConnections:isClient( tcpStream, host, port ) 
+
+	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
 	local magicNumber = magicNumberRange:uint()
 	messageTree:add( dptProto.fields.connectionMagicNumber, magicNumberRange )
@@ -280,13 +323,63 @@ local function dissect_connection( tvb, pinfo, tree )
 	messageTree:add( dptProto.fields.connectionProtoNumber, protoVerRange )
 	offset = offset +1
 	
-	-- the 1 byte connection type
-	local connectionTypeRange = tvb( offset, 1 )
-	local connectionType = connectionTypeRange:uint()
-	local treeNode = messageTree:add( dptProto.fields.connectionType, connectionTypeRange )
-	treeNode:append_text( string.format( " = %s", clientTypesByValue[connectionType] or string.format( "Unknown value %d", connectionType ) ) )
+	if isClient then
+		pinfo.cols.info = string.format( "Connection request" )
+		
+		-- the 1 byte connection type
+		local connectionTypeRange = tvb( offset, 1 )
+		local connectionType = connectionTypeRange:uint()
+		messageTree:add( dptProto.fields.connectionType, connectionTypeRange )
+		offset = offset +1
+		
+		-- the 1 byte capabilities value
+		local capabilitiesRange = tvb( offset, 1 )
+		messageTree:add( dptProto.fields.capabilities, capabilitiesRange )
+		offset = offset +1
+		
+		-- TODO: load credentials <RD> data <MD>
+		local range = tvb( offset )
+		local rdBreak = range:bytes():index( RD )
+		if rdBreak >= 0 then
+			-- Mark up the creds - if there are any
+			local credsRange = range(0, rdBreak )
+			local creds = credsRange:string():toRecordString()
+			if credsRange:len() > 0 then
+				messageTree:add( dptProto.fields.loginCreds, credsRange, creds )
+			end
+
+			-- Mark up the login topicset - if there are any
+			local topicsetRange = range( rdBreak +1, ( range:len() -2 ) -rdBreak ) -- fiddly handling of trailing null character
+			if topicsetRange:len() > 0 then
+				messageTree:add( dptProto.fields.loginTopics, topicsetRange )
+			end
+			
+		end
+		
+	else
+		-- Is a server response
+		pinfo.cols.info = string.format( "Connection response" )
+		
+		local connectionResponseRange = tvb( offset, 1 )
+		local connectionResponse = connectionResponseRange:uint()
+		messageTree:add( dptProto.fields.connectionResponse, connectionResponseRange )
+		offset = offset +1
+		
+		-- The size field
+		local messageLengthSizeRange = tvb( offset, 1 )
+		local messageLengthSize = messageLengthSizeRange:uint()
+		messageTree:add( dptProto.fields.messageLengthSize, messageLengthSizeRange ) 
+		offset = offset +1
+		
+		-- the client ID (the rest of this)
+		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
+		local clientID = clientIDRange:string()
+		messageTree:add( dptProto.fields.clientID, clientIDRange )
+		
+	end
 	
-	pinfo.cols.info = string.format( "Connection negotiation, protocol=v%d", protoVersion )
+	
+	--TODO: dissect this as a client or as a server packet
 end
 
 -- Process an individual DPT message
@@ -324,7 +417,6 @@ local function processMessage( tvb, pinfo, tree, offset )
 	-- Get the encoding byte
 	local msgEncodingRange = tvb( offset, 1 )
 	msgDetails.msgEncoding = msgEncodingRange:uint()
-	local msgEncodingStr = encodingTypesByValue[msgDetails.msgEncoding] or "Unknown encoding"
 	offset = offset +1
 
 	-- Add to the GUI the size-header, type-header & encoding-header
@@ -334,9 +426,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 	messageTree:add( dptProto.fields.sizeHdr, msgSizeRange )
 	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
 	local messageTypeName = MessageType.nameByID( msgDetails.msgType )
-	typeNode:append_text( " = " .. messageTypeName )
-	local encodingNode = messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
-	encodingNode:append_text( string.format( " = %s", msgEncodingStr ) )
+	typeNode:append_text( " = " .. messageTypeName )	
+	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
@@ -383,7 +474,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 	local firstByte = tvb( 0, 1 ):uint()
 	if( firstByte == DIFFUSION_MAGIC_NUMBER ) then
 		-- process & skip over it, if it is.
-		return dissect_connection( tvb, pinfo, tree )
+		return dissectConnection( tvb, pinfo, tree )
 	end
 
 	local offset, messageCount = 0, 0
@@ -399,21 +490,38 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 end
 
+local responseCodes = {
+	[100] = "OK - Connection Successful", 
+	[101] = "Invalid Connection Protocol",
+	[103] = "One or more of the specified topics are invalid",
+	[105] = "Reconnection Successful",
+	[110] = "Topic already exists",
+	[110] = "Connection Rejected",
+	[127] = "Undefined error"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "diffusion.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "diffusion.connection.protoNumber", "Protocol number" )
-dptProto.fields.connectionType = ProtoField.uint8( "diffusion.connection.connectionType", "Connection Type", base.HEX )
+dptProto.fields.connectionType = ProtoField.uint8( "diffusion.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
 
 -- Message fields
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
-dptProto.fields.typeHdr = ProtoField.uint8( "dptProto.type", "Type", base.HEX ) --TODO: scope to include lookup table here
-dptProto.fields.encodingHdr = ProtoField.uint8( "dptProto.encoding", "Encoding", base.HEX )
+dptProto.fields.typeHdr = ProtoField.uint8( "dptProto.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield
+dptProto.fields.encodingHdr = ProtoField.uint8( "dptProto.encoding", "Encoding", base.HEX, encodingTypesByValue )
 dptProto.fields.headers = ProtoField.string( "dptProto.headers", "Headers" )
 dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User headers" )
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
 dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
 
+dptProto.fields.connectionResponse = ProtoField.uint8( "dptProto.connectionResponse", "Connection Response", base.DEC, responseCodes )
+dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
+dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
+dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX ) -- TODO: how to break this bitfield open?
+dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
+dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
 tcp_table:add( 8080, dptProto )
+
