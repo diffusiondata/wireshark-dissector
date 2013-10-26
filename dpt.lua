@@ -355,7 +355,7 @@ local function dissectConnection( tvb, pinfo, tree )
 			end
 			
 		end
-		
+
 	else
 		-- Is a server response
 		pinfo.cols.info = string.format( "Connection response" )
@@ -500,6 +500,18 @@ local responseCodes = {
 	[127] = "Undefined error"
 }
 
+local capabilities = {
+	[0x00] = "None",
+	[0x01] = "Supports encrypted data messages",
+	[0x02] = "Supports compressed data messages",
+	[0x03] = "Supports encrypted and compressed data messages",
+	[0x04] = "Supports base 64 encoded data messages",
+	[0x05] = "Supports encrypted and base 64 encoded data messages",
+	[0x06] = "Supports compressed and base 64 encoded data messages",
+	[0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
+	[0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a control client"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "diffusion.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "diffusion.connection.protoNumber", "Protocol number" )
@@ -517,7 +529,7 @@ dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
 dptProto.fields.connectionResponse = ProtoField.uint8( "dptProto.connectionResponse", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
 dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
-dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX ) -- TODO: how to break this bitfield open?
+dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
 
