@@ -197,7 +197,35 @@ function topicLoadType:getDescription( messageDetails )
 	return string.format( "%s, %s", self.name, self.loadDescription ) 
 end 
 
+-- Functionality specific to Command Messages
+local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
+function commandMessageType:markupHeaders( treeNode, headerRange )
+	-- Parse topic
+	local topicEndIndex = headerRange:bytes():index( FD )
+	local topicRange = headerRange:range( 0, topicEndIndex )
+	treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
 
+	-- Parse command
+	headerRange = headerRange:range( topicEndIndex + 1 )
+	local commandEndIndex = headerRange:bytes():index( FD )
+	local commandRange
+	if commandEndIndex > -1 then
+		commandRange = headerRange:range( 0, commandEndIndex )
+		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+
+		--Parse parameters
+		local parametersRange = headerRange:range( commandEndIndex + 1 )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+	else
+		commandRange = headerRange:range( 0 )
+		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+	end
+	self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topicRange:string(), commandRange:string() )
+end
+
+function commandMessageType:getDescription( messageDetails )
+	return self.commandDescription 
+end
 
 -- The messageType table
 
@@ -218,7 +246,7 @@ local messageTypesByValue = MessageType.index( {
 	MessageType:new( 0x21, "Fetch", 1 ),
 	MessageType:new( 0x22, "Fetch Reply", 1 ),
 	MessageType:new( 0x23, "Topic Status Notification", 2 ),
-	MessageType:new( 0x24, "Command Message", 2 ),
+	commandMessageType,
 	MessageType:new( 0x28, "Command Topic Load", 3 ),
 	MessageType:new( 0x29, "Command Topic Notification", 2 ),
 	MessageType:new( 0x30, "Cancel Fragmented Message Set", 1 )
@@ -426,7 +454,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	messageTree:add( dptProto.fields.sizeHdr, msgSizeRange )
 	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
 	local messageTypeName = MessageType.nameByID( msgDetails.msgType )
-	typeNode:append_text( " = " .. messageTypeName )	
+	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
 	-- The content range
@@ -532,6 +560,11 @@ dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client
 dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
+
+-- Command Message fields
+dptProto.fields.topic = ProtoField.string( "dptProto.field.topic", "Topic" )
+dptProto.fields.command =  ProtoField.string( "dptProto.field.command", "Command" )
+dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
