@@ -143,12 +143,12 @@ function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 
 		-- Break open into records & then fields
 		for i,record in ipairs(records) do
-			
+
 			local recordRange = bodyRange:range( rangeBase, #record )
-			local recordTree = bodyNode:add( diffusionProto.fields.record, recordRange, record:toRecordString() )
-							
+			local recordTree = bodyNode:add( dptProto.fields.record, recordRange, record:toRecordString() )
+
 			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
-		end	
+		end
 	end
 end
 
