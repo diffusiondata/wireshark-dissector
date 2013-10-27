@@ -215,7 +215,7 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 	else
 		commandRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
@@ -251,7 +251,7 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandTopicTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 	else
 		commandTopicTypeRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
@@ -281,7 +281,7 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 
 		--Parse parameters
 		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 	else
 		notificationTypeRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
