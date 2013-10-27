@@ -227,6 +227,72 @@ function commandMessageType:getDescription( messageDetails )
 	return self.commandDescription 
 end
 
+-- Functionality specific to Command Topic Load
+local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
+function commandTopicLoadType:markupHeaders( treeNode, headerRange )
+	-- Parse topic
+	local topicEndIndex = headerRange:bytes():index( FD )
+	local topicRange = headerRange:range( 0, topicEndIndex )
+	treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
+	
+	-- Parse command topic category
+	headerRange = headerRange:range( topicEndIndex + 1 )
+	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
+	local commandTopicCategoryRange = headerRange:range( 0, commandTopicCategoryEndIndex )
+	treeNode:add( dptProto.fields.commandTopicCategory, commandTopicCategoryRange, commandTopicCategoryRange:string() )
+	
+	-- Parse command Topic Type
+	headerRange = headerRange:range( commandTopicCategoryEndIndex + 1 )
+	local commandTopicTypeEndIndex = headerRange:bytes():index( FD )
+	local commandRange
+	if commandTopicTypeEndIndex > -1 then
+		commandTopicTypeRange = headerRange:range( 0, commandTopicTypeEndIndex )
+		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+
+		--Parse parameters
+		local parametersRange = headerRange:range( commandTopicTypeEndIndex + 1 )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+	else
+		commandTopicTypeRange = headerRange:range( 0 )
+		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+	end
+	self.commandTopicLoadDescription = string.format ( "Command Topic Load: %s Topic Category: %s", topicRange:string(), commandTopicCategoryRange:string() )
+end
+
+function commandTopicLoadType:getDescription( messageDetails )
+	return self.commandTopicLoadDescription 
+end
+
+-- Functionality specific to Command Topic Notification
+local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notification", 2 )
+function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
+	-- Parse topic
+	local topicEndIndex = headerRange:bytes():index( FD )
+	local topicRange = headerRange:range( 0, topicEndIndex )
+	treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
+
+	-- Parse notification type
+	headerRange = headerRange:range( topicEndIndex + 1 )
+	local notificationTypeEndIndex = headerRange:bytes():index( FD )
+	local notificationTypeRange
+	if notificationTypeEndIndex > -1 then
+		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
+		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+
+		--Parse parameters
+		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
+		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string() )
+	else
+		notificationTypeRange = headerRange:range( 0 )
+		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+	end
+	self.commandTopicLoadDescription = string.format ( "Command Topic Notification: %s Notification Type: %s", topicRange:string(), notificationTypeRange:string() )
+end
+
+function commandTopicNotificationType:getDescription( messageDetails )
+	return self.commandTopicLoadDescription 
+end
+
 -- The messageType table
 
 local messageTypesByValue = MessageType.index( {
@@ -247,8 +313,8 @@ local messageTypesByValue = MessageType.index( {
 	MessageType:new( 0x22, "Fetch Reply", 1 ),
 	MessageType:new( 0x23, "Topic Status Notification", 2 ),
 	commandMessageType,
-	MessageType:new( 0x28, "Command Topic Load", 3 ),
-	MessageType:new( 0x29, "Command Topic Notification", 2 ),
+	commandTopicLoadType,
+	commandTopicNotificationType,
 	MessageType:new( 0x30, "Cancel Fragmented Message Set", 1 )
 } )
 
@@ -565,6 +631,9 @@ dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "
 dptProto.fields.topic = ProtoField.string( "dptProto.field.topic", "Topic" )
 dptProto.fields.command =  ProtoField.string( "dptProto.field.command", "Command" )
 dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
+dptProto.fields.commandTopicType = ProtoField.string( "dptProto.field.commandTopicType", "Topic Type" )
+dptProto.fields.commandTopicCategory = ProtoField.string( "dptProto.field.commandTopicCategory", "Topic Category" )
+dptProto.fields.notificationType = ProtoField.string( "dptProto.field.notificationType", "Notification Type" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
