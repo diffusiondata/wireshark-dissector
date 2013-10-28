@@ -192,7 +192,27 @@ end
 
 function topicLoadType:getDescription( messageDetails )
 	return string.format( "%s, %s", self.name, self.loadDescription ) 
-end 
+end
+
+local deltaType = MessageType:new( 0x15, "Delta", 1 )
+function deltaType:markupHeaders( treeNode, headerRange )
+	-- Parse topic
+	local topic, alias
+	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+
+	if topic ~= nil then
+		self.topicDescription = string.format( "Topic: %s", topic )
+	else
+		self.topicDescription = string.format( "Unknown alias: %s", alias )
+	end
+
+	if headerRange ~= nil then
+		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+	end
+end
+function deltaType:getDescription( messageDetails )
+	return string.format( "%s, %s", self.name, self.topicDescription ) 
+end
 
 -- Parse the first header as a topic
 -- Takes the tree node and header range
@@ -367,7 +387,7 @@ end
 
 local messageTypesByValue = MessageType.index( {
 	topicLoadType,
-	MessageType:new( 0x15, "Delta", 1 ),
+	deltaType,
 	subscribeType,
 	MessageType:new( 0x17, "Unsubscribe", 1 ),
 	MessageType:new( 0x18, "Ping Server", 2 ), 
