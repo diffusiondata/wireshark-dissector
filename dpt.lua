@@ -175,24 +175,19 @@ end
 local topicLoadType = MessageType:new( 0x14, "Topic Load", 1 )
 
 function topicLoadType:markupHeaders( treeNode, headerRange )
-	-- FIXME: this does not handle user-headers, and assumes there will be only one header - bleh
-	-- A single header, with a topic-name, or a name&alias pair
-	local topicExpression = headerRange:string()
-	local delimIndex = topicExpression:find( "!" )
-	if delimIndex == nil then
-		-- No alias binding
-		self.loadDescription = topicExpression
-	else
-		local expressionPieces = topicExpression:split( '!' )
-		local topicName = expressionPieces[1]
-		local topicAlias = expressionPieces[2]
-		self.loadDescription = string.format( "aliasing %s => topic '%s'", topicAlias, topicName )
+	-- Parse topic
+	local topic, alias
+	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
 
-		local tcpStream = f_tcp_stream().value
-		aliasTable:setAlias( tcpStream, topicAlias, topicName )
+	if alias ~= nil then
+		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
+	else
+		self.loadDescription = topic
 	end
-	
-	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.loadDescription )
+
+	if headerRange ~= nil then
+		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+	end
 end
 
 function topicLoadType:getDescription( messageDetails )
@@ -202,15 +197,23 @@ end
 -- Parse the first header as a topic
 -- Takes the tree node and header range
 -- Assumes there will be more than one header
--- TODO: Support a single header
 -- Adds the topic to the aliasTable if an alias is present
 -- Retrieves the topic from the aliasTable if there is only an alias
 -- Adds the topic and alias entries to the dissection tree 
--- The remaining header range, the topic as a string and the alias as a string
+-- Returns the remaining header range, the topic as a string and the alias as a string
+-- The remaining header range will be nil if there are no more headers
 -- The alias will be nil if there is no alias present in the header
 function parseTopicHeader( treeNode, headerRange )
 	local topicEndIndex = headerRange:bytes():index( FD )
-	local topicExpressionRange = headerRange:range( 0, topicEndIndex )
+	local topicExpressionRange
+
+	if topicEndIndex > -1 then
+		topicExpressionRange = headerRange:range( 0, topicEndIndex )
+		headerRange = headerRange:range( topicEndIndex + 1 )
+	else
+		topicExpressionRange = headerRange
+		headerRange = nil
+	end
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
 	local tcpStream = f_tcp_stream().value
@@ -219,11 +222,11 @@ function parseTopicHeader( treeNode, headerRange )
 	local topic = nil
 	local alias = nil
 	if delimIndex == 0 then
-		aliasRange = topicExpressionRange:range( 0, topicEndIndex )
+		aliasRange = topicExpressionRange
 		alias = aliasRange:string();
 
 		topic = aliasTable:getAlias( tcpStream, alias )
-	elseif delimIndex > -1 and delimIndex < topicEndIndex then
+	elseif delimIndex > -1 then
 		topicRange = topicExpressionRange:range( 0, delimIndex )
 		aliasRange = topicExpressionRange:range( delimIndex )
 
@@ -235,7 +238,6 @@ function parseTopicHeader( treeNode, headerRange )
 		topicRange = topicExpressionRange
 		topic = topicRange:string()
 	end
-	headerRange = headerRange:range( topicEndIndex + 1 )
 
 	-- Add topic entry to dissection tree
 	if topicRange ~= nil then
