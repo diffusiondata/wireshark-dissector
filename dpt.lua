@@ -94,6 +94,67 @@ end
 
 local aliasTable = AliasTable:new()
 
+-- Parse the first header as a topic
+-- Takes the tree node and header range
+-- Assumes there will be more than one header
+-- Adds the topic to the aliasTable if an alias is present
+-- Retrieves the topic from the aliasTable if there is only an alias
+-- Adds the topic and alias entries to the dissection tree 
+-- Returns the remaining header range, the topic as a string and the alias as a string
+-- The remaining header range will be nil if there are no more headers
+-- The alias will be nil if there is no alias present in the header
+function parseTopicHeader( treeNode, headerRange )
+	local topicEndIndex = headerRange:bytes():index( FD )
+	local topicExpressionRange
+
+	if topicEndIndex > -1 then
+		topicExpressionRange = headerRange:range( 0, topicEndIndex )
+		headerRange = headerRange:range( topicEndIndex + 1 )
+	else
+		topicExpressionRange = headerRange
+		headerRange = nil
+	end
+
+	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
+	local tcpStream = f_tcp_stream().value
+	local topicRange = nil
+	local aliasRange = nil
+	local topic = nil
+	local alias = nil
+	if delimIndex == 0 then
+		aliasRange = topicExpressionRange
+		alias = aliasRange:string();
+
+		topic = aliasTable:getAlias( tcpStream, alias )
+	elseif delimIndex > -1 then
+		topicRange = topicExpressionRange:range( 0, delimIndex )
+		aliasRange = topicExpressionRange:range( delimIndex )
+
+		topic = topicRange:string()
+		alias = aliasRange:string()
+
+		aliasTable:setAlias( tcpStream, alias, topic )
+	else
+		topicRange = topicExpressionRange
+		topic = topicRange:string()
+	end
+
+	-- Add topic entry to dissection tree
+	if topicRange ~= nil then
+		treeNode:add( dptProto.fields.topic, topicRange, topic )
+	elseif topic ~= nil then
+		-- Topic from alias table, range expired reuse alias range
+		treeNode:add( dptProto.fields.topic, aliasRange, topic ):append_text(" (resolved from alias)")
+	end
+
+	-- Add alias entry to dissection tree
+	if aliasRange ~= nil then
+		treeNode:add( dptProto.fields.alias, aliasRange, alias )
+	end
+
+	return headerRange, topic, alias
+end
+
 -- -----------------------------------
 -- A 'class' to process message types
 
@@ -157,19 +218,6 @@ function MessageType:getDescription( messageDetails )
 	return self.name
 end
 
--- Functionality specific to Subscriptions - the info column, mostly
-
-local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
-function subscribeType:markupHeaders( treeNode, headerRange )
-	-- A single header, with a topic-selector
-	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
-	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
-end
-
-function subscribeType:getDescription( messageDetails )
-	return self.subscriptionDescription 
-end 
-
 -- Functionality specific to Topic Loads
 
 local topicLoadType = MessageType:new( 0x14, "Topic Load", 1 )
@@ -194,7 +242,10 @@ function topicLoadType:getDescription( messageDetails )
 	return string.format( "%s, %s", self.name, self.loadDescription ) 
 end
 
+-- Functionality specific to Delta Messages
+
 local deltaType = MessageType:new( 0x15, "Delta", 1 )
+
 function deltaType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
 	local topic, alias
@@ -210,73 +261,28 @@ function deltaType:markupHeaders( treeNode, headerRange )
 		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
 	end
 end
+
 function deltaType:getDescription( messageDetails )
 	return string.format( "%s, %s", self.name, self.topicDescription ) 
 end
 
--- Parse the first header as a topic
--- Takes the tree node and header range
--- Assumes there will be more than one header
--- Adds the topic to the aliasTable if an alias is present
--- Retrieves the topic from the aliasTable if there is only an alias
--- Adds the topic and alias entries to the dissection tree 
--- Returns the remaining header range, the topic as a string and the alias as a string
--- The remaining header range will be nil if there are no more headers
--- The alias will be nil if there is no alias present in the header
-function parseTopicHeader( treeNode, headerRange )
-	local topicEndIndex = headerRange:bytes():index( FD )
-	local topicExpressionRange
+-- Functionality specific to Subscriptions - the info column, mostly
 
-	if topicEndIndex > -1 then
-		topicExpressionRange = headerRange:range( 0, topicEndIndex )
-		headerRange = headerRange:range( topicEndIndex + 1 )
-	else
-		topicExpressionRange = headerRange
-		headerRange = nil
-	end
+local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
 
-	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
-	local tcpStream = f_tcp_stream().value
-	local topicRange = nil
-	local aliasRange = nil
-	local topic = nil
-	local alias = nil
-	if delimIndex == 0 then
-		aliasRange = topicExpressionRange
-		alias = aliasRange:string();
+function subscribeType:markupHeaders( treeNode, headerRange )
+	-- A single header, with a topic-selector
+	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
+	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
+end
 
-		topic = aliasTable:getAlias( tcpStream, alias )
-	elseif delimIndex > -1 then
-		topicRange = topicExpressionRange:range( 0, delimIndex )
-		aliasRange = topicExpressionRange:range( delimIndex )
-
-		topic = topicRange:string()
-		alias = aliasRange:string()
-
-		aliasTable:setAlias( tcpStream, alias, topic )
-	else
-		topicRange = topicExpressionRange
-		topic = topicRange:string()
-	end
-
-	-- Add topic entry to dissection tree
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topic )
-	elseif topic ~= nil then
-		-- Topic from alias table, range expired reuse alias range
-		treeNode:add( dptProto.fields.topic, aliasRange, topic ):append_text(" (resolved from alias)")
-	end
-
-	-- Add alias entry to dissection tree
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, alias )
-	end
-
-	return headerRange, topic, alias
+function subscribeType:getDescription( messageDetails )
+	return self.subscriptionDescription 
 end
 
 -- Functionality specific to Command Messages
 local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
+
 function commandMessageType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
 	local topic, alias
@@ -310,6 +316,7 @@ end
 
 -- Functionality specific to Command Topic Load
 local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
+
 function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
 	local topic, alias
@@ -350,6 +357,7 @@ end
 
 -- Functionality specific to Command Topic Notification
 local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notification", 2 )
+
 function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
 	local topic
@@ -709,6 +717,15 @@ dptProto.fields.headers = ProtoField.string( "dptProto.headers", "Headers" )
 dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User headers" )
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
 dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
+dptProto.fields.topic = ProtoField.string( "dptProto.field.topic", "Topic" )
+dptProto.fields.alias = ProtoField.string( "dptProto.field.alias", "Alias" )
+
+-- Command message fields
+dptProto.fields.command =  ProtoField.string( "dptProto.field.command", "Command" )
+dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
+dptProto.fields.commandTopicType = ProtoField.string( "dptProto.field.commandTopicType", "Topic Type" )
+dptProto.fields.commandTopicCategory = ProtoField.string( "dptProto.field.commandTopicCategory", "Topic Category" )
+dptProto.fields.notificationType = ProtoField.string( "dptProto.field.notificationType", "Notification Type" )
 
 dptProto.fields.connectionResponse = ProtoField.uint8( "dptProto.connectionResponse", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
@@ -716,15 +733,6 @@ dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client
 dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
-
--- Command Message fields
-dptProto.fields.topic = ProtoField.string( "dptProto.field.topic", "Topic" )
-dptProto.fields.alias = ProtoField.string( "dptProto.field.alias", "Alias" )
-dptProto.fields.command =  ProtoField.string( "dptProto.field.command", "Command" )
-dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
-dptProto.fields.commandTopicType = ProtoField.string( "dptProto.field.commandTopicType", "Topic Type" )
-dptProto.fields.commandTopicCategory = ProtoField.string( "dptProto.field.commandTopicCategory", "Topic Category" )
-dptProto.fields.notificationType = ProtoField.string( "dptProto.field.notificationType", "Notification Type" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
