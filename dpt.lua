@@ -66,8 +66,9 @@ end
 
 -- -----------------------------------
 -- The Alias Table
+-- TODO: Should the Alias table be based on tcpStreams or the client ID?
 
-AliasTable = {}
+local AliasTable = {}
 
 function AliasTable:new()
 	local result = {}
@@ -76,14 +77,14 @@ function AliasTable:new()
 	return result
 end
 
-function AliasTable.setAlias( tcpStream, alias, topicName )
+function AliasTable:setAlias( tcpStream, alias, topicName )
 	-- Get the table for the tcpStream, or create a new one
 	local conversation = self[tcpStream] or {}
 	conversation[alias] = topicName
 	self[tcpStream] = conversation
 end
 
-function AliasTable.getAlias( tcpStream, alias )
+function AliasTable:getAlias( tcpStream, alias )
 	local conversation = self[tcpStream]
 	if conversation == nil then
 		return nil
@@ -186,8 +187,9 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 		local topicName = expressionPieces[1]
 		local topicAlias = expressionPieces[2]
 		self.loadDescription = string.format( "aliasing %s => topic '%s'", topicAlias, topicName )
-		
-		-- TODO: bind this alias in the AliasTable
+
+		local tcpStream = f_tcp_stream().value
+		aliasTable:setAlias( tcpStream, topicAlias, topicName )
 	end
 	
 	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.loadDescription )
@@ -197,41 +199,67 @@ function topicLoadType:getDescription( messageDetails )
 	return string.format( "%s, %s", self.name, self.loadDescription ) 
 end 
 
-function parseTopicHeader( headerRange )
-	-- Parse topic
+-- Parse the first header as a topic
+-- Takes the tree node and header range
+-- Assumes there will be more than one header
+-- TODO: Support a single header
+-- Adds the topic to the aliasTable if an alias is present
+-- Retrieves the topic from the aliasTable if there is only an alias
+-- Adds the topic and alias entries to the dissection tree 
+-- The remaining header range, the topic as a string and the alias as a string
+-- The alias will be nil if there is no alias present in the header
+function parseTopicHeader( treeNode, headerRange )
 	local topicEndIndex = headerRange:bytes():index( FD )
 	local topicExpressionRange = headerRange:range( 0, topicEndIndex )
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
+	local tcpStream = f_tcp_stream().value
 	local topicRange = nil
 	local aliasRange = nil
+	local topic = nil
+	local alias = nil
 	if delimIndex == 0 then
 		aliasRange = topicExpressionRange:range( 0, topicEndIndex )
-		-- TODO: get this alias from the AliasTable
+		alias = aliasRange:string();
+
+		topic = aliasTable:getAlias( tcpStream, alias )
 	elseif delimIndex > -1 and delimIndex < topicEndIndex then
 		topicRange = topicExpressionRange:range( 0, delimIndex )
 		aliasRange = topicExpressionRange:range( delimIndex )
-		-- TODO: bind this alias in the AliasTable
+
+		topic = topicRange:string()
+		alias = aliasRange:string()
+
+		aliasTable:setAlias( tcpStream, alias, topic )
 	else
 		topicRange = topicExpressionRange
+		topic = topicRange:string()
 	end
 	headerRange = headerRange:range( topicEndIndex + 1 )
-	return topicRange, aliasRange, headerRange
+
+	-- Add topic entry to dissection tree
+	if topicRange ~= nil then
+		treeNode:add( dptProto.fields.topic, topicRange, topic )
+	elseif topic ~= nil then
+		-- Topic from alias table, range expired reuse alias range
+		treeNode:add( dptProto.fields.topic, aliasRange, topic ):append_text(" (resolved from alias)")
+	end
+
+	-- Add alias entry to dissection tree
+	if aliasRange ~= nil then
+		treeNode:add( dptProto.fields.alias, aliasRange, alias )
+	end
+
+	return headerRange, topic, alias
 end
 
 -- Functionality specific to Command Messages
 local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
 function commandMessageType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topicRange
-	topicRange, aliasRange, headerRange = parseTopicHeader( headerRange )
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
-	end
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, aliasRange:string() )
-	end
-	
+	local topic, alias
+	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
 	if commandEndIndex > -1 then
@@ -245,10 +273,10 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 		commandRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
 	end
-	if topicRange ~= nil then
-		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topicRange:string(), commandRange:string() )
-	elseif aliasRange ~= nil then
-		self.commandDescription = string.format ( "Command Message Alias: %s Command: %s", aliasRange:string(), commandRange:string() )
+	if topic ~= nil then
+		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topic, commandRange:string() )
+	elseif alias ~= nil then
+		self.commandDescription = string.format ( "Command Message Alias: %s Command: %s", alias, commandRange:string() )
 	else
 		self.commandDescription = string.format ( "Command Message Topic: Unknown Command: %s", commandRange:string() )
 	end
@@ -262,14 +290,8 @@ end
 local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
 function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topicRange
-	topicRange, aliasRange, headerRange = parseTopicHeader( headerRange )
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
-	end
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, aliasRange:string() )
-	end
+	local topic, alias
+	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
 
 	-- Parse command topic category
 	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
@@ -291,10 +313,10 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 		commandTopicTypeRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
 	end
-	if topicRange ~= nil then
-		self.commandTopicLoadDescription = string.format ( "Command Load Topic: %s Topic Category: %s", topicRange:string(), commandTopicCategoryRange:string() )
-	elseif aliasRange ~= nil then
-		self.commandTopicLoadDescription = string.format ( "Command Load Alias: %s Topic Category: %s", aliasRange:string(), commandTopicCategoryRange:string() )
+	if topic ~= nil then
+		self.commandTopicLoadDescription = string.format ( "Command Load Topic: %s Topic Category: %s", topic, commandTopicCategoryRange:string() )
+	elseif alias ~= nil then
+		self.commandTopicLoadDescription = string.format ( "Command Load Alias: %s Topic Category: %s", alias, commandTopicCategoryRange:string() )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Load Topic: Unknown Topic Category: %s", commandTopicCategoryRange:string() )
 	end
@@ -308,14 +330,9 @@ end
 local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notification", 2 )
 function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topicRange
-	topicRange, aliasRange, headerRange = parseTopicHeader( headerRange )
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topicRange:string() )
-	end
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, aliasRange:string() )
-	end
+	local topic
+	local alias
+	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
@@ -331,10 +348,10 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 		notificationTypeRange = headerRange:range( 0 )
 		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
 	end
-	if topicRange ~= nil then
-		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: %s Notification Type: %s", topicRange:string(), notificationTypeRange:string() )
-	elseif aliasRange ~= nil then
-		self.commandTopicLoadDescription = string.format ( "Command Notification Alias: %s Notification Type: %s", aliasRange:string(), notificationTypeRange:string() )
+	if topic ~= nil then
+		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: %s Notification Type: %s", topic, notificationTypeRange:string() )
+	elseif alias ~= nil then
+		self.commandTopicLoadDescription = string.format ( "Command Notification Alias: %s Notification Type: %s", alias, notificationTypeRange:string() )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: Unknown Notification Type: %s", notificationTypeRange:string() )
 	end
