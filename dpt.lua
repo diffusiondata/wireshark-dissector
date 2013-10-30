@@ -710,6 +710,7 @@ dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protoc
 dptProto.fields.connectionType = ProtoField.uint8( "dpt.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
 dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
+dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield
@@ -721,6 +722,8 @@ dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User h
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
 dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
+dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
+
 -- Command message fields
 dptProto.fields.command =  ProtoField.string( "dpt.header.command", "Command" )
 dptProto.fields.commandTopicType = ProtoField.string( "dpt.header.command.topicType", "Topic Type" )
@@ -728,8 +731,6 @@ dptProto.fields.commandTopicCategory = ProtoField.string( "dpt.header.command.to
 dptProto.fields.notificationType = ProtoField.string( "dpt.header.command.notificationType", "Notification Type" )
 dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
 
-dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
-dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
 
