@@ -25,6 +25,67 @@ function dump(o)
 	end
 end
 
+--------------------------------------
+-- Client
+
+Client = {}
+function Client:new( host, port )
+	local result = { host = host, port = port }
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function Client:setId( clientId )
+	self.clientId = clientId
+end
+
+--------------------------------------
+-- The Client Table
+ClientTable = {}
+function ClientTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function ClientTable:add( host, port, client )
+	local machine = self[host] or {}
+	machine[port] = client
+	self[host] = machine
+end
+function ClientTable:get( host, port )
+	return self[host][port]
+end
+
+---------------------------------------
+-- Server
+
+Server = {}
+function Server:new( host, port )
+	local result = { host = host, port = port }
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+
+--------------------------------------
+-- The Server Table
+ServerTable = {}
+function ServerTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function ServerTable:add( host, port, server )
+	local machine = self[host] or {}
+	machine[port] = server
+	self[host] = machine
+end
+function ServerTable:get( host, port )
+	return self[host][port]
+end
+
 -- -----------------------------------
 -- Create and register a listener for TCP connections
 
@@ -55,7 +116,12 @@ function tcpTap.packet( pinfo )
 	tcpConnections[streamNumber] = { 
 		client = { ip = f_ip_dsthost().value, port = pinfo.dst_port }, 
 		server = { ip = f_ip_srchost().value, port = pinfo.src_port } }
-		
+
+	local client = Client:new( f_ip_dsthost().value, pinfo.dst_port )
+	ClientTable:add( f_ip_dsthost().value, pinfo.dst_port, client )
+	local server = Server:new( f_ip_srchost().value, pinfo.src_port )
+	ServerTable:add( f_ip_dsthost().value, pinfo.dst_port, server )
+
 	info( dump( tcpConnections ) )
 end
 
@@ -66,9 +132,8 @@ end
 
 -- -----------------------------------
 -- The Alias Table
--- TODO: Should the Alias table be based on tcpStreams or the client ID?
 
-local AliasTable = {}
+AliasTable = {}
 
 function AliasTable:new()
 	local result = {}
@@ -144,7 +209,9 @@ function parseTopicHeader( treeNode, headerRange )
 		treeNode:add( dptProto.fields.topic, topicRange, topic )
 	elseif topic ~= nil then
 		-- Topic from alias table, range expired reuse alias range
-		treeNode:add( dptProto.fields.topic, aliasRange, topic ):append_text(" (resolved from alias)")
+		local node = treeNode:add( dptProto.fields.topic, aliasRange, topic )
+		node:append_text(" (resolved from alias)")
+		node:set_generated()
 	end
 
 	-- Add alias entry to dissection tree
@@ -501,7 +568,9 @@ local function dissectConnection( tvb, pinfo, tree )
 	
 	-- Is this a client or server packet?
 	local tcpStream, host, port = f_tcp_stream().value, f_ip_srchost().value, f_tcp_srcport().value
-	local isClient = tcpConnections:isClient( tcpStream, host, port ) 
+	local isClient = tcpConnections:isClient( tcpStream, host, port )
+	
+	local dstHost, dstPort = f_ip_dsthost().value, f_tcp_dstport().value
 
 	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
@@ -556,18 +625,20 @@ local function dissectConnection( tvb, pinfo, tree )
 		local connectionResponse = connectionResponseRange:uint()
 		messageTree:add( dptProto.fields.connectionResponse, connectionResponseRange )
 		offset = offset +1
-		
+
 		-- The size field
 		local messageLengthSizeRange = tvb( offset, 1 )
 		local messageLengthSize = messageLengthSizeRange:uint()
 		messageTree:add( dptProto.fields.messageLengthSize, messageLengthSizeRange ) 
 		offset = offset +1
-		
+
 		-- the client ID (the rest of this)
 		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
 		local clientID = clientIDRange:string()
 		messageTree:add( dptProto.fields.clientID, clientIDRange )
 		
+		local client = ClientTable:get( dstHost, dstPort)
+		client:setId(clientIDRange:string())
 	end
 	
 	
@@ -579,6 +650,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream().value -- get the artificial 'tcp stream' number
+	local host, port = f_ip_srchost().value, f_tcp_srcport().value
+	local dstHost, dstPort = f_ip_dsthost().value, f_tcp_dstport().value
 
 	-- Assert there is enough to parse even the LLLL segment
 	if offset + LENGTH_LEN >  tvb:len() then
@@ -625,6 +698,18 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local contentSize = msgDetails.msgSize - HEADER_LEN
 	local contentRange = tvb( offset, contentSize )
 	local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
+
+	local client = ClientTable:get( host, port )
+	if client ~= nil and client.clientId ~= nil then
+		local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
+		node:set_generated()
+	else
+		client = ClientTable:get( dstHost, dstPort )
+		if client~= nil and client.clientId ~= nil then
+			local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
+			node:set_generated()
+		end
+	end
 
 	offset = offset + contentSize
 	local messageType = messageTypesByValue[msgDetails.msgType]
@@ -728,7 +813,7 @@ dptProto.fields.notificationType = ProtoField.string( "dptProto.field.notificati
 
 dptProto.fields.connectionResponse = ProtoField.uint8( "dptProto.connectionResponse", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
-dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
+dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
 dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
