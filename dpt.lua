@@ -35,8 +35,14 @@ function Client:new( host, port )
 	self.__index = self
 	return result
 end
+function Client:matches( host, port )
+	return self.host == host and self.port == port
+end
 function Client:setId( clientId )
 	self.clientId = clientId
+end
+function Client:isClient()
+	return true
 end
 
 --------------------------------------
@@ -67,6 +73,12 @@ function Server:new( host, port )
 	self.__index = self
 	return result
 end
+function Server:matches( host, port )
+	return self.host == host and self.port == port
+end
+function Server:isClient()
+	return false
+end
 
 --------------------------------------
 -- The Server Table
@@ -90,7 +102,6 @@ end
 -- Create and register a listener for TCP connections
 
 local tcpConnections = {}
-
 function tcpConnections:len()
 	local result = 0
 	local i,v
@@ -98,29 +109,20 @@ function tcpConnections:len()
 	return result
 end
 
-function tcpConnections:isClient( tcpStream, host, port )
-	local record = self[tcpStream]
-	
-	-- Is there a record of this TCP stream?
-	if record == nil then return false end
-	
-	return record.client.ip == host and 
-		record.client.port == port
-end
-
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream().value
 	local fNumber = f_frame_number().value
 
-	tcpConnections[streamNumber] = { 
-		client = { ip = f_ip_dsthost().value, port = pinfo.dst_port }, 
-		server = { ip = f_ip_srchost().value, port = pinfo.src_port } }
-
 	local client = Client:new( f_ip_dsthost().value, pinfo.dst_port )
 	ClientTable:add( f_ip_dsthost().value, pinfo.dst_port, client )
 	local server = Server:new( f_ip_srchost().value, pinfo.src_port )
 	ServerTable:add( f_ip_dsthost().value, pinfo.dst_port, server )
+
+	tcpConnections[streamNumber] = { 
+		client = client, 
+		server = server
+	}
 
 	info( dump( tcpConnections ) )
 end
@@ -565,12 +567,13 @@ end
 local function dissectConnection( tvb, pinfo, tree )
 	local messageTree = tree:add( dptProto, tvb() )
 	local offset = 0
-	
+
 	-- Is this a client or server packet?
 	local tcpStream, host, port = f_tcp_stream().value, f_ip_srchost().value, f_tcp_srcport().value
-	local isClient = tcpConnections:isClient( tcpStream, host, port )
-	
-	local dstHost, dstPort = f_ip_dsthost().value, f_tcp_dstport().value
+
+	local client = tcpConnections[tcpStream].client
+	local server = tcpConnections[tcpStream].server
+	local isClient = client:matches( host, port )
 
 	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
@@ -636,8 +639,7 @@ local function dissectConnection( tvb, pinfo, tree )
 		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
 		local clientID = clientIDRange:string()
 		messageTree:add( dptProto.fields.clientID, clientIDRange )
-		
-		local client = ClientTable:get( dstHost, dstPort)
+
 		client:setId(clientIDRange:string())
 	end
 	
@@ -650,8 +652,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream().value -- get the artificial 'tcp stream' number
-	local host, port = f_ip_srchost().value, f_tcp_srcport().value
-	local dstHost, dstPort = f_ip_dsthost().value, f_tcp_dstport().value
+	local client = tcpConnections[tcpStream].client
 
 	-- Assert there is enough to parse even the LLLL segment
 	if offset + LENGTH_LEN >  tvb:len() then
@@ -699,17 +700,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local contentRange = tvb( offset, contentSize )
 	local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
 
-	local client = ClientTable:get( host, port )
-	if client ~= nil and client.clientId ~= nil then
-		local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
-		node:set_generated()
-	else
-		client = ClientTable:get( dstHost, dstPort )
-		if client~= nil and client.clientId ~= nil then
-			local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
-			node:set_generated()
-		end
-	end
+	local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
+	node:set_generated()
 
 	offset = offset + contentSize
 	local messageType = messageTypesByValue[msgDetails.msgType]
