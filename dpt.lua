@@ -580,7 +580,7 @@ local function dissectConnection( tvb, pinfo, tree )
 	
 	-- get the protocol version number
 	local protoVerRange = tvb( offset, 1 )
-	local protoVersion = protoVerRange:uint()
+	client.protoVersion = protoVerRange:uint()
 	messageTree:add( dptProto.fields.connectionProtoNumber, protoVerRange )
 	offset = offset +1
 	
@@ -589,12 +589,13 @@ local function dissectConnection( tvb, pinfo, tree )
 		
 		-- the 1 byte connection type
 		local connectionTypeRange = tvb( offset, 1 )
-		local connectionType = connectionTypeRange:uint()
+		client.connectionType = connectionTypeRange:uint()
 		messageTree:add( dptProto.fields.connectionType, connectionTypeRange )
 		offset = offset +1
 		
 		-- the 1 byte capabilities value
 		local capabilitiesRange = tvb( offset, 1 )
+		client.capabilities = capabilitiesRange:uint()
 		messageTree:add( dptProto.fields.capabilities, capabilitiesRange )
 		offset = offset +1
 		
@@ -642,6 +643,14 @@ local function dissectConnection( tvb, pinfo, tree )
 	
 	
 	--TODO: dissect this as a client or as a server packet
+end
+
+local function addClientConnectionInformation( tree, tvb, client )
+	local rootNode = tree:add( dptProto.fields.connection )
+	rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
+	rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
+	rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
+	rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
 end
 
 -- Process an individual DPT message
@@ -692,13 +701,12 @@ local function processMessage( tvb, pinfo, tree, offset )
 	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
+	addClientConnectionInformation( messageTree, tvb, client )
+
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
 	local contentRange = tvb( offset, contentSize )
 	local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
-
-	local node = messageTree:add( dptProto.fields.clientID, tvb(0,0), client.clientId )
-	node:set_generated()
 
 	offset = offset + contentSize
 	local messageType = messageTypesByValue[msgDetails.msgType]
@@ -794,6 +802,7 @@ dptProto.fields.headers = ProtoField.string( "dptProto.headers", "Headers" )
 dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User headers" )
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
 dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
+dptProto.fields.connection = ProtoField.string( "dptProto.connection", "Connection" )
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
 
