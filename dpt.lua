@@ -646,11 +646,15 @@ local function dissectConnection( tvb, pinfo, tree )
 end
 
 local function addClientConnectionInformation( tree, tvb, client )
-	local rootNode = tree:add( dptProto.fields.connection )
-	rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
-	rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
-	rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
-	rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+	if client ~= nil then
+		local rootNode = tree:add( dptProto.fields.connection )
+		rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
+		rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
+		rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
+		rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+	else
+		tree:add( dptProto.fields.connection, tvb(0,0), "Connection unknown, partial capture" )
+	end
 end
 
 -- Process an individual DPT message
@@ -658,7 +662,11 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream().value -- get the artificial 'tcp stream' number
-	local client = tcpConnections[tcpStream].client
+	local conn = tcpConnections[tcpStream]
+	local client
+	if conn ~= nil then
+		client = conn.client
+	end
 
 	-- Assert there is enough to parse even the LLLL segment
 	if offset + LENGTH_LEN >  tvb:len() then
