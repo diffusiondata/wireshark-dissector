@@ -645,13 +645,18 @@ local function dissectConnection( tvb, pinfo, tree )
 	--TODO: dissect this as a client or as a server packet
 end
 
-local function addClientConnectionInformation( tree, tvb, client )
+local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPort )
 	if client ~= nil then
 		local rootNode = tree:add( dptProto.fields.connection )
 		rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
 		rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
 		rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
 		rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+		if client:matches( f_ip_srchost().value, f_tcp_srcport().value ) then
+			rootNode:add( dptProto.fields.direction, tvb(0,0), "Client to Server" ):set_generated()
+		else
+			rootNode:add( dptProto.fields.direction, tvb(0,0), "Server to Client" ):set_generated()
+		end
 	else
 		tree:add( dptProto.fields.connection, tvb(0,0), "Connection unknown, partial capture" )
 	end
@@ -709,7 +714,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
-	addClientConnectionInformation( messageTree, tvb, client )
+	addClientConnectionInformation( messageTree, tvb, client, host, port )
 
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
@@ -800,6 +805,7 @@ dptProto.fields.connectionType = ProtoField.uint8( "dpt.connection.connectionTyp
 dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
+dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield
