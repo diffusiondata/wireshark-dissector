@@ -38,9 +38,6 @@ end
 function Client:matches( host, port )
 	return self.host == host and self.port == port
 end
-function Client:setId( clientId )
-	self.clientId = clientId
-end
 function Client:isClient()
 	return true
 end
@@ -640,7 +637,7 @@ local function dissectConnection( tvb, pinfo, tree )
 		local clientID = clientIDRange:string()
 		messageTree:add( dptProto.fields.clientID, clientIDRange )
 
-		client:setId(clientIDRange:string())
+		client.clientId = clientIDRange:string()
 	end
 	
 	
