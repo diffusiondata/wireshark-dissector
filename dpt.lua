@@ -159,15 +159,14 @@ end
 local aliasTable = AliasTable:new()
 
 -- Parse the first header as a topic
--- Takes the tree node and header range
+-- Takes the header range
 -- Assumes there will be more than one header
 -- Adds the topic to the aliasTable if an alias is present
 -- Retrieves the topic from the aliasTable if there is only an alias
--- Adds the topic and alias entries to the dissection tree 
--- Returns the remaining header range, the topic as a string and the alias as a string
+-- Returns the remaining header range, the topic range and string as a pair and the alias topic and string as a pair
 -- The remaining header range will be nil if there are no more headers
--- The alias will be nil if there is no alias present in the header
-function parseTopicHeader( treeNode, headerRange )
+-- The alias.range will be nil if there is no alias present in the header
+function parseTopicHeader( headerRange )
 	local topicEndIndex = headerRange:bytes():index( FD )
 	local topicExpressionRange
 
@@ -185,11 +184,16 @@ function parseTopicHeader( treeNode, headerRange )
 	local aliasRange = nil
 	local topic = nil
 	local alias = nil
+	local topicObject
+	local aliasObject
 	if delimIndex == 0 then
 		aliasRange = topicExpressionRange
 		alias = aliasRange:string();
 
 		topic = aliasTable:getAlias( tcpStream, alias )
+
+		aliasObject = { range = aliasRange, string = alias }
+		topicObject = { range = aliasRange, string = topic, resolved = true }
 	elseif delimIndex > -1 then
 		topicRange = topicExpressionRange:range( 0, delimIndex )
 		aliasRange = topicExpressionRange:range( delimIndex )
@@ -198,27 +202,31 @@ function parseTopicHeader( treeNode, headerRange )
 		alias = aliasRange:string()
 
 		aliasTable:setAlias( tcpStream, alias, topic )
+
+		aliasObject = { range = aliasRange, string = alias }
+		topicObject = { range = topicRange, string = topic, resolved = false }
 	else
 		topicRange = topicExpressionRange
 		topic = topicRange:string()
+		topicObject = { range = topicRange, string = topic, resolved = false }
+		aliasObject = {}
 	end
 
-	-- Add topic entry to dissection tree
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topic )
-	elseif topic ~= nil then
-		-- Topic from alias table, range expired reuse alias range
-		local node = treeNode:add( dptProto.fields.topic, aliasRange, topic )
+	return headerRange, { topic = topicObject, alias = aliasObject }
+end
+
+-- Add topic and alias information to dissection tree
+function addTopicHeaderInformation( treeNode, info )
+	if info.alias.range ~= nil then
+		treeNode:add( dptProto.fields.alias, info.alias.range, info.alias.string )
+	end
+	if info.topic.resolved then
+		local node = treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
 		node:append_text(" (resolved from alias)")
 		node:set_generated()
+	else
+		treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
 	end
-
-	-- Add alias entry to dissection tree
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, alias )
-	end
-
-	return headerRange, topic, alias
 end
 
 -- -----------------------------------
@@ -290,8 +298,11 @@ local topicLoadType = MessageType:new( 0x14, "Topic Load", 1 )
 
 function topicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+	addTopicHeaderInformation( treeNode, info )
 
 	if alias ~= nil then
 		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
@@ -314,8 +325,11 @@ local deltaType = MessageType:new( 0x15, "Delta", 1 )
 
 function deltaType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+	addTopicHeaderInformation( treeNode, info )
 
 	if topic ~= nil then
 		self.topicDescription = string.format( "Topic: %s", topic )
@@ -351,8 +365,11 @@ local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
 
 function commandMessageType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+	addTopicHeaderInformation( treeNode, info )
 
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
@@ -385,8 +402,11 @@ local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
 
 function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+	addTopicHeaderInformation( treeNode, info )
 
 	-- Parse command topic category
 	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
@@ -426,9 +446,11 @@ local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notif
 
 function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic
-	local alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+	addTopicHeaderInformation( treeNode, info )
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
