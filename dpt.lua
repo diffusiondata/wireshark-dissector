@@ -302,7 +302,7 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	addTopicHeaderInformation( treeNode, info )
+	--addTopicHeaderInformation( treeNode, info )
 
 	if alias ~= nil then
 		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
@@ -311,8 +311,11 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 	end
 
 	if headerRange ~= nil then
-		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
+
+	return { topic = info, userHeader = userHeaderObject }
 end
 
 function topicLoadType:getDescription( messageDetails )
@@ -329,7 +332,7 @@ function deltaType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	addTopicHeaderInformation( treeNode, info )
+	--addTopicHeaderInformation( treeNode, info )
 
 	if topic ~= nil then
 		self.topicDescription = string.format( "Topic: %s", topic )
@@ -338,8 +341,11 @@ function deltaType:markupHeaders( treeNode, headerRange )
 	end
 
 	if headerRange ~= nil then
-		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
+
+	return { topic = info, userHeader = userHeaderObject }
 end
 
 function deltaType:getDescription( messageDetails )
@@ -369,20 +375,23 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	addTopicHeaderInformation( treeNode, info )
+	--addTopicHeaderInformation( treeNode, info )
 
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
 	if commandEndIndex > -1 then
 		commandRange = headerRange:range( 0, commandEndIndex )
-		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		--treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		local commandObject = { range = commandRange, string = commandRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		--treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		local commandObject = { range = commandRange, string = commandRange:string() }
 	end
 	if topic ~= nil then
 		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topic, commandRange:string() )
@@ -391,6 +400,8 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 	else
 		self.commandDescription = string.format ( "Command Message Topic: Unknown Command: %s", commandRange:string() )
 	end
+
+	return { topic = info, command = commandObject, parameters = parametersObject }
 end
 
 function commandMessageType:getDescription( messageDetails )
@@ -406,27 +417,31 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	addTopicHeaderInformation( treeNode, info )
+	--addTopicHeaderInformation( treeNode, info )
 
 	-- Parse command topic category
 	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
 	local commandTopicCategoryRange = headerRange:range( 0, commandTopicCategoryEndIndex )
-	treeNode:add( dptProto.fields.commandTopicCategory, commandTopicCategoryRange, commandTopicCategoryRange:string() )
+	--treeNode:add( dptProto.fields.commandTopicCategory, commandTopicCategoryRange, commandTopicCategoryRange:string() )
+	local commandTopicCategoryObject = { range = commandTopicCategoryRange, string = commandTopicCategoryRange:string() }
 
 	-- Parse command Topic Type
 	headerRange = headerRange:range( commandTopicCategoryEndIndex + 1 )
 	local commandTopicTypeEndIndex = headerRange:bytes():index( FD )
-	local commandRange
+	local commandRange, commandTopicTypeObject, parametersObject
 	if commandTopicTypeEndIndex > -1 then
 		commandTopicTypeRange = headerRange:range( 0, commandTopicTypeEndIndex )
-		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		--treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandTopicTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandTopicTypeRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		--treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 	end
 	if topic ~= nil then
 		self.commandTopicLoadDescription = string.format ( "Command Load Topic: %s Topic Category: %s", topic, commandTopicCategoryRange:string() )
@@ -435,6 +450,8 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Load Topic: Unknown Topic Category: %s", commandTopicCategoryRange:string() )
 	end
+
+	return { topic = info, parameters = parametersObject, commandCategory = commandTopicCategoryObject, commandTopicType = commandTopicTypeObject }
 end
 
 function commandTopicLoadType:getDescription( messageDetails )
@@ -450,21 +467,24 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	addTopicHeaderInformation( treeNode, info )
+	--addTopicHeaderInformation( treeNode, info )
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
 	local notificationTypeRange
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
-		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		--treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		notificationTypeRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		--treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 	end
 	if topic ~= nil then
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: %s Notification Type: %s", topic, notificationTypeRange:string() )
@@ -473,6 +493,8 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: Unknown Notification Type: %s", notificationTypeRange:string() )
 	end
+
+	return { topic = info, parameters = parametersObject, notificationType = notificationTypeObject }
 end
 
 function commandTopicNotificationType:getDescription( messageDetails )
@@ -719,6 +741,30 @@ local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPo
 	end
 end
 
+-- Add information from the header parsing
+function addHeaderInformation( headerNode, info )
+	if info ~= nil then
+		if info.topic ~= nill then
+			addTopicHeaderInformation( headerNode, info.topic ) 
+		end
+		if info.userHeaders ~= nil then
+			headerNode:add( dptProto.fields.userHeaders, info.userHeaders.range, info.userHeaders.string )
+		end
+		if info.parameters ~= nil then
+			headerNode:add( dptProto.fields.parameters, info.parameters.range, info.parameters.string )
+		end
+		if info.command ~= nil then
+			headerNode:add( dptProto.fields.command, info.command.range, info.command.string )
+		end
+		if info.commandTopicType ~= nil then
+			headerNode:add( dptProto.fields.commandTopicType, info.commandTopicType.range, info.commandTopicType.string )
+		end
+		if info.commandCategory ~= nil then
+			headerNode:add( dptProto.fields.commandTopicCategory, info.commandCategory.range, info.commandCategory.string )
+		end
+	end
+end
+
 -- Process an individual DPT message
 local function processMessage( tvb, pinfo, tree, offset ) 
 	local msgDetails = {}
@@ -788,7 +834,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 		local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
 
 		-- Pass the header-node to the MessageType for further processing
-		messageType:markupHeaders( headerNode, headerRange )
+		local info = messageType:markupHeaders( headerNode, headerRange )
+		addHeaderInformation ( headerNode, info )
 
 		if headerBreak +1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
