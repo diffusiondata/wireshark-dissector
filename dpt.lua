@@ -561,8 +561,7 @@ function string:split(sep)
 end
 
 -- Dissect the connection negotiation messages
-local function dissectConnection( tvb, pinfo, tree )
-	local messageTree = tree:add( dptProto, tvb() )
+local function dissectConnection( tvb, pinfo )
 	local offset = 0
 
 	-- Is this a client or server packet?
@@ -575,48 +574,48 @@ local function dissectConnection( tvb, pinfo, tree )
 	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
 	local magicNumber = magicNumberRange:uint()
-	messageTree:add( dptProto.fields.connectionMagicNumber, magicNumberRange )
 	offset = offset +1
 	
 	-- get the protocol version number
 	local protoVerRange = tvb( offset, 1 )
 	client.protoVersion = protoVerRange:uint()
-	messageTree:add( dptProto.fields.connectionProtoNumber, protoVerRange )
 	offset = offset +1
-	
+
 	if isClient then
 		pinfo.cols.info = string.format( "Connection request" )
-		
+
 		-- the 1 byte connection type
 		local connectionTypeRange = tvb( offset, 1 )
 		client.connectionType = connectionTypeRange:uint()
-		messageTree:add( dptProto.fields.connectionType, connectionTypeRange )
 		offset = offset +1
-		
+
 		-- the 1 byte capabilities value
 		local capabilitiesRange = tvb( offset, 1 )
 		client.capabilities = capabilitiesRange:uint()
-		messageTree:add( dptProto.fields.capabilities, capabilitiesRange )
 		offset = offset +1
-		
+
 		-- TODO: load credentials <RD> data <MD>
 		local range = tvb( offset )
 		local rdBreak = range:bytes():index( RD )
 		if rdBreak >= 0 then
 			-- Mark up the creds - if there are any
 			local credsRange = range(0, rdBreak )
-			local creds = credsRange:string():toRecordString()
+			local credsString = credsRange:string():toRecordString()
 			if credsRange:len() > 0 then
-				messageTree:add( dptProto.fields.loginCreds, credsRange, creds )
+				local creds = { range = credsRange, string = credsString }
 			end
 
 			-- Mark up the login topicset - if there are any
 			local topicsetRange = range( rdBreak +1, ( range:len() -2 ) -rdBreak ) -- fiddly handling of trailing null character
 			if topicsetRange:len() > 0 then
-				messageTree:add( dptProto.fields.loginTopics, topicsetRange )
+				local topicset = topicsetRange
 			end
-			
+
 		end
+
+		return { request = true, magicNumberRange = magicNumberRange,
+			protoVerRange = protoVerRange, connectionTypeRange = connectionTypeRange,
+			capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset }
 
 	else
 		-- Is a server response
@@ -624,25 +623,61 @@ local function dissectConnection( tvb, pinfo, tree )
 		
 		local connectionResponseRange = tvb( offset, 1 )
 		local connectionResponse = connectionResponseRange:uint()
-		messageTree:add( dptProto.fields.connectionResponse, connectionResponseRange )
 		offset = offset +1
 
 		-- The size field
 		local messageLengthSizeRange = tvb( offset, 1 )
-		local messageLengthSize = messageLengthSizeRange:uint()
-		messageTree:add( dptProto.fields.messageLengthSize, messageLengthSizeRange ) 
+		local messageLengthSize = messageLengthSizeRange:uint() 
 		offset = offset +1
 
 		-- the client ID (the rest of this)
 		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
 		local clientID = clientIDRange:string()
-		messageTree:add( dptProto.fields.clientID, clientIDRange )
 
 		client.clientId = clientIDRange:string()
+
+		return { request = false, magicNumberRange = magicNumberRange,
+			protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
+			messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
 	end
-	
-	
+
 	--TODO: dissect this as a client or as a server packet
+end
+
+-- Attach the connection request information to the dissection tree
+function addConnectionRequest( tree , fullRange, pinfo, request )
+	pinfo.cols.info = string.format( "Connection request" )
+	local messageTree = tree:add( dptProto, fullRange )
+	messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
+	messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
+	messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
+	messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
+	if request.creds ~= nil then
+		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
+	end
+	if request.topicsetRange ~= nil then
+		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
+	end
+end
+
+-- Attach the connection response information to the dissection tree
+function addConnectionResponse( tree , fullRange, pinfo, response )
+	pinfo.cols.info = string.format( "Connection response" )
+	local messageTree = tree:add( dptProto, fullRange )
+	messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
+	messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
+	messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
+	messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
+	messageTree:add( dptProto.fields.clientID, response.clientIDRange )
+end
+
+-- Attach the handshake information to the dissection tree
+function addConnectionHandshake( tree , fullRange, pinfo, handshake )
+	if handshake.request then
+		addConnectionRequest( tree, fullRange, pinfo, handshake )
+	else
+		addConnectionResponse( tree, fullRange, pinfo, handshake )
+	end
 end
 
 local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPort )
@@ -761,7 +796,9 @@ function dptProto.dissector( tvb, pinfo, tree )
 	local firstByte = tvb( 0, 1 ):uint()
 	if( firstByte == DIFFUSION_MAGIC_NUMBER ) then
 		-- process & skip over it, if it is.
-		return dissectConnection( tvb, pinfo, tree )
+		local handshake = dissectConnection( tvb, pinfo )
+		addConnectionHandshake( tree, tvb(), pinfo, handshake )
+		return {}
 	end
 
 	local offset, messageCount = 0, 0
