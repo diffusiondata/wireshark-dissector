@@ -256,13 +256,16 @@ function MessageType:markupHeaders( treeNode, headerRange )
 	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
 	if headerBreak == -1 then
 		-- no user headers, only fixed headers
-		treeNode:add( dptProto.fields.fixedHeaders, headerRange, headerRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.fixedHeaders, headerRange, headerRange:string():escapeDiff() )
+		return { fixedHeaders = { range = headerRange, string = headerRange:string():escapeDiff() } }
 	else
 		-- fixed headers and user headers
 		local fixedHeaderRange = headerRange:range( 0, headerBreak )
 		local userHeaderRange = headerRange:range( headerBreak +1 )
-		treeNode:add( dptProto.fields.fixedHeaders, fixedHeaderRange, fixedHeaderRange:string():escapeDiff() )
-		treeNode:add( dptProto.fields.userHeaders, userHeaderRange, userHeaderRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.fixedHeaders, fixedHeaderRange, fixedHeaderRange:string():escapeDiff() )
+		--treeNode:add( dptProto.fields.userHeaders, userHeaderRange, userHeaderRange:string():escapeDiff() )
+		return { fixedHeaders = { range = fixedHeaderRange, string = fixedHeaderRange:string():escapeDiff() },
+			userHeaders = { range = userHeaderRange, string = userHeaderRange:string():escapeDiff() } }
 	end
 end
 
@@ -359,7 +362,8 @@ local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
 function subscribeType:markupHeaders( treeNode, headerRange )
 	-- A single header, with a topic-selector
 	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
-	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
+	--treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
+	return { fixedHeaders = { range = headerRange, string = headerRange:string() } }
 end
 
 function subscribeType:getDescription( messageDetails )
@@ -747,6 +751,9 @@ function addHeaderInformation( headerNode, info )
 		if info.topic ~= nill then
 			addTopicHeaderInformation( headerNode, info.topic ) 
 		end
+		if info.fixedHeaders ~= nil then
+			headerNode:add( dptProto.fields.fixedHeaders, info.fixedHeaders.range, info.fixedHeaders.string )
+		end
 		if info.userHeaders ~= nil then
 			headerNode:add( dptProto.fields.userHeaders, info.userHeaders.range, info.userHeaders.string )
 		end
@@ -835,7 +842,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 
 		-- Pass the header-node to the MessageType for further processing
 		local info = messageType:markupHeaders( headerNode, headerRange )
-		addHeaderInformation ( headerNode, info )
+		addHeaderInformation( headerNode, info )
 
 		if headerBreak +1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
