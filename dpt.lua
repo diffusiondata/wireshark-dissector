@@ -271,23 +271,26 @@ end
 
 function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 	-- the payload, everything after the headers
-	local bodyNode = parentTreeNode:add( dptProto.fields.content, bodyRange, string.format( "%d bytes", bodyRange:len() ) )
+	--local bodyNode = parentTreeNode:add( dptProto.fields.content, bodyRange, string.format( "%d bytes", bodyRange:len() ) )
 
 	if messageDetails.msgEncoding == 0 then
 		local rangeBase = 0
 		local bodyString = bodyRange:string()
 		local records = bodyString:split( string.char( RD ) )
 
-		bodyNode:append_text( string.format(  ", %d records", #records ) )
+		--bodyNode:append_text( string.format(  ", %d records", #records ) )
+		local recs = { num = #records, range = bodyRange }
 
 		-- Break open into records & then fields
 		for i,record in ipairs(records) do
 
 			local recordRange = bodyRange:range( rangeBase, #record )
-			local recordTree = bodyNode:add( dptProto.fields.record, recordRange, record:toRecordString() )
+			--local recordTree = bodyNode:add( dptProto.fields.record, recordRange, record:toRecordString() )
+			recs[i] = { range = recordRange, string = record:toRecordString() }
 
 			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
 		end
+		return recs
 	end
 end
 
@@ -772,6 +775,16 @@ function addHeaderInformation( headerNode, info )
 	end
 end
 
+function addBody( parentTreeNode, records )
+	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
+	bodyNode:append_text( string.format( ", %d records", records.num ) )
+	if records ~= nil then
+		for i, record in ipairs(records) do
+			bodyNode:add( dptProto.fields.record, record.range, record.string )
+		end
+	end
+end
+
 -- Process an individual DPT message
 local function processMessage( tvb, pinfo, tree, offset ) 
 	local msgDetails = {}
@@ -848,7 +861,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 			-- Only markup up the body if there is one (there needn't be)
 			local bodyRange = contentRange:range( headerBreak +1 )
 
-			messageType:markupBody( msgDetails, contentNode, bodyRange )
+			local records = messageType:markupBody( msgDetails, contentNode, bodyRange )
+			addBody( contentNode , records )
 		end
 	end
 	
@@ -932,6 +946,8 @@ dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
 dptProto.fields.connection = ProtoField.string( "dptProto.connection", "Connection" )
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
+
+dptProto.fields.record = ProtoField.string( "dpt.records", "Record" )
 
 -- Command message fields
 dptProto.fields.command =  ProtoField.string( "dpt.header.command", "Command" )
