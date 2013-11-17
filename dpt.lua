@@ -273,7 +273,6 @@ function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 		local rangeBase = 0
 		local bodyString = bodyRange:string()
 		local records = bodyString:split( string.char( RD ) )
-
 		local recs = { num = #records, range = bodyRange }
 
 		-- Break open into records & then fields
@@ -309,8 +308,9 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 		self.loadDescription = topic
 	end
 
+	local userHeaderObject
 	if headerRange ~= nil then
-		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+		userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
 
 	return { topic = info, userHeader = userHeaderObject }
@@ -374,16 +374,18 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
+	local commandObject
+	local parametersObject
 	if commandEndIndex > -1 then
 		commandRange = headerRange:range( 0, commandEndIndex )
-		local commandObject = { range = commandRange, string = commandRange:string() }
+		commandObject = { range = commandRange, string = commandRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandEndIndex + 1 )
-		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandRange = headerRange:range( 0 )
-		local commandObject = { range = commandRange, string = commandRange:string() }
+		commandObject = { range = commandRange, string = commandRange:string() }
 	end
 	if topic ~= nil then
 		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topic, commandRange:string() )
@@ -457,9 +459,7 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
-	local notificationTypeRange
-	local notificationTypeObject
-	local parametersObject
+	local notificationTypeRange, notificationTypeObject, parametersObject
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
 		notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
