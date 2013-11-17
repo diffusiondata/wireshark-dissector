@@ -458,16 +458,18 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
 	local notificationTypeRange
+	local notificationTypeObject
+	local parametersObject
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
-		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
+		notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
-		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		notificationTypeRange = headerRange:range( 0 )
-		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
+		notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 	end
 	if topic ~= nil then
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: %s Notification Type: %s", topic, notificationTypeRange:string() )
@@ -747,6 +749,9 @@ function addHeaderInformation( headerNode, info )
 		end
 		if info.commandCategory ~= nil then
 			headerNode:add( dptProto.fields.commandTopicCategory, info.commandCategory.range, info.commandCategory.string )
+		end
+		if info.notificationType ~= nil then
+			headerNode:add( dptProto.fields.notificationType, info.notificationType.range, info.notificationType.string )
 		end
 	end
 end
