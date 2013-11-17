@@ -256,14 +256,11 @@ function MessageType:markupHeaders( treeNode, headerRange )
 	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
 	if headerBreak == -1 then
 		-- no user headers, only fixed headers
-		--treeNode:add( dptProto.fields.fixedHeaders, headerRange, headerRange:string():escapeDiff() )
 		return { fixedHeaders = { range = headerRange, string = headerRange:string():escapeDiff() } }
 	else
 		-- fixed headers and user headers
 		local fixedHeaderRange = headerRange:range( 0, headerBreak )
 		local userHeaderRange = headerRange:range( headerBreak +1 )
-		--treeNode:add( dptProto.fields.fixedHeaders, fixedHeaderRange, fixedHeaderRange:string():escapeDiff() )
-		--treeNode:add( dptProto.fields.userHeaders, userHeaderRange, userHeaderRange:string():escapeDiff() )
 		return { fixedHeaders = { range = fixedHeaderRange, string = fixedHeaderRange:string():escapeDiff() },
 			userHeaders = { range = userHeaderRange, string = userHeaderRange:string():escapeDiff() } }
 	end
@@ -271,21 +268,18 @@ end
 
 function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 	-- the payload, everything after the headers
-	--local bodyNode = parentTreeNode:add( dptProto.fields.content, bodyRange, string.format( "%d bytes", bodyRange:len() ) )
 
 	if messageDetails.msgEncoding == 0 then
 		local rangeBase = 0
 		local bodyString = bodyRange:string()
 		local records = bodyString:split( string.char( RD ) )
 
-		--bodyNode:append_text( string.format(  ", %d records", #records ) )
 		local recs = { num = #records, range = bodyRange }
 
 		-- Break open into records & then fields
 		for i,record in ipairs(records) do
 
 			local recordRange = bodyRange:range( rangeBase, #record )
-			--local recordTree = bodyNode:add( dptProto.fields.record, recordRange, record:toRecordString() )
 			recs[i] = { range = recordRange, string = record:toRecordString() }
 
 			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
@@ -308,7 +302,6 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	--addTopicHeaderInformation( treeNode, info )
 
 	if alias ~= nil then
 		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
@@ -317,7 +310,6 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 	end
 
 	if headerRange ~= nil then
-		--treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
 		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
 
@@ -338,7 +330,6 @@ function deltaType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	--addTopicHeaderInformation( treeNode, info )
 
 	if topic ~= nil then
 		self.topicDescription = string.format( "Topic: %s", topic )
@@ -347,7 +338,6 @@ function deltaType:markupHeaders( treeNode, headerRange )
 	end
 
 	if headerRange ~= nil then
-		--treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
 		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
 
@@ -365,7 +355,6 @@ local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
 function subscribeType:markupHeaders( treeNode, headerRange )
 	-- A single header, with a topic-selector
 	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
-	--treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
 	return { fixedHeaders = { range = headerRange, string = headerRange:string() } }
 end
 
@@ -382,22 +371,18 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	--addTopicHeaderInformation( treeNode, info )
 
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
 	if commandEndIndex > -1 then
 		commandRange = headerRange:range( 0, commandEndIndex )
-		--treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
 		local commandObject = { range = commandRange, string = commandRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandEndIndex + 1 )
-		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandRange = headerRange:range( 0 )
-		--treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
 		local commandObject = { range = commandRange, string = commandRange:string() }
 	end
 	if topic ~= nil then
@@ -424,12 +409,10 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	--addTopicHeaderInformation( treeNode, info )
 
 	-- Parse command topic category
 	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
 	local commandTopicCategoryRange = headerRange:range( 0, commandTopicCategoryEndIndex )
-	--treeNode:add( dptProto.fields.commandTopicCategory, commandTopicCategoryRange, commandTopicCategoryRange:string() )
 	local commandTopicCategoryObject = { range = commandTopicCategoryRange, string = commandTopicCategoryRange:string() }
 
 	-- Parse command Topic Type
@@ -438,16 +421,13 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	local commandRange, commandTopicTypeObject, parametersObject
 	if commandTopicTypeEndIndex > -1 then
 		commandTopicTypeRange = headerRange:range( 0, commandTopicTypeEndIndex )
-		--treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
 		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandTopicTypeEndIndex + 1 )
-		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandTopicTypeRange = headerRange:range( 0 )
-		--treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
 		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 	end
 	if topic ~= nil then
@@ -474,23 +454,19 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
-	--addTopicHeaderInformation( treeNode, info )
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
 	local notificationTypeRange
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
-		--treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
 		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
-		--treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
 		local parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		notificationTypeRange = headerRange:range( 0 )
-		--treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
 		local notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 	end
 	if topic ~= nil then
