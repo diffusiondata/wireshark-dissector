@@ -276,15 +276,35 @@ function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 		local recs = { num = #records, range = bodyRange }
 
 		-- Break open into records & then fields
-		for i,record in ipairs(records) do
+		for i, record in ipairs(records) do
 
 			local recordRange = bodyRange:range( rangeBase, #record )
-			recs[i] = { range = recordRange, string = record:toRecordString() }
+			local fields = parseRecordFields( recordRange )
+			recs[i] = { range = recordRange, string = record:toRecordString(), fields = fields }
 
 			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
 		end
 		return recs
+	else
+		return {}
 	end
+end
+
+function parseRecordFields( recordRange )
+	local fieldBase = 0
+	local rangeString = recordRange:string()
+	local fields = rangeString:split( string.char( FD ) )
+	local fs = { num = #fields }
+
+	-- Break open into records & then fields
+	for i, field in ipairs(fields) do
+
+		local fieldRange = recordRange:range( fieldBase, #field )
+		fs[i] = { range = fieldRange, string = fieldRange:string() }
+
+		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
+	end
+	return fs
 end
 
 function MessageType:getDescription( messageDetails )
@@ -758,7 +778,7 @@ end
 
 function addBody( parentTreeNode, records )
 	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
-	if ( records.num == 1 ) then
+	if records.num == 1 then
 		bodyNode:append_text( ", 1 record" )
 	else
 		bodyNode:append_text( string.format( ", %d records", records.num ) )
@@ -766,7 +786,19 @@ function addBody( parentTreeNode, records )
 	if records ~= nil then
 		for i, record in ipairs(records) do
 			local recordNode = bodyNode:add( dptProto.fields.record, record.range, record.string )
-			recordNode:set_text( string.format( "%d: %s", i, record.string ) )
+			recordNode:set_text( string.format( "Record %d: %s", i, record.string ) )
+
+			if record.fields ~= nil then
+				if record.fields.num == 1 then
+					recordNode:set_text( string.format( "Record %d: %d bytes, 1 field", i, record.range:len() ) )
+				else
+					recordNode:set_text( string.format( "Record %d: %d bytes, %d fields", i, record.range:len(), record.fields.num ) )
+				end
+				for j, field in ipairs(record.fields) do
+					local fieldNode = recordNode:add( dptProto.fields.field, field.range, field.string )
+					fieldNode:set_text( string.format( "Field %d: %s [%d bytes]", j, field.string, field.range:len() ) )
+				end
+			end
 		end
 	end
 end
@@ -934,6 +966,7 @@ dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
 
 dptProto.fields.record = ProtoField.string( "dpt.records" )
+dptProto.fields.field = ProtoField.string( "dpt.fields" )
 
 -- Command message fields
 dptProto.fields.command =  ProtoField.string( "dpt.header.command", "Command" )
