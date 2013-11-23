@@ -758,10 +758,15 @@ end
 
 function addBody( parentTreeNode, records )
 	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
-	bodyNode:append_text( string.format( ", %d records", records.num ) )
+	if ( records.num == 1 ) then
+		bodyNode:append_text( ", 1 record" )
+	else
+		bodyNode:append_text( string.format( ", %d records", records.num ) )
+	end
 	if records ~= nil then
 		for i, record in ipairs(records) do
-			bodyNode:add( dptProto.fields.record, record.range, record.string )
+			local recordNode = bodyNode:add( dptProto.fields.record, record.range, record.string )
+			recordNode:set_text( string.format( "%d: %s", i, record.string ) )
 		end
 	end
 end
@@ -928,7 +933,7 @@ dptProto.fields.connection = ProtoField.string( "dptProto.connection", "Connecti
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
 
-dptProto.fields.record = ProtoField.string( "dpt.records", "Record" )
+dptProto.fields.record = ProtoField.string( "dpt.records" )
 
 -- Command message fields
 dptProto.fields.command =  ProtoField.string( "dpt.header.command", "Command" )
