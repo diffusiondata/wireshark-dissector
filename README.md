@@ -13,6 +13,23 @@ Installation
 + Copy dpt.lua into ~/.wireshark
 + edit init.lua to include dofile(USER_DIR.."dpt.lua")
 
+Displayed Information
+=====================
+
+The connection request and response from a handshake, after the handshake messages are exchanged messages are sent in
+both directions. The connection request displays the protocol version, connection type and client capabilities. The
+connection response displays the protocol version, connection response and client ID. If the connection is captured
+from the beginning then this information will also be be displayed with each message. It will also explicitly state the
+direction of the message. If the connection is not captured from the beginning then it is made clear that it is a
+partial capture.
+
+For each message the size, message type and encoding are displayed. If the message is unencoded then the content of the
+message can be displayed. The content is divided into headers and the body. The fixed headers sent with each message
+vary depending on the type. For messages sent over topics, the topic name should be extracted and if a it was sent as
+an alias then the alias will be resolved to the topic name. Command messages are also displayed with the topic type,
+topic category, the command, notification type and any parameters. Any user headers will be displayed as field
+delimited values. The body of the message is separated into records and each record is separated into fields.
+
 Filters
 =======
 
