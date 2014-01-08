@@ -180,34 +180,35 @@ function parseTopicHeader( headerRange )
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
 	local tcpStream = f_tcp_stream().value
-	local topicRange = nil
-	local aliasRange = nil
-	local topic = nil
-	local alias = nil
 	local topicObject
 	local aliasObject
 	if delimIndex == 0 then
-		aliasRange = topicExpressionRange
-		alias = aliasRange:string();
+		local aliasRange = topicExpressionRange
+		local alias = aliasRange:string();
 
-		topic = aliasTable:getAlias( tcpStream, alias )
+		local topic = aliasTable:getAlias( tcpStream, alias )
 
-		aliasObject = { range = aliasRange, string = alias }
-		topicObject = { range = aliasRange, string = topic, resolved = true }
+		if topic == nil then
+			aliasObject = { range = aliasRange, string = alias }
+			topicObject = { range = aliasRange, string = "Unknown topic alias (ITL not captured)", resolved = false }
+		else
+			aliasObject = { range = aliasRange, string = alias }
+			topicObject = { range = aliasRange, string = topic, resolved = true }
+		end
 	elseif delimIndex > -1 then
-		topicRange = topicExpressionRange:range( 0, delimIndex )
-		aliasRange = topicExpressionRange:range( delimIndex )
+		local topicRange = topicExpressionRange:range( 0, delimIndex )
+		local aliasRange = topicExpressionRange:range( delimIndex )
 
-		topic = topicRange:string()
-		alias = aliasRange:string()
+		local topic = topicRange:string()
+		local alias = aliasRange:string()
 
 		aliasTable:setAlias( tcpStream, alias, topic )
 
 		aliasObject = { range = aliasRange, string = alias }
 		topicObject = { range = topicRange, string = topic, resolved = false }
 	else
-		topicRange = topicExpressionRange
-		topic = topicRange:string()
+		local topicRange = topicExpressionRange
+		local topic = topicRange:string()
 		topicObject = { range = topicRange, string = topic, resolved = false }
 		aliasObject = {}
 	end
