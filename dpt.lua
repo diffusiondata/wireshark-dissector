@@ -291,6 +291,10 @@ function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 	end
 end
 
+function MessageType:getDescription( messageDetails )
+	return self.name
+end
+
 function parseRecordFields( recordRange )
 	local fieldBase = 0
 	local rangeString = recordRange:string()
@@ -306,10 +310,6 @@ function parseRecordFields( recordRange )
 		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
 	end
 	return fs
-end
-
-function MessageType:getDescription( messageDetails )
-	return self.name
 end
 
 -- Functionality specific to Topic Loads
@@ -507,6 +507,28 @@ function commandTopicNotificationType:getDescription( messageDetails )
 	return self.commandTopicLoadDescription 
 end
 
+local fetchType = MessageType:new( 0x21, "Fetch", 0 )
+function fetchType:markupHeaders( treeNode, headerRange )
+	local info
+	headerRange, info = parseTopicHeader( headerRange )
+	self.fetchDescription = string.format( "Fetch '%s'", info.topic.string )
+	return { topic = info }
+end
+function fetchType:getDescription( )
+	return self.fetchDescription
+end
+
+local fetchReplyType = MessageType:new( 0x22, "Fetch Reply", 0 )
+function fetchReplyType:markupHeaders( treeNode, headerRange )
+	local info
+	headerRange, info = parseTopicHeader( headerRange )
+	self.fetchDescription = string.format( "Fetch reply '%s'", info.topic.string )
+	return { topic = info }
+end
+function fetchReplyType:getDescription( )
+	return self.fetchDescription
+end
+
 -- The messageType table
 
 local messageTypesByValue = MessageType.index( {
@@ -523,8 +545,8 @@ local messageTypesByValue = MessageType.index( {
 	MessageType:new( 0x1e, "Topic Load - ACK Required", 2), 
 	MessageType:new( 0x1f, "Delta - ACK Required", 2 ),
 	MessageType:new( 0x20, "ACK - acknowledge", 1 ),
-	MessageType:new( 0x21, "Fetch", 1 ),
-	MessageType:new( 0x22, "Fetch Reply", 1 ),
+	fetchType,
+	fetchReplyType,
 	MessageType:new( 0x23, "Topic Status Notification", 2 ),
 	commandMessageType,
 	commandTopicLoadType,
@@ -778,6 +800,10 @@ function addHeaderInformation( headerNode, info )
 end
 
 function addBody( parentTreeNode, records )
+	if records.range == nil then
+		-- If the body is not parsed (eg. unsupported encoding) then do not try to add anything to the body
+		return
+	end
 	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
 	if records.num == 1 then
 		bodyNode:append_text( ", 1 record" )
