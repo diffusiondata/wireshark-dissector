@@ -507,7 +507,7 @@ function commandTopicNotificationType:getDescription( messageDetails )
 	return self.commandTopicLoadDescription 
 end
 
-local fetchType = MessageType:new( 0x21, "Fetch", 0 )
+local fetchType = MessageType:new( 0x21, "Fetch", 1 )
 function fetchType:markupHeaders( treeNode, headerRange )
 	local info
 	headerRange, info = parseTopicHeader( headerRange )
@@ -518,7 +518,7 @@ function fetchType:getDescription( )
 	return self.fetchDescription
 end
 
-local fetchReplyType = MessageType:new( 0x22, "Fetch Reply", 0 )
+local fetchReplyType = MessageType:new( 0x22, "Fetch Reply", 1 )
 function fetchReplyType:markupHeaders( treeNode, headerRange )
 	local info
 	headerRange, info = parseTopicHeader( headerRange )
@@ -529,15 +529,42 @@ function fetchReplyType:getDescription( )
 	return self.fetchDescription
 end
 
--- The messageType table
+function parseField( headerRange )
+	local fieldEndIndex = headerRange:bytes():index( FD )
+	if fieldEndIndex > -1 then
+		return headerRange:range( 0, fieldEndIndex ), headerRange:range( fieldEndIndex + 1 )
+	else
+		return headerRange, nil
+	end
+end
 
+local pingServer = MessageType:new( 0x18, "Ping Server", 2 )
+function pingServer:markupHeaders( treeNode, headerRange )
+	local timestampRange
+	timestampRange, headerRange = parseField( headerRange )
+	if headerRange ~= nil then
+		local messageQueueRange, headerRange = parseField( headerRange )
+		return { timestamp = { range = timestampRange, string = timestampRange:string() },
+			queueSize = { range = messageQueueRange, string = messageQueueRange:string() } }
+	else
+		return { timestamp = { range = timestampRange, string = timestampRange:string() } }
+	end
+end
+local pingClient = MessageType:new( 0x19, "Ping Client", 1 )
+function pingClient:markupHeaders( treeNode, headerRange )
+	local timestampRange, messageQueueRange
+	timestampRange, headerRange = parseField( headerRange )
+	return { timestamp = { range = timestampRange, string = timestampRange:string() } }
+end
+
+-- The messageType table
 local messageTypesByValue = MessageType.index( {
 	topicLoadType,
 	deltaType,
 	subscribeType,
 	MessageType:new( 0x17, "Unsubscribe", 1 ),
-	MessageType:new( 0x18, "Ping Server", 2 ), 
-	MessageType:new( 0x19, "Ping Client", 1 ),
+	pingServer,
+	pingClient,
 	MessageType:new( 0x1a, "Credentials", 2 ),
 	MessageType:new( 0x1b, "Credentials Rejected", 2 ),
 	MessageType:new( 0x1c, "Abort Notification", 0 ),
@@ -796,6 +823,12 @@ function addHeaderInformation( headerNode, info )
 		if info.notificationType ~= nil then
 			headerNode:add( dptProto.fields.notificationType, info.notificationType.range, info.notificationType.string )
 		end
+		if info.timestamp ~= nil then
+			headerNode:add( dptProto.fields.timestamp, info.timestamp.range, info.timestamp.string )
+		end
+		if info.queueSize ~= nil then
+			headerNode:add( dptProto.fields.queueSize, info.queueSize.range, info.queueSize.string )
+		end
 	end
 end
 
@@ -1004,6 +1037,10 @@ dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Pa
 
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
+
+-- Ping message fields
+dptProto.fields.timestamp = ProtoField.string( "dpt.header.timestamp", "Timestamp" )
+dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message Queue size" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
