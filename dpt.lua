@@ -538,6 +538,12 @@ function parseField( headerRange )
 	end
 end
 
+function parseAckId( headerRange )
+	local ackIdRange
+	ackIdRange, headerRange = parseField( headerRange )
+	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
+end
+
 local pingServer = MessageType:new( 0x18, "Ping Server", 2 )
 function pingServer:markupHeaders( treeNode, headerRange )
 	local timestampRange
@@ -557,6 +563,77 @@ function pingClient:markupHeaders( treeNode, headerRange )
 	return { timestamp = { range = timestampRange, string = timestampRange:string() } }
 end
 
+local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2)
+function topicLoadAckType:markupHeaders( treeNode, headerRange )
+	return topicLoadType.markupHeaders( self, treeNode, headerRange )
+end
+
+local deltaAckType = MessageType:new( 0x1f, "Delta - ACK Required", 2 )
+function deltaAckType:markupHeaders( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+
+	if topic ~= nil then
+		self.topicDescription = string.format( "Topic: %s", topic )
+	else
+		self.topicDescription = string.format( "Unknown alias: %s", alias )
+	end
+
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+
+	if headerRange ~= nil then
+		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+	end
+
+	return { topic = info, ackId = ackIdObject, userHeader = userHeaderObject }
+end
+function deltaAckType:getDescription( messageDetails )
+	return string.format( "%s, %s, %s", self.name, self.topicDescription, self.ackDescription )
+end
+
+local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2 )
+function topicLoadAckType:markupHeaders( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+
+	if alias ~= nil then
+		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
+	else
+		self.loadDescription = topic
+	end
+
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+
+	local userHeaderObject
+	if headerRange ~= nil then
+		userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+	end
+
+	return { topic = info, ackId = ackIdObject, userHeader = userHeaderObject }
+end
+function topicLoadAckType:getDescription( messageDetails )
+	return string.format( "%s, %s, %s", self.name, self.loadDescription, self.ackDescription )
+end
+
+local ackType = MessageType:new( 0x20, "ACK - acknowledge", 1 )
+function ackType:markupHeaders( treeNode, headerRange )
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+	return { ackId = ackIdObject }
+end
+function ackType:getDescription( messageDetails )
+	return string.format( "%s, %s", self.name, self.ackDescription )
+end
+
 -- The messageType table
 local messageTypesByValue = MessageType.index( {
 	topicLoadType,
@@ -569,9 +646,9 @@ local messageTypesByValue = MessageType.index( {
 	MessageType:new( 0x1b, "Credentials Rejected", 2 ),
 	MessageType:new( 0x1c, "Abort Notification", 0 ),
 	MessageType:new( 0x1d, "Close Request", 0 ),
-	MessageType:new( 0x1e, "Topic Load - ACK Required", 2), 
-	MessageType:new( 0x1f, "Delta - ACK Required", 2 ),
-	MessageType:new( 0x20, "ACK - acknowledge", 1 ),
+	topicLoadAckType,
+	deltaAckType,
+	ackType,
 	fetchType,
 	fetchReplyType,
 	MessageType:new( 0x23, "Topic Status Notification", 2 ),
@@ -829,6 +906,9 @@ function addHeaderInformation( headerNode, info )
 		if info.queueSize ~= nil then
 			headerNode:add( dptProto.fields.queueSize, info.queueSize.range, info.queueSize.string )
 		end
+		if info.ackId ~= nil then
+			headerNode:add( dptProto.fields.ackId, info.ackId.range, info.ackId.string )
+		end
 	end
 end
 
@@ -1041,6 +1121,9 @@ dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "
 -- Ping message fields
 dptProto.fields.timestamp = ProtoField.string( "dpt.header.timestamp", "Timestamp" )
 dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message Queue size" )
+
+-- Ack message field
+dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement ID" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
