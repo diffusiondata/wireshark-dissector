@@ -166,7 +166,7 @@ local aliasTable = AliasTable:new()
 -- Returns the remaining header range, the topic range and string as a pair and the alias topic and string as a pair
 -- The remaining header range will be nil if there are no more headers
 -- The alias.range will be nil if there is no alias present in the header
-function parseTopicHeader( headerRange )
+local function parseTopicHeader( headerRange )
 	local topicEndIndex = headerRange:bytes():index( FD )
 	local topicExpressionRange
 
@@ -216,18 +216,36 @@ function parseTopicHeader( headerRange )
 	return headerRange, { topic = topicObject, alias = aliasObject }
 end
 
--- Add topic and alias information to dissection tree
-function addTopicHeaderInformation( treeNode, info )
-	if info.alias.range ~= nil then
-		treeNode:add( dptProto.fields.alias, info.alias.range, info.alias.string )
+local function parseRecordFields( recordRange )
+	local fieldBase = 0
+	local rangeString = recordRange:string()
+	local fields = rangeString:split( string.char( FD ) )
+	local fs = { num = #fields }
+
+	-- Break open into records & then fields
+	for i, field in ipairs(fields) do
+
+		local fieldRange = recordRange:range( fieldBase, #field )
+		fs[i] = { range = fieldRange, string = fieldRange:string() }
+
+		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
 	end
-	if info.topic.resolved then
-		local node = treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
-		node:append_text(" (resolved from alias)")
-		node:set_generated()
+	return fs
+end
+
+local function parseField( headerRange )
+	local fieldEndIndex = headerRange:bytes():index( FD )
+	if fieldEndIndex > -1 then
+		return headerRange:range( 0, fieldEndIndex ), headerRange:range( fieldEndIndex + 1 )
 	else
-		treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+		return headerRange, nil
 	end
+end
+
+local function parseAckId( headerRange )
+	local ackIdRange
+	ackIdRange, headerRange = parseField( headerRange )
+	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
 -- -----------------------------------
@@ -293,23 +311,6 @@ end
 
 function MessageType:getDescription( messageDetails )
 	return self.name
-end
-
-function parseRecordFields( recordRange )
-	local fieldBase = 0
-	local rangeString = recordRange:string()
-	local fields = rangeString:split( string.char( FD ) )
-	local fs = { num = #fields }
-
-	-- Break open into records & then fields
-	for i, field in ipairs(fields) do
-
-		local fieldRange = recordRange:range( fieldBase, #field )
-		fs[i] = { range = fieldRange, string = fieldRange:string() }
-
-		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
-	end
-	return fs
 end
 
 -- Functionality specific to Topic Loads
@@ -529,21 +530,6 @@ function fetchReplyType:getDescription( )
 	return self.fetchDescription
 end
 
-function parseField( headerRange )
-	local fieldEndIndex = headerRange:bytes():index( FD )
-	if fieldEndIndex > -1 then
-		return headerRange:range( 0, fieldEndIndex ), headerRange:range( fieldEndIndex + 1 )
-	else
-		return headerRange, nil
-	end
-end
-
-function parseAckId( headerRange )
-	local ackIdRange
-	ackIdRange, headerRange = parseField( headerRange )
-	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
-end
-
 local pingServer = MessageType:new( 0x18, "Ping Server", 2 )
 function pingServer:markupHeaders( treeNode, headerRange )
 	local timestampRange
@@ -680,7 +666,7 @@ local clientTypesByValue = {
 	--TODO: Generate these values from ConnectionTypes.xml
 	[1] = "Event Publisher",
 	[2] = "External Publisher",
-	
+
 	[0x10] = "Publisher",
 	[0x14] = "Default type",
 	[0x15] = "Java",
@@ -821,7 +807,7 @@ local function dissectConnection( tvb, pinfo )
 end
 
 -- Attach the connection request information to the dissection tree
-function addConnectionRequest( tree , fullRange, pinfo, request )
+local function addConnectionRequest( tree , fullRange, pinfo, request )
 	pinfo.cols.info = string.format( "Connection request" )
 	local messageTree = tree:add( dptProto, fullRange )
 	messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
@@ -848,7 +834,7 @@ function addConnectionResponse( tree , fullRange, pinfo, response )
 end
 
 -- Attach the handshake information to the dissection tree
-function addConnectionHandshake( tree , fullRange, pinfo, handshake )
+local function addConnectionHandshake( tree , fullRange, pinfo, handshake )
 	if handshake.request then
 		addConnectionRequest( tree, fullRange, pinfo, handshake )
 	else
@@ -873,8 +859,22 @@ local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPo
 	end
 end
 
+-- Add topic and alias information to dissection tree
+local function addTopicHeaderInformation( treeNode, info )
+	if info.alias.range ~= nil then
+		treeNode:add( dptProto.fields.alias, info.alias.range, info.alias.string )
+	end
+	if info.topic.resolved then
+		local node = treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+		node:append_text(" (resolved from alias)")
+		node:set_generated()
+	else
+		treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+	end
+end
+
 -- Add information from the header parsing
-function addHeaderInformation( headerNode, info )
+local function addHeaderInformation( headerNode, info )
 	if info ~= nil then
 		if info.topic ~= nill then
 			addTopicHeaderInformation( headerNode, info.topic ) 
@@ -912,7 +912,7 @@ function addHeaderInformation( headerNode, info )
 	end
 end
 
-function addBody( parentTreeNode, records )
+local function addBody( parentTreeNode, records )
 	if records.range == nil then
 		-- If the body is not parsed (eg. unsupported encoding) then do not try to add anything to the body
 		return
