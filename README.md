@@ -34,10 +34,12 @@ Filters
 =======
 
 It is possible to use Wireshark filters with fields provided by the DPT dissector. There are many fields that can be
-used to filter on, here are a selection of useful fields.
+used to filter on. When a value following the field is absent all TCP packets with the field will be shown. The
+following is a selection of useful fields.
 
 | Filter field | Detail | Example |
 | ------------ | ------ | ------- |
+| dpt.clientID | Filter by the client ID | dpt.clientID == "PTLT05-18vblbnn21pig" |
 | dpt.message.type | Filter by the message type | dpt.message.type == 0x15 |
 | dpt.message.encoding | Filter by the message encoding byte | dpt.message.type == 0x02 |
 | dpt.header.topic | Filter by the topic name | dpt.header.topic == "Diffusion/Metrics/server/clients" |
@@ -46,6 +48,8 @@ used to filter on, here are a selection of useful fields.
 | dpt.header.command.topicType | Filter by the command message topic type | dpt.header.command.topicType == "1" |
 | dpt.header.command.topicCategory | Filter by the command message topic category | dpt.header.command.topicCategory == "PR" |
 | dpt.header.command.notificationType | Filter by the command message notification type | dpt.header.command.notificationType == "P" |
+| dpt.header.timestamp | Filter by the timestamp of the ping message | dpt.header.timestamp == "1389475563726" |
+| dpt.header.ackId | Filter by the acknowledgement ID of the message | dpt.header.ackId == "8" |
 | dpt.connection.protocolVersion | Filter connection requests by the protocol version byte | dpt.connection.protocolVersion == 4 |
 | dpt.connection.connectionType | Filter connection requests by the connection type | dpt.connection.connectionType == 0x17 |
 | dpt.connection.capabilities | Filter connection requests by the capabilities byte | dpt.connection.capabilities == 0x07 |
