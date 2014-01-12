@@ -25,11 +25,80 @@ function dump(o)
 	end
 end
 
+--------------------------------------
+-- Client
+
+Client = {}
+function Client:new( host, port )
+	local result = { host = host, port = port }
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function Client:matches( host, port )
+	return self.host == host and self.port == port
+end
+function Client:isClient()
+	return true
+end
+
+--------------------------------------
+-- The Client Table
+ClientTable = {}
+function ClientTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function ClientTable:add( host, port, client )
+	local machine = self[host] or {}
+	machine[port] = client
+	self[host] = machine
+end
+function ClientTable:get( host, port )
+	return self[host][port]
+end
+
+---------------------------------------
+-- Server
+
+Server = {}
+function Server:new( host, port )
+	local result = { host = host, port = port }
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function Server:matches( host, port )
+	return self.host == host and self.port == port
+end
+function Server:isClient()
+	return false
+end
+
+--------------------------------------
+-- The Server Table
+ServerTable = {}
+function ServerTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function ServerTable:add( host, port, server )
+	local machine = self[host] or {}
+	machine[port] = server
+	self[host] = machine
+end
+function ServerTable:get( host, port )
+	return self[host][port]
+end
+
 -- -----------------------------------
 -- Create and register a listener for TCP connections
 
 local tcpConnections = {}
-
 function tcpConnections:len()
 	local result = 0
 	local i,v
@@ -37,25 +106,21 @@ function tcpConnections:len()
 	return result
 end
 
-function tcpConnections:isClient( tcpStream, host, port )
-	local record = self[tcpStream]
-	
-	-- Is there a record of this TCP stream?
-	if record == nil then return false end
-	
-	return record.client.ip == host and 
-		record.client.port == port
-end
-
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream().value
 	local fNumber = f_frame_number().value
 
+	local client = Client:new( f_ip_dsthost().value, pinfo.dst_port )
+	ClientTable:add( f_ip_dsthost().value, pinfo.dst_port, client )
+	local server = Server:new( f_ip_srchost().value, pinfo.src_port )
+	ServerTable:add( f_ip_dsthost().value, pinfo.dst_port, server )
+
 	tcpConnections[streamNumber] = { 
-		client = { ip = f_ip_dsthost().value, port = pinfo.dst_port }, 
-		server = { ip = f_ip_srchost().value, port = pinfo.src_port } }
-		
+		client = client, 
+		server = server
+	}
+
 	info( dump( tcpConnections ) )
 end
 
@@ -66,9 +131,8 @@ end
 
 -- -----------------------------------
 -- The Alias Table
--- TODO: Should the Alias table be based on tcpStreams or the client ID?
 
-local AliasTable = {}
+AliasTable = {}
 
 function AliasTable:new()
 	local result = {}
@@ -95,15 +159,14 @@ end
 local aliasTable = AliasTable:new()
 
 -- Parse the first header as a topic
--- Takes the tree node and header range
+-- Takes the header range
 -- Assumes there will be more than one header
 -- Adds the topic to the aliasTable if an alias is present
 -- Retrieves the topic from the aliasTable if there is only an alias
--- Adds the topic and alias entries to the dissection tree 
--- Returns the remaining header range, the topic as a string and the alias as a string
+-- Returns the remaining header range, the topic range and string as a pair and the alias topic and string as a pair
 -- The remaining header range will be nil if there are no more headers
--- The alias will be nil if there is no alias present in the header
-function parseTopicHeader( treeNode, headerRange )
+-- The alias.range will be nil if there is no alias present in the header
+local function parseTopicHeader( headerRange )
 	local topicEndIndex = headerRange:bytes():index( FD )
 	local topicExpressionRange
 
@@ -117,42 +180,72 @@ function parseTopicHeader( treeNode, headerRange )
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
 	local tcpStream = f_tcp_stream().value
-	local topicRange = nil
-	local aliasRange = nil
-	local topic = nil
-	local alias = nil
+	local topicObject
+	local aliasObject
 	if delimIndex == 0 then
-		aliasRange = topicExpressionRange
-		alias = aliasRange:string();
+		local aliasRange = topicExpressionRange
+		local alias = aliasRange:string();
 
-		topic = aliasTable:getAlias( tcpStream, alias )
+		local topic = aliasTable:getAlias( tcpStream, alias )
+
+		if topic == nil then
+			aliasObject = { range = aliasRange, string = alias }
+			topicObject = { range = aliasRange, string = "Unknown topic alias (ITL not captured)", resolved = false }
+		else
+			aliasObject = { range = aliasRange, string = alias }
+			topicObject = { range = aliasRange, string = topic, resolved = true }
+		end
 	elseif delimIndex > -1 then
-		topicRange = topicExpressionRange:range( 0, delimIndex )
-		aliasRange = topicExpressionRange:range( delimIndex )
+		local topicRange = topicExpressionRange:range( 0, delimIndex )
+		local aliasRange = topicExpressionRange:range( delimIndex )
 
-		topic = topicRange:string()
-		alias = aliasRange:string()
+		local topic = topicRange:string()
+		local alias = aliasRange:string()
 
 		aliasTable:setAlias( tcpStream, alias, topic )
+
+		aliasObject = { range = aliasRange, string = alias }
+		topicObject = { range = topicRange, string = topic, resolved = false }
 	else
-		topicRange = topicExpressionRange
-		topic = topicRange:string()
+		local topicRange = topicExpressionRange
+		local topic = topicRange:string()
+		topicObject = { range = topicRange, string = topic, resolved = false }
+		aliasObject = {}
 	end
 
-	-- Add topic entry to dissection tree
-	if topicRange ~= nil then
-		treeNode:add( dptProto.fields.topic, topicRange, topic )
-	elseif topic ~= nil then
-		-- Topic from alias table, range expired reuse alias range
-		treeNode:add( dptProto.fields.topic, aliasRange, topic ):append_text(" (resolved from alias)")
-	end
+	return headerRange, { topic = topicObject, alias = aliasObject }
+end
 
-	-- Add alias entry to dissection tree
-	if aliasRange ~= nil then
-		treeNode:add( dptProto.fields.alias, aliasRange, alias )
-	end
+local function parseRecordFields( recordRange )
+	local fieldBase = 0
+	local rangeString = recordRange:string()
+	local fields = rangeString:split( string.char( FD ) )
+	local fs = { num = #fields }
 
-	return headerRange, topic, alias
+	-- Break open into records & then fields
+	for i, field in ipairs(fields) do
+
+		local fieldRange = recordRange:range( fieldBase, #field )
+		fs[i] = { range = fieldRange, string = fieldRange:string() }
+
+		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
+	end
+	return fs
+end
+
+local function parseField( headerRange )
+	local fieldEndIndex = headerRange:bytes():index( FD )
+	if fieldEndIndex > -1 then
+		return headerRange:range( 0, fieldEndIndex ), headerRange:range( fieldEndIndex + 1 )
+	else
+		return headerRange, nil
+	end
+end
+
+local function parseAckId( headerRange )
+	local ackIdRange
+	ackIdRange, headerRange = parseField( headerRange )
+	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
 -- -----------------------------------
@@ -182,35 +275,37 @@ function MessageType:markupHeaders( treeNode, headerRange )
 	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
 	if headerBreak == -1 then
 		-- no user headers, only fixed headers
-		treeNode:add( dptProto.fields.fixedHeaders, headerRange, headerRange:string():escapeDiff() )
+		return { fixedHeaders = { range = headerRange, string = headerRange:string():escapeDiff() } }
 	else
 		-- fixed headers and user headers
 		local fixedHeaderRange = headerRange:range( 0, headerBreak )
 		local userHeaderRange = headerRange:range( headerBreak +1 )
-		treeNode:add( dptProto.fields.fixedHeaders, fixedHeaderRange, fixedHeaderRange:string():escapeDiff() )
-		treeNode:add( dptProto.fields.userHeaders, userHeaderRange, userHeaderRange:string():escapeDiff() )
+		return { fixedHeaders = { range = fixedHeaderRange, string = fixedHeaderRange:string():escapeDiff() },
+			userHeaders = { range = userHeaderRange, string = userHeaderRange:string():escapeDiff() } }
 	end
 end
 
 function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
 	-- the payload, everything after the headers
-	local bodyNode = parentTreeNode:add( dptProto.fields.content, bodyRange, string.format( "%d bytes", bodyRange:len() ) )
 
 	if messageDetails.msgEncoding == 0 then
 		local rangeBase = 0
 		local bodyString = bodyRange:string()
 		local records = bodyString:split( string.char( RD ) )
-
-		bodyNode:append_text( string.format(  ", %d records", #records ) )
+		local recs = { num = #records, range = bodyRange }
 
 		-- Break open into records & then fields
-		for i,record in ipairs(records) do
+		for i, record in ipairs(records) do
 
 			local recordRange = bodyRange:range( rangeBase, #record )
-			local recordTree = bodyNode:add( dptProto.fields.record, recordRange, record:toRecordString() )
+			local fields = parseRecordFields( recordRange )
+			recs[i] = { range = recordRange, string = record:toRecordString(), fields = fields }
 
 			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
 		end
+		return recs
+	else
+		return {}
 	end
 end
 
@@ -224,8 +319,10 @@ local topicLoadType = MessageType:new( 0x14, "Topic Load", 1 )
 
 function topicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
 
 	if alias ~= nil then
 		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
@@ -233,9 +330,12 @@ function topicLoadType:markupHeaders( treeNode, headerRange )
 		self.loadDescription = topic
 	end
 
+	local userHeaderObject
 	if headerRange ~= nil then
-		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
+
+	return { topic = info, userHeader = userHeaderObject }
 end
 
 function topicLoadType:getDescription( messageDetails )
@@ -248,18 +348,22 @@ local deltaType = MessageType:new( 0x15, "Delta", 1 )
 
 function deltaType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
 
 	if topic ~= nil then
-		self.topicDescription = string.format( "Topic: %s", topic )
+		self.topicDescription = string.format( "Topic: '%s'", topic )
 	else
-		self.topicDescription = string.format( "Unknown alias: %s", alias )
+		self.topicDescription = string.format( "Unknown alias: '%s'", alias )
 	end
 
 	if headerRange ~= nil then
-		treeNode:add( dptProto.fields.userHeaders, headerRange, headerRange:string():escapeDiff() )
+		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
 	end
+
+	return { topic = info, userHeader = userHeaderObject }
 end
 
 function deltaType:getDescription( messageDetails )
@@ -273,7 +377,7 @@ local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
 function subscribeType:markupHeaders( treeNode, headerRange )
 	-- A single header, with a topic-selector
 	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
-	treeNode:add( dptProto.fields.fixedHeaders, headerRange, self.subscriptionDescription )
+	return { fixedHeaders = { range = headerRange, string = headerRange:string() } }
 end
 
 function subscribeType:getDescription( messageDetails )
@@ -285,29 +389,35 @@ local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
 
 function commandMessageType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
 
 	local commandEndIndex = headerRange:bytes():index( FD )
 	local commandRange
+	local commandObject
+	local parametersObject
 	if commandEndIndex > -1 then
 		commandRange = headerRange:range( 0, commandEndIndex )
-		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		commandObject = { range = commandRange, string = commandRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.command, commandRange, commandRange:string() )
+		commandObject = { range = commandRange, string = commandRange:string() }
 	end
 	if topic ~= nil then
-		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topic, commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Topic: '%s', Command: '%s'", topic, commandRange:string() )
 	elseif alias ~= nil then
-		self.commandDescription = string.format ( "Command Message Alias: %s Command: %s", alias, commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Alias: '%s', Command: '%s'", alias, commandRange:string() )
 	else
-		self.commandDescription = string.format ( "Command Message Topic: Unknown Command: %s", commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Topic: Unknown, Command: '%s'", commandRange:string() )
 	end
+
+	return { topic = info, command = commandObject, parameters = parametersObject }
 end
 
 function commandMessageType:getDescription( messageDetails )
@@ -319,28 +429,30 @@ local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
 
 function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic, alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
 
 	-- Parse command topic category
 	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
 	local commandTopicCategoryRange = headerRange:range( 0, commandTopicCategoryEndIndex )
-	treeNode:add( dptProto.fields.commandTopicCategory, commandTopicCategoryRange, commandTopicCategoryRange:string() )
+	local commandTopicCategoryObject = { range = commandTopicCategoryRange, string = commandTopicCategoryRange:string() }
 
 	-- Parse command Topic Type
 	headerRange = headerRange:range( commandTopicCategoryEndIndex + 1 )
 	local commandTopicTypeEndIndex = headerRange:bytes():index( FD )
-	local commandRange
+	local commandRange, commandTopicTypeObject, parametersObject
 	if commandTopicTypeEndIndex > -1 then
 		commandTopicTypeRange = headerRange:range( 0, commandTopicTypeEndIndex )
-		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( commandTopicTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		commandTopicTypeRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.commandTopicType, commandTopicTypeRange, commandTopicTypeRange:string() )
+		commandTopicTypeObject = { range = commandTopicTypeRange, string = commandTopicTypeRange:string() }
 	end
 	if topic ~= nil then
 		self.commandTopicLoadDescription = string.format ( "Command Load Topic: %s Topic Category: %s", topic, commandTopicCategoryRange:string() )
@@ -349,6 +461,8 @@ function commandTopicLoadType:markupHeaders( treeNode, headerRange )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Load Topic: Unknown Topic Category: %s", commandTopicCategoryRange:string() )
 	end
+
+	return { topic = info, parameters = parametersObject, commandCategory = commandTopicCategoryObject, commandTopicType = commandTopicTypeObject }
 end
 
 function commandTopicLoadType:getDescription( messageDetails )
@@ -360,23 +474,24 @@ local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notif
 
 function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	-- Parse topic
-	local topic
-	local alias
-	headerRange, topic, alias = parseTopicHeader( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
 
 	-- Parse notification type
 	local notificationTypeEndIndex = headerRange:bytes():index( FD )
-	local notificationTypeRange
+	local notificationTypeRange, notificationTypeObject, parametersObject
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
-		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 
 		--Parse parameters
 		local parametersRange = headerRange:range( notificationTypeEndIndex + 1 )
-		treeNode:add( dptProto.fields.parameters, parametersRange, parametersRange:string():escapeDiff() )
+		parametersObject = { range = parametersRange, string = parametersRange:string():escapeDiff() }
 	else
 		notificationTypeRange = headerRange:range( 0 )
-		treeNode:add( dptProto.fields.notificationType, notificationTypeRange, notificationTypeRange:string() )
+		notificationTypeObject = { range = notificationTypeRange, string = notificationTypeRange:string() }
 	end
 	if topic ~= nil then
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: %s Notification Type: %s", topic, notificationTypeRange:string() )
@@ -385,30 +500,143 @@ function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
 	else
 		self.commandTopicLoadDescription = string.format ( "Command Notification Topic: Unknown Notification Type: %s", notificationTypeRange:string() )
 	end
+
+	return { topic = info, parameters = parametersObject, notificationType = notificationTypeObject }
 end
 
 function commandTopicNotificationType:getDescription( messageDetails )
 	return self.commandTopicLoadDescription 
 end
 
--- The messageType table
+local fetchType = MessageType:new( 0x21, "Fetch", 1 )
+function fetchType:markupHeaders( treeNode, headerRange )
+	local info
+	headerRange, info = parseTopicHeader( headerRange )
+	self.fetchDescription = string.format( "Fetch '%s'", info.topic.string )
+	return { topic = info }
+end
+function fetchType:getDescription( )
+	return self.fetchDescription
+end
 
+local fetchReplyType = MessageType:new( 0x22, "Fetch Reply", 1 )
+function fetchReplyType:markupHeaders( treeNode, headerRange )
+	local info
+	headerRange, info = parseTopicHeader( headerRange )
+	self.fetchDescription = string.format( "Fetch reply '%s'", info.topic.string )
+	return { topic = info }
+end
+function fetchReplyType:getDescription( )
+	return self.fetchDescription
+end
+
+local pingServer = MessageType:new( 0x18, "Ping Server", 2 )
+function pingServer:markupHeaders( treeNode, headerRange )
+	local timestampRange
+	timestampRange, headerRange = parseField( headerRange )
+	if headerRange ~= nil then
+		local messageQueueRange, headerRange = parseField( headerRange )
+		return { timestamp = { range = timestampRange, string = timestampRange:string() },
+			queueSize = { range = messageQueueRange, string = messageQueueRange:string() } }
+	else
+		return { timestamp = { range = timestampRange, string = timestampRange:string() } }
+	end
+end
+local pingClient = MessageType:new( 0x19, "Ping Client", 1 )
+function pingClient:markupHeaders( treeNode, headerRange )
+	local timestampRange, messageQueueRange
+	timestampRange, headerRange = parseField( headerRange )
+	return { timestamp = { range = timestampRange, string = timestampRange:string() } }
+end
+
+local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2)
+function topicLoadAckType:markupHeaders( treeNode, headerRange )
+	return topicLoadType.markupHeaders( self, treeNode, headerRange )
+end
+
+local deltaAckType = MessageType:new( 0x1f, "Delta - ACK Required", 2 )
+function deltaAckType:markupHeaders( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+
+	if topic ~= nil then
+		self.topicDescription = string.format( "Topic: '%s'", topic )
+	else
+		self.topicDescription = string.format( "Unknown alias: '%s'", alias )
+	end
+
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+
+	if headerRange ~= nil then
+		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+	end
+
+	return { topic = info, ackId = ackIdObject, userHeader = userHeaderObject }
+end
+function deltaAckType:getDescription( messageDetails )
+	return string.format( "%s, %s, %s", self.name, self.topicDescription, self.ackDescription )
+end
+
+local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2 )
+function topicLoadAckType:markupHeaders( treeNode, headerRange )
+	local info, topic, alias
+	headerRange, info = parseTopicHeader( headerRange )
+	topic = info.topic.string
+	alias = info.alias.string
+
+	if alias ~= nil then
+		self.loadDescription = string.format( "aliasing %s => topic '%s'", alias, topic )
+	else
+		self.loadDescription = topic
+	end
+
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+
+	local userHeaderObject
+	if headerRange ~= nil then
+		userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+	end
+
+	return { topic = info, ackId = ackIdObject, userHeader = userHeaderObject }
+end
+function topicLoadAckType:getDescription( messageDetails )
+	return string.format( "%s, %s, %s", self.name, self.loadDescription, self.ackDescription )
+end
+
+local ackType = MessageType:new( 0x20, "ACK - acknowledge", 1 )
+function ackType:markupHeaders( treeNode, headerRange )
+	local ackIdObject
+	ackIdObject, headerRange = parseAckId( headerRange )
+	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
+	return { ackId = ackIdObject }
+end
+function ackType:getDescription( messageDetails )
+	return string.format( "%s, %s", self.name, self.ackDescription )
+end
+
+-- The messageType table
 local messageTypesByValue = MessageType.index( {
 	topicLoadType,
 	deltaType,
 	subscribeType,
 	MessageType:new( 0x17, "Unsubscribe", 1 ),
-	MessageType:new( 0x18, "Ping Server", 2 ), 
-	MessageType:new( 0x19, "Ping Client", 1 ),
+	pingServer,
+	pingClient,
 	MessageType:new( 0x1a, "Credentials", 2 ),
 	MessageType:new( 0x1b, "Credentials Rejected", 2 ),
 	MessageType:new( 0x1c, "Abort Notification", 0 ),
 	MessageType:new( 0x1d, "Close Request", 0 ),
-	MessageType:new( 0x1e, "Topic Load - ACK Required", 2), 
-	MessageType:new( 0x1f, "Delta - ACK Required", 2 ),
-	MessageType:new( 0x20, "ACK - acknowledge", 1 ),
-	MessageType:new( 0x21, "Fetch", 1 ),
-	MessageType:new( 0x22, "Fetch Reply", 1 ),
+	topicLoadAckType,
+	deltaAckType,
+	ackType,
+	fetchType,
+	fetchReplyType,
 	MessageType:new( 0x23, "Topic Status Notification", 2 ),
 	commandMessageType,
 	commandTopicLoadType,
@@ -438,7 +666,7 @@ local clientTypesByValue = {
 	--TODO: Generate these values from ConnectionTypes.xml
 	[1] = "Event Publisher",
 	[2] = "External Publisher",
-	
+
 	[0x10] = "Publisher",
 	[0x14] = "Default type",
 	[0x15] = "Java",
@@ -495,58 +723,61 @@ function string:split(sep)
 end
 
 -- Dissect the connection negotiation messages
-local function dissectConnection( tvb, pinfo, tree )
-	local messageTree = tree:add( dptProto, tvb() )
+local function dissectConnection( tvb, pinfo )
 	local offset = 0
-	
+
 	-- Is this a client or server packet?
 	local tcpStream, host, port = f_tcp_stream().value, f_ip_srchost().value, f_tcp_srcport().value
-	local isClient = tcpConnections:isClient( tcpStream, host, port ) 
+
+	local client = tcpConnections[tcpStream].client
+	local server = tcpConnections[tcpStream].server
+	local isClient = client:matches( host, port )
 
 	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
 	local magicNumber = magicNumberRange:uint()
-	messageTree:add( dptProto.fields.connectionMagicNumber, magicNumberRange )
 	offset = offset +1
 	
 	-- get the protocol version number
 	local protoVerRange = tvb( offset, 1 )
-	local protoVersion = protoVerRange:uint()
-	messageTree:add( dptProto.fields.connectionProtoNumber, protoVerRange )
+	client.protoVersion = protoVerRange:uint()
 	offset = offset +1
-	
+
 	if isClient then
 		pinfo.cols.info = string.format( "Connection request" )
-		
+
 		-- the 1 byte connection type
 		local connectionTypeRange = tvb( offset, 1 )
-		local connectionType = connectionTypeRange:uint()
-		messageTree:add( dptProto.fields.connectionType, connectionTypeRange )
+		client.connectionType = connectionTypeRange:uint()
 		offset = offset +1
-		
+
 		-- the 1 byte capabilities value
 		local capabilitiesRange = tvb( offset, 1 )
-		messageTree:add( dptProto.fields.capabilities, capabilitiesRange )
+		client.capabilities = capabilitiesRange:uint()
 		offset = offset +1
-		
+
 		-- TODO: load credentials <RD> data <MD>
 		local range = tvb( offset )
 		local rdBreak = range:bytes():index( RD )
 		if rdBreak >= 0 then
 			-- Mark up the creds - if there are any
 			local credsRange = range(0, rdBreak )
-			local creds = credsRange:string():toRecordString()
+			local credsString = credsRange:string():toRecordString()
 			if credsRange:len() > 0 then
-				messageTree:add( dptProto.fields.loginCreds, credsRange, creds )
+				local creds = { range = credsRange, string = credsString }
 			end
 
 			-- Mark up the login topicset - if there are any
 			local topicsetRange = range( rdBreak +1, ( range:len() -2 ) -rdBreak ) -- fiddly handling of trailing null character
 			if topicsetRange:len() > 0 then
-				messageTree:add( dptProto.fields.loginTopics, topicsetRange )
+				local topicset = topicsetRange
 			end
-			
+
 		end
+
+		return { request = true, magicNumberRange = magicNumberRange,
+			protoVerRange = protoVerRange, connectionTypeRange = connectionTypeRange,
+			capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset }
 
 	else
 		-- Is a server response
@@ -554,24 +785,162 @@ local function dissectConnection( tvb, pinfo, tree )
 		
 		local connectionResponseRange = tvb( offset, 1 )
 		local connectionResponse = connectionResponseRange:uint()
-		messageTree:add( dptProto.fields.connectionResponse, connectionResponseRange )
 		offset = offset +1
-		
+
 		-- The size field
 		local messageLengthSizeRange = tvb( offset, 1 )
-		local messageLengthSize = messageLengthSizeRange:uint()
-		messageTree:add( dptProto.fields.messageLengthSize, messageLengthSizeRange ) 
+		local messageLengthSize = messageLengthSizeRange:uint() 
 		offset = offset +1
-		
+
 		-- the client ID (the rest of this)
 		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
 		local clientID = clientIDRange:string()
-		messageTree:add( dptProto.fields.clientID, clientIDRange )
-		
+
+		client.clientId = clientIDRange:string()
+
+		return { request = false, magicNumberRange = magicNumberRange,
+			protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
+			messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
 	end
-	
-	
+
 	--TODO: dissect this as a client or as a server packet
+end
+
+-- Attach the connection request information to the dissection tree
+local function addConnectionRequest( tree , fullRange, pinfo, request )
+	pinfo.cols.info = string.format( "Connection request" )
+	local messageTree = tree:add( dptProto, fullRange )
+	messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
+	messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
+	messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
+	messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
+	if request.creds ~= nil then
+		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
+	end
+	if request.topicsetRange ~= nil then
+		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
+	end
+end
+
+-- Attach the connection response information to the dissection tree
+function addConnectionResponse( tree , fullRange, pinfo, response )
+	pinfo.cols.info = string.format( "Connection response" )
+	local messageTree = tree:add( dptProto, fullRange )
+	messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
+	messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
+	messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
+	messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
+	messageTree:add( dptProto.fields.clientID, response.clientIDRange )
+end
+
+-- Attach the handshake information to the dissection tree
+local function addConnectionHandshake( tree , fullRange, pinfo, handshake )
+	if handshake.request then
+		addConnectionRequest( tree, fullRange, pinfo, handshake )
+	else
+		addConnectionResponse( tree, fullRange, pinfo, handshake )
+	end
+end
+
+local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPort )
+	if client ~= nil then
+		local rootNode = tree:add( dptProto.fields.connection )
+		rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
+		rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
+		rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
+		rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+		if client:matches( f_ip_srchost().value, f_tcp_srcport().value ) then
+			rootNode:add( dptProto.fields.direction, tvb(0,0), "Client to Server" ):set_generated()
+		else
+			rootNode:add( dptProto.fields.direction, tvb(0,0), "Server to Client" ):set_generated()
+		end
+	else
+		tree:add( dptProto.fields.connection, tvb(0,0), "Connection unknown, partial capture" )
+	end
+end
+
+-- Add topic and alias information to dissection tree
+local function addTopicHeaderInformation( treeNode, info )
+	if info.alias.range ~= nil then
+		treeNode:add( dptProto.fields.alias, info.alias.range, info.alias.string )
+	end
+	if info.topic.resolved then
+		local node = treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+		node:append_text(" (resolved from alias)")
+		node:set_generated()
+	else
+		treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+	end
+end
+
+-- Add information from the header parsing
+local function addHeaderInformation( headerNode, info )
+	if info ~= nil then
+		if info.topic ~= nill then
+			addTopicHeaderInformation( headerNode, info.topic ) 
+		end
+		if info.fixedHeaders ~= nil then
+			headerNode:add( dptProto.fields.fixedHeaders, info.fixedHeaders.range, info.fixedHeaders.string )
+		end
+		if info.userHeaders ~= nil then
+			headerNode:add( dptProto.fields.userHeaders, info.userHeaders.range, info.userHeaders.string )
+		end
+		if info.parameters ~= nil then
+			headerNode:add( dptProto.fields.parameters, info.parameters.range, info.parameters.string )
+		end
+		if info.command ~= nil then
+			headerNode:add( dptProto.fields.command, info.command.range, info.command.string )
+		end
+		if info.commandTopicType ~= nil then
+			headerNode:add( dptProto.fields.commandTopicType, info.commandTopicType.range, info.commandTopicType.string )
+		end
+		if info.commandCategory ~= nil then
+			headerNode:add( dptProto.fields.commandTopicCategory, info.commandCategory.range, info.commandCategory.string )
+		end
+		if info.notificationType ~= nil then
+			headerNode:add( dptProto.fields.notificationType, info.notificationType.range, info.notificationType.string )
+		end
+		if info.timestamp ~= nil then
+			headerNode:add( dptProto.fields.timestamp, info.timestamp.range, info.timestamp.string )
+		end
+		if info.queueSize ~= nil then
+			headerNode:add( dptProto.fields.queueSize, info.queueSize.range, info.queueSize.string )
+		end
+		if info.ackId ~= nil then
+			headerNode:add( dptProto.fields.ackId, info.ackId.range, info.ackId.string )
+		end
+	end
+end
+
+local function addBody( parentTreeNode, records )
+	if records.range == nil then
+		-- If the body is not parsed (eg. unsupported encoding) then do not try to add anything to the body
+		return
+	end
+	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
+	if records.num == 1 then
+		bodyNode:append_text( ", 1 record" )
+	else
+		bodyNode:append_text( string.format( ", %d records", records.num ) )
+	end
+	if records ~= nil then
+		for i, record in ipairs(records) do
+			local recordNode = bodyNode:add( dptProto.fields.record, record.range, record.string )
+			recordNode:set_text( string.format( "Record %d: %s", i, record.string ) )
+
+			if record.fields ~= nil then
+				if record.fields.num == 1 then
+					recordNode:set_text( string.format( "Record %d: %d bytes, 1 field", i, record.range:len() ) )
+				else
+					recordNode:set_text( string.format( "Record %d: %d bytes, %d fields", i, record.range:len(), record.fields.num ) )
+				end
+				for j, field in ipairs(record.fields) do
+					local fieldNode = recordNode:add( dptProto.fields.field, field.range, field.string )
+					fieldNode:set_text( string.format( "Field %d: %s [%d bytes]", j, field.string, field.range:len() ) )
+				end
+			end
+		end
+	end
 end
 
 -- Process an individual DPT message
@@ -579,6 +948,11 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream().value -- get the artificial 'tcp stream' number
+	local conn = tcpConnections[tcpStream]
+	local client
+	if conn ~= nil then
+		client = conn.client
+	end
 
 	-- Assert there is enough to parse even the LLLL segment
 	if offset + LENGTH_LEN >  tvb:len() then
@@ -621,6 +995,8 @@ local function processMessage( tvb, pinfo, tree, offset )
 	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
+	addClientConnectionInformation( messageTree, tvb, client, host, port )
+
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
 	local contentRange = tvb( offset, contentSize )
@@ -636,13 +1012,15 @@ local function processMessage( tvb, pinfo, tree, offset )
 		local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
 
 		-- Pass the header-node to the MessageType for further processing
-		messageType:markupHeaders( headerNode, headerRange )
+		local info = messageType:markupHeaders( headerNode, headerRange )
+		addHeaderInformation( headerNode, info )
 
 		if headerBreak +1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
 			local bodyRange = contentRange:range( headerBreak +1 )
 
-			messageType:markupBody( msgDetails, contentNode, bodyRange )
+			local records = messageType:markupBody( msgDetails, contentNode, bodyRange )
+			addBody( contentNode , records )
 		end
 	end
 	
@@ -666,7 +1044,9 @@ function dptProto.dissector( tvb, pinfo, tree )
 	local firstByte = tvb( 0, 1 ):uint()
 	if( firstByte == DIFFUSION_MAGIC_NUMBER ) then
 		-- process & skip over it, if it is.
-		return dissectConnection( tvb, pinfo, tree )
+		local handshake = dissectConnection( tvb, pinfo )
+		addConnectionHandshake( tree, tvb(), pinfo, handshake )
+		return {}
 	end
 
 	local offset, messageCount = 0, 0
@@ -700,39 +1080,50 @@ local capabilities = {
 	[0x04] = "Supports base 64 encoded data messages",
 	[0x05] = "Supports encrypted and base 64 encoded data messages",
 	[0x06] = "Supports compressed and base 64 encoded data messages",
-	[0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
-	[0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a control client"
+	[0x07] = "Supports encrypted, compressed and base 64 encoded data messages"
 }
 
 -- Connection negotiation fields
-dptProto.fields.connectionMagicNumber = ProtoField.uint8( "diffusion.connection.magicNumber", "Magic number" , base.HEX )
-dptProto.fields.connectionProtoNumber = ProtoField.uint8( "diffusion.connection.protoNumber", "Protocol number" )
-dptProto.fields.connectionType = ProtoField.uint8( "diffusion.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
+dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
+dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
+dptProto.fields.connectionType = ProtoField.uint8( "dpt.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
+dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", "Client Capabilities", base.HEX, capabilities )
+dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
+dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
+dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
 
 -- Message fields
-dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
-dptProto.fields.typeHdr = ProtoField.uint8( "dptProto.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield
-dptProto.fields.encodingHdr = ProtoField.uint8( "dptProto.encoding", "Encoding", base.HEX, encodingTypesByValue )
+dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield
+dptProto.fields.encodingHdr = ProtoField.uint8( "dpt.message.encoding", "Encoding", base.HEX, encodingTypesByValue )
+dptProto.fields.topic = ProtoField.string( "dpt.header.topic", "Topic" )
+dptProto.fields.alias = ProtoField.string( "dpt.header.alias", "Alias" )
 dptProto.fields.headers = ProtoField.string( "dptProto.headers", "Headers" )
 dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User headers" )
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
 dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
-dptProto.fields.topic = ProtoField.string( "dptProto.field.topic", "Topic" )
-dptProto.fields.alias = ProtoField.string( "dptProto.field.alias", "Alias" )
+dptProto.fields.connection = ProtoField.string( "dptProto.connection", "Connection" )
+dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
+dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
+
+dptProto.fields.record = ProtoField.string( "dpt.records" )
+dptProto.fields.field = ProtoField.string( "dpt.fields" )
 
 -- Command message fields
-dptProto.fields.command =  ProtoField.string( "dptProto.field.command", "Command" )
+dptProto.fields.command =  ProtoField.string( "dpt.header.command", "Command" )
+dptProto.fields.commandTopicType = ProtoField.string( "dpt.header.command.topicType", "Topic Type" )
+dptProto.fields.commandTopicCategory = ProtoField.string( "dpt.header.command.topicCategory", "Topic Category" )
+dptProto.fields.notificationType = ProtoField.string( "dpt.header.command.notificationType", "Notification Type" )
 dptProto.fields.parameters = ProtoField.string( "dptProto.field.parameters", "Parameters" )
-dptProto.fields.commandTopicType = ProtoField.string( "dptProto.field.commandTopicType", "Topic Type" )
-dptProto.fields.commandTopicCategory = ProtoField.string( "dptProto.field.commandTopicCategory", "Topic Category" )
-dptProto.fields.notificationType = ProtoField.string( "dptProto.field.notificationType", "Notification Type" )
 
-dptProto.fields.connectionResponse = ProtoField.uint8( "dptProto.connectionResponse", "Connection Response", base.DEC, responseCodes )
-dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
-dptProto.fields.clientID = ProtoField.string( "dptProto.field.clientID", "Client ID" )
-dptProto.fields.capabilities = ProtoField.uint8( "dptProto.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.loginCreds = ProtoField.string( "dptProto.field.loginCreds", "Login Credentials" )
 dptProto.fields.loginTopics = ProtoField.string( "dptProto.field.loginTopics", "Subscriptions" )
+
+-- Ping message fields
+dptProto.fields.timestamp = ProtoField.string( "dpt.header.timestamp", "Timestamp" )
+dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message Queue size" )
+
+-- Ack message field
+dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement ID" )
 
 -- Register the dissector
 tcp_table = DissectorTable.get( "tcp.port" )
