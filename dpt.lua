@@ -1080,7 +1080,7 @@ local capabilities = {
 	[0x04] = "Supports base 64 encoded data messages",
 	[0x05] = "Supports encrypted and base 64 encoded data messages",
 	[0x06] = "Supports compressed and base 64 encoded data messages",
-	[0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
+	[0x07] = "Supports encrypted, compressed and base 64 encoded data messages"
 }
 
 -- Connection negotiation fields
