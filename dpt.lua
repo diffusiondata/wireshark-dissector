@@ -354,9 +354,9 @@ function deltaType:markupHeaders( treeNode, headerRange )
 	alias = info.alias.string
 
 	if topic ~= nil then
-		self.topicDescription = string.format( "Topic: %s", topic )
+		self.topicDescription = string.format( "Topic: '%s'", topic )
 	else
-		self.topicDescription = string.format( "Unknown alias: %s", alias )
+		self.topicDescription = string.format( "Unknown alias: '%s'", alias )
 	end
 
 	if headerRange ~= nil then
@@ -410,11 +410,11 @@ function commandMessageType:markupHeaders( treeNode, headerRange )
 		commandObject = { range = commandRange, string = commandRange:string() }
 	end
 	if topic ~= nil then
-		self.commandDescription = string.format ( "Command Message Topic: %s Command: %s", topic, commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Topic: '%s', Command: '%s'", topic, commandRange:string() )
 	elseif alias ~= nil then
-		self.commandDescription = string.format ( "Command Message Alias: %s Command: %s", alias, commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Alias: '%s', Command: '%s'", alias, commandRange:string() )
 	else
-		self.commandDescription = string.format ( "Command Message Topic: Unknown Command: %s", commandRange:string() )
+		self.commandDescription = string.format ( "Command Message Topic: Unknown, Command: '%s'", commandRange:string() )
 	end
 
 	return { topic = info, command = commandObject, parameters = parametersObject }
@@ -562,9 +562,9 @@ function deltaAckType:markupHeaders( treeNode, headerRange )
 	alias = info.alias.string
 
 	if topic ~= nil then
-		self.topicDescription = string.format( "Topic: %s", topic )
+		self.topicDescription = string.format( "Topic: '%s'", topic )
 	else
-		self.topicDescription = string.format( "Unknown alias: %s", alias )
+		self.topicDescription = string.format( "Unknown alias: '%s'", alias )
 	end
 
 	local ackIdObject
