@@ -663,11 +663,19 @@ local messageTypesByValue = MessageType.index( {
 	commandTopicLoadType,
 	commandTopicNotificationType,
 	MessageType:new( 0x30, "Cancel Fragmented Message Set", 1 )
-} )
+})
+
+local function messageTypeLookup(byte)
+	if byte >= 0x40 then
+		return messageTypesByValue[byte - 0x40]
+	else
+		return messageTypesByValue[byte]
+	end
+end
 
 function MessageType.nameByID(byte)
-	if( byte >= 0x40 ) then
-		return nameByID(byte - 0x40) .. " fragmented"
+	if byte >= 0x40 then
+		return MessageType.nameByID(byte - 0x40) .. " fragmented"
 	else
 		return messageTypesByValue[byte].name
 	end
@@ -1024,7 +1032,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
 
 	offset = offset + contentSize
-	local messageType = messageTypesByValue[msgDetails.msgType]
+	local messageType = messageTypeLookup(msgDetails.msgType)
 
 	-- The headers & body -- find the 1st RD in the content
 	local headerBreak = contentRange:bytes():index( RD )
