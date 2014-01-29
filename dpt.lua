@@ -646,7 +646,7 @@ local messageTypesByValue = MessageType.index( {
 
 function MessageType.nameByID(byte)
 	if( byte >= 0x40 ) then
-		return nameByID(byte - 0x40) .. " fragmented"
+		return MessageType.nameByID(byte - 0x40) .. " fragmented"
 	else
 		return messageTypesByValue[byte].name
 	end
