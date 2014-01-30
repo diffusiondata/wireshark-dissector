@@ -382,9 +382,10 @@ function deltaType:markupHeaders( treeNode, headerRange )
 
 	if headerRange ~= nil then
 		local userHeaderObject = { range = headerRange, string = headerRange:string():escapeDiff() }
+		return { topic = info, userHeaders = userHeaderObject }
 	end
 
-	return { topic = info, userHeader = userHeaderObject }
+	return { topic = info, userHeaders = userHeaderObject }
 end
 
 function deltaType:getDescription( messageDetails )
