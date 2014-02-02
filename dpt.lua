@@ -1,5 +1,10 @@
 local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
 
+-- This assumes that files are in USER_DIR
+dofile(USER_DIR.."dpt.utilities.lua")
+
+local u = diffusion.utilities
+
 local RD, FD = 1, 2
 local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
@@ -7,31 +12,7 @@ local DIFFUSION_MAGIC_NUMBER = 0x23
 
 local f_tcp_stream  = Field.new("tcp.stream")
 local f_tcp_srcport = Field.new("tcp.srcport")
-local f_ip_dsthost  = Field.new("ip.dst_host")
-local f_ip_srchost  = Field.new("ip.src_host")
-local f_ipv6_dsthost  = Field.new("ipv6.dst_host")
-local f_ipv6_srchost  = Field.new("ipv6.src_host")
 local f_frame_number = Field.new("frame.number")
-
--- Get the src host either from IPv4 or IPv6
-local function srcHost()
-	local ipv4SrcHost = f_ip_srchost()
-	if ipv4SrcHost == nil then
-		return f_ipv6_srchost().value
-	else
-		return ipv4SrcHost.value
-	end
-end
-
--- Get the dst host either from IPv4 or IPv6
-local function dstHost()
-	local ipv4DstHost = f_ip_dsthost()
-	if ipv4DstHost == nil then
-		return f_ipv6_dsthost().value
-	else
-		return ipv4DstHost.value
-	end
-end
 
 function dump(o)
 	if type(o) == 'table' then
@@ -132,10 +113,10 @@ function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream().value
 	local fNumber = f_frame_number().value
 
-	local client = Client:new( dstHost(), pinfo.dst_port )
-	ClientTable:add( dstHost(), pinfo.dst_port, client )
-	local server = Server:new( srcHost(), pinfo.src_port )
-	ServerTable:add( dstHost(), pinfo.dst_port, server )
+	local client = Client:new( u.dstHost(), pinfo.dst_port )
+	ClientTable:add( u.dstHost(), pinfo.dst_port, client )
+	local server = Server:new( u.srcHost(), pinfo.src_port )
+	ServerTable:add( u.dstHost(), pinfo.dst_port, server )
 
 	tcpConnections[streamNumber] = { 
 		client = client, 
@@ -757,7 +738,7 @@ local function dissectConnection( tvb, pinfo )
 	local offset = 0
 
 	-- Is this a client or server packet?
-	local tcpStream, host, port = f_tcp_stream().value, srcHost(), f_tcp_srcport().value
+	local tcpStream, host, port = f_tcp_stream().value, u.srcHost(), f_tcp_srcport().value
 
 	local client = tcpConnections[tcpStream].client
 	local server = tcpConnections[tcpStream].server
