@@ -1,4 +1,10 @@
 
+-- Check package is not already loaded
+local master = diffusion or {}
+if master.utilities ~= nil then
+	return master.utilities
+end
+
 local f_ip_dsthost  = Field.new("ip.dst_host")
 local f_ip_srchost  = Field.new("ip.src_host")
 local f_ipv6_dsthost  = Field.new("ipv6.dst_host")
@@ -24,9 +30,7 @@ local function dstHost()
 	end
 end
 
-
--- Package management
-local master = diffusion or {}
+-- Export package
 master.utilities = {
 	srcHost = srcHost,
 	dstHost = dstHost
