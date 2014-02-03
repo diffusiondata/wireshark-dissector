@@ -1,7 +1,8 @@
 local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
 
 -- This assumes that files are in USER_DIR
-dofile(USER_DIR.."dpt.utilities.lua")
+-- require looks in wireshark directories.
+dofile( USER_DIR.."dpt.utilities.lua" )
 
 local u = diffusion.utilities
 
