@@ -348,8 +348,6 @@ function deltaAckType:getDescription()
 	return string.format( "%s, %s, %s", self.name, self.topicDescription, self.ackDescription )
 end
 
-local logInfo = critical
-
 local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2 )
 function topicLoadAckType:markupHeaders( treeNode, headerRange )
 	local info, topic, alias
@@ -368,12 +366,6 @@ function topicLoadAckType:markupHeaders( treeNode, headerRange )
 	local ackIdObject
 	ackIdObject, headerRange = parseAckId( headerRange )
 	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
-
-	logInfo( string.format( "Name %s", self.name ) )
-	logInfo( string.format( "Load %s", self.loadDescription ) )
-	logInfo( string.format( "Ack %s", self.ackDescription ) )
-	logInfo( string.format( "Alias %s", alias ) )
-	logInfo( string.format( "Topic %s", topic ) )
 
 	local userHeaderObject
 	if headerRange ~= nil then
