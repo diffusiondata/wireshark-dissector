@@ -11,7 +11,7 @@ Installation
 + Ensure your Wireshark has Lua installed
 + Minimum version of Wireshark?
 + Copy all the .lua files into ~/.wireshark
-+ edit init.lua in your Wireshark installation directory to include dofile(USER_DIR.."dpt.lua")
++ Edit init.lua in your Wireshark installation directory to include dofile(USER_DIR.."dpt.lua")
 
 The files that need to be installed are:
 + dpt.lua
