@@ -47,7 +47,12 @@ end
 master.utilities = {
 	srcHost = srcHost,
 	dstHost = dstHost,
-	dump = dump
+	dump = dump,
+	f_tcp_stream  = Field.new("tcp.stream"),
+	f_tcp_srcport = Field.new("tcp.srcport"),
+	f_frame_number = Field.new("frame.number"),
+	RD = 1,
+	FD = 2
 }
 diffusion = master
 return master.utilities

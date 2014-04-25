@@ -1,5 +1,4 @@
 
-
 -- This assumes that files are in USER_DIR
 -- require looks in wireshark directories.
 dofile( USER_DIR.."dpt.utilities.lua" )
@@ -8,11 +7,14 @@ dofile( USER_DIR.."dpt.parse.lua" )
 dofile( USER_DIR.."dpt.messages.lua" )
 dofile( USER_DIR.."dpt.proto.lua" )
 dofile( USER_DIR.."dpt.display.lua" )
+dofile( USER_DIR.."dpt.dissector.lua" )
 
 local u = diffusion.utilities
 local i = diffusion.info
-local dptProto = diffusion.proto.proto
+local dptProto = diffusion.proto.dptProto
 local tcpConnections = diffusion.info.tcpConnections
+
+local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
 
 --------------------------------------
 -- Client
@@ -84,6 +86,8 @@ function ServerTable:get( host, port )
 	return self[host][port]
 end
 
+local f_tcp_stream = diffusion.utilities.f_tcp_stream
+local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 function tcpTap.packet( pinfo )

@@ -5,7 +5,7 @@ if master.display ~= nil then
 	return master.display
 end
 
-local dptProto = diffusion.proto.proto
+local dptProto = diffusion.proto.dptProto
 
 -- Attach the connection request information to the dissection tree
 local function addConnectionRequest( tree , fullRange, pinfo, request )
