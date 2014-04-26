@@ -1,6 +1,7 @@
 
 -- Dissector package
--- This package attaches the dissector, parsing and display behaviour to the protocol.
+-- This package attaches the dissector, parsing and display behaviour to the protocol. Unlike other packages this
+-- modifies previously created objects.
 
 -- Package header
 local master = diffusion or {}
@@ -236,7 +237,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 end
 
-
 -- Package footer
+master.dissector = {}
 diffusion = master
 return master.dissector
