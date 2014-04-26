@@ -146,11 +146,8 @@ end
 
 -- Export package
 master.display = {
-	addConnectionRequest = addConnectionRequest,
-	addConnectionResponse = addConnectionResponse,
 	addConnectionHandshake = addConnectionHandshake,
 	addClientConnectionInformation = addClientConnectionInformation,
-	addTopicHeaderInformation = addTopicHeaderInformation,
 	addHeaderInformation = addHeaderInformation,
 	addBody = addBody
 }
