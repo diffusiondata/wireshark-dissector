@@ -230,4 +230,5 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 end
 
+diffusion = master
 return master.dissector
