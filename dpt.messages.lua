@@ -1,5 +1,8 @@
 
--- Check package is not already loaded
+-- Messages package
+-- This package describes and parses different message types sent by Diffusion.
+
+-- Package header
 local master = diffusion or {}
 if master.messages ~= nil then
 	return master.messages
@@ -11,6 +14,7 @@ local parseTopicHeader = diffusion.parse.parseTopicHeader
 local parseRecordFields = diffusion.parse.parseRecordFields
 local parseField = diffusion.parse.parseField
 local parseAckId = diffusion.parse.parseAckId
+
 
 -- -----------------------------------
 -- A 'class' to process message types
@@ -429,7 +433,8 @@ local function nameByID(byte)
 	end
 end
 
--- Export package
+
+-- Package footer
 master.messages = {
 	messageTypeLookup = messageTypeLookup,
 	nameByID = nameByID

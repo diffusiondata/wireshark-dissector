@@ -1,5 +1,8 @@
 
--- Check package is not already loaded
+-- Dissector package
+-- This package attaches the dissector, parsing and display behaviour to the protocol.
+
+-- Package header
 local master = diffusion or {}
 if master.dissector ~= nil then
 	return master.dissector
@@ -9,23 +12,26 @@ local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
 
 local srcHost = diffusion.utilities.srcHost
 local dstHost = diffusion.utilities.dstHost
-local tcpConnections = diffusion.info.tcpConnections
-local nameByID = diffusion.messages.nameByID
-local messageTypeLookup = diffusion.messages.messageTypeLookup
-
 local f_tcp_stream  = diffusion.utilities.f_tcp_stream
 local f_tcp_srcport = diffusion.utilities.f_tcp_srcport
 local f_frame_number = diffusion.utilities.f_frame_number
 
-local LENGTH_LEN = 4 -- LLLL
-local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
-local DIFFUSION_MAGIC_NUMBER = 0x23
+local tcpConnections = diffusion.info.tcpConnections
+
+local nameByID = diffusion.messages.nameByID
+local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
+
 local addClientConnectionInformation = diffusion.display.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
 local addBody = diffusion.display.addBody
 local addConnectionHandshake = diffusion.display.addConnectionHandshake
+
+
+local LENGTH_LEN = 4 -- LLLL
+local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
+local DIFFUSION_MAGIC_NUMBER = 0x23
 
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
@@ -230,5 +236,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 end
 
+
+-- Package footer
 diffusion = master
 return master.dissector

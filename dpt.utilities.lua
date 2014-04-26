@@ -1,9 +1,13 @@
 
--- Check package is not already loaded
+-- Utilities package
+-- This package provides common utilities and constants.
+
+-- Package header
 local master = diffusion or {}
 if master.utilities ~= nil then
 	return master.utilities
 end
+
 
 local f_ip_dsthost  = Field.new("ip.dst_host")
 local f_ip_srchost  = Field.new("ip.src_host")
@@ -43,7 +47,8 @@ local function dump(o)
 	end
 end
 
--- Export package
+
+-- Package footer
 master.utilities = {
 	srcHost = srcHost,
 	dstHost = dstHost,

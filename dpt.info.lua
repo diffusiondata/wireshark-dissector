@@ -1,9 +1,13 @@
 
--- Check package is not already loaded
+-- Info package
+-- This package provides information tables that are built up and maintained over the course of the dissection.
+
+-- Package header
 local master = diffusion or {}
 if master.info ~= nil then
 	return master.info
 end
+
 
 -- -----------------------------------
 -- The Alias Table
@@ -45,7 +49,8 @@ function tcpConnections:len()
 	return result
 end
 
--- Export package
+
+-- Package footer
 master.info = {
 	aliasTable = aliasTable,
 	tcpConnections = tcpConnections

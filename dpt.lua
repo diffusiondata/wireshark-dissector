@@ -1,4 +1,8 @@
 
+-- Main
+-- This file is the entry point for the plugin. It loads the other packages and adds listeners to Wireshark and
+-- modifies the dissection table
+
 -- This assumes that files are in USER_DIR
 -- require looks in wireshark directories.
 dofile( USER_DIR.."dpt.utilities.lua" )

@@ -1,6 +1,8 @@
 
+-- Parse package
+-- This package provides reusable parsing utilities for individual elements of messages
 
--- Check package is not already loaded
+-- Package header
 local master = diffusion or {}
 if master.parse ~= nil then
 	return master.parse
@@ -10,6 +12,7 @@ local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local aliasTable = diffusion.info.aliasTable
 
 local RD, FD = 1, 2
+
 
 -- Parse the first header as a topic
 -- Takes the header range
@@ -101,7 +104,8 @@ local function parseAckId( headerRange )
 	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
--- Export package
+
+-- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
 	parseRecordFields = parseRecordFields,

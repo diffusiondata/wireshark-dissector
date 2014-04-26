@@ -1,11 +1,14 @@
 
--- Check package is not already loaded
+-- Display package
+-- This package adds information to the dissection tree that is displayed in Wireshark. 
+
+-- Package header
 local master = diffusion or {}
 if master.display ~= nil then
 	return master.display
 end
-
 local dptProto = diffusion.proto.dptProto
+
 
 -- Attach the connection request information to the dissection tree
 local function addConnectionRequest( tree , fullRange, pinfo, request )
@@ -144,7 +147,8 @@ local function addBody( parentTreeNode, records )
 	end
 end
 
--- Export package
+
+-- Package footer
 master.display = {
 	addConnectionHandshake = addConnectionHandshake,
 	addClientConnectionInformation = addClientConnectionInformation,
@@ -153,4 +157,3 @@ master.display = {
 }
 diffusion = master
 return master.display
-

@@ -1,9 +1,13 @@
 
--- Check package is not already loaded
+-- Proto package
+-- This package sets up the protocol description, fields and value mappings used by Wireshark.
+
+-- Package header
 local master = diffusion or {}
 if master.proto ~= nil then
 	return master.proto
 end
+
 
 local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
 
@@ -100,7 +104,8 @@ dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message 
 -- Ack message field
 dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement ID" )
 
--- Export package
+
+-- Package footer
 master.proto = {
 	dptProto = dptProto
 }
