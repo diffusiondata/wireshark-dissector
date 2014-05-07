@@ -104,13 +104,86 @@ local function parseAckId( headerRange )
 	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
+local function parseConnectionRequest( tvb, client )
+	-- Get the magic number 
+	local magicNumberRange = tvb( 0, 1 )
+	local magicNumber = magicNumberRange:uint()
+
+	-- get the protocol version number
+	local protoVerRange = tvb( 1, 1 )
+	client.protoVersion = protoVerRange:uint()
+
+	-- the 1 byte connection type
+	local connectionTypeRange = tvb( 2, 1 )
+	client.connectionType = connectionTypeRange:uint()
+
+	-- the 1 byte capabilities value
+	local capabilitiesRange = tvb( 3, 1 )
+	client.capabilities = capabilitiesRange:uint()
+	local offset = 4
+
+	local creds, topicset
+	local range = tvb( offset )
+	local rdBreak = range:bytes():index( RD )
+
+	if rdBreak >= 0 then
+		-- Mark up the creds - if there are any
+		local credsRange = range(0, rdBreak )
+		local credsString = credsRange:string():toRecordString()
+		if credsRange:len() > 0 then
+			creds = { range = credsRange, string = credsString }
+		end
+		offset = offset + rdBreak + 1
+	end
+
+	-- Mark up the login topicset - if there are any
+	local topicsetRange = range( offset, ( range:len() -1 ) - offset ) -- fiddly handling of trailing null character
+	if topicsetRange:len() > 0 then
+		topicset = topicsetRange
+	end
+
+	return { request = true, magicNumberRange = magicNumberRange,
+		protoVerRange = protoVerRange, connectionTypeRange = connectionTypeRange,
+		capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset }
+end
+
+local function parseConnectionResponse( tvb, client )
+	-- Get the magic number 
+	local magicNumberRange = tvb( 0, 1 )
+	local magicNumber = magicNumberRange:uint()
+
+	-- get the protocol version number
+	local protoVerRange = tvb( 1, 1 )
+	client.protoVersion = protoVerRange:uint()
+
+	-- Is a server response
+
+	local connectionResponseRange = tvb( 2, 1 )
+	local connectionResponse = connectionResponseRange:uint()
+
+	-- The size field
+	local messageLengthSizeRange = tvb( 3, 1 )
+	local messageLengthSize = messageLengthSizeRange:uint() 
+
+-- the client ID (the rest of this)
+	local clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
+	local clientID = clientIDRange:string()
+
+	client.clientId = clientIDRange:string()
+
+	return { request = false, magicNumberRange = magicNumberRange,
+		protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
+		messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
+end
 
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
 	parseRecordFields = parseRecordFields,
 	parseField = parseField,
-	parseAckId = parseAckId
+	parseAckId = parseAckId,
+	parseConnectionRequest = parseConnectionRequest,
+	parseConnectionResponse = parseConnectionResponse
 }
 diffusion = master
 return master.parse
