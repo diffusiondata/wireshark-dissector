@@ -171,7 +171,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
-	addClientConnectionInformation( messageTree, tvb, client, host, port )
+	addClientConnectionInformation( messageTree, tvb, client, srcHost(), f_tcp_srcport().value )
 
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
