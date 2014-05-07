@@ -48,12 +48,12 @@ local function dissectConnection( tvb, pinfo )
 	-- Get the magic number 
 	local magicNumberRange = tvb( offset, 1 )
 	local magicNumber = magicNumberRange:uint()
-	offset = offset +1
+	offset = offset + 1
 	
 	-- get the protocol version number
 	local protoVerRange = tvb( offset, 1 )
 	client.protoVersion = protoVerRange:uint()
-	offset = offset +1
+	offset = offset + 1
 
 	if isClient then
 		pinfo.cols.info = string.format( "Connection request" )
@@ -61,17 +61,17 @@ local function dissectConnection( tvb, pinfo )
 		-- the 1 byte connection type
 		local connectionTypeRange = tvb( offset, 1 )
 		client.connectionType = connectionTypeRange:uint()
-		offset = offset +1
+		offset = offset + 1
 
 		-- the 1 byte capabilities value
 		local capabilitiesRange = tvb( offset, 1 )
 		client.capabilities = capabilitiesRange:uint()
-		offset = offset +1
+		offset = offset + 1
 
 		local creds, topicset
-		-- TODO: load credentials <RD> data <MD>
 		local range = tvb( offset )
 		local rdBreak = range:bytes():index( RD )
+
 		if rdBreak >= 0 then
 			-- Mark up the creds - if there are any
 			local credsRange = range(0, rdBreak )
@@ -79,13 +79,13 @@ local function dissectConnection( tvb, pinfo )
 			if credsRange:len() > 0 then
 				creds = { range = credsRange, string = credsString }
 			end
+			offset = offset + rdBreak + 1
+		end
 
-			-- Mark up the login topicset - if there are any
-			local topicsetRange = range( rdBreak +1, ( range:len() -2 ) -rdBreak ) -- fiddly handling of trailing null character
-			if topicsetRange:len() > 0 then
-				topicset = topicsetRange
-			end
-
+		-- Mark up the login topicset - if there are any
+		local topicsetRange = range( offset, ( range:len() -1 ) - offset ) -- fiddly handling of trailing null character
+		if topicsetRange:len() > 0 then
+			topicset = topicsetRange
 		end
 
 		return { request = true, magicNumberRange = magicNumberRange,
