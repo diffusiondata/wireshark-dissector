@@ -47,12 +47,36 @@ local function dump(o)
 	end
 end
 
+-- Decode the varint used by command serialiser
+-- Takes a range containing the varint
+-- Returns: a range containing the varint, a range excluding the varint, the
+-- numeric value of the varint
+-- TODO: Unit test
+local function varint( range )
+	local sum = 0
+	local idx = 0
+	local shift = 0
+	while idx + 1 < range:len() do
+		local byte = range:range( idx, idx + 1 ):uint()
+		if byte >= 128 then
+			sum = sum + ( shift + byte - 128 )
+			idx = idx + 1
+			shift = shift + ( 2 ^ idx * 8 )
+		else
+			sum = sum + ( shift + byte )
+			idx = idx + 1
+			break
+		end
+	end
+	return range:range( 0, idx ), range:range( idx ), sum
+end
 
 -- Package footer
 master.utilities = {
 	srcHost = srcHost,
 	dstHost = dstHost,
 	dump = dump,
+	varint = varint,
 	f_tcp_stream  = Field.new("tcp.stream"),
 	f_tcp_srcport = Field.new("tcp.srcport"),
 	f_frame_number = Field.new("frame.number"),
