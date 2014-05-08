@@ -24,6 +24,7 @@ local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
 
+local parseAsV4ServiceMessage = diffusion.parse.parseAsV4ServiceMessage
 local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 
@@ -31,7 +32,10 @@ local addClientConnectionInformation = diffusion.display.addClientConnectionInfo
 local addHeaderInformation = diffusion.display.addHeaderInformation
 local addBody = diffusion.display.addBody
 local addConnectionHandshake = diffusion.display.addConnectionHandshake
+local addServiceInformation = diffusion.display.addServiceInformation
+local addDescription = diffusion.display.addDescription
 
+local SERVICE_TOPIC = diffusion.v5.SERVICE_TOPIC
 
 local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
@@ -117,6 +121,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
+	local headerInfo, serviceInfo
 	-- The headers & body -- find the 1st RD in the content
 	local headerBreak = contentRange:bytes():index( RD )
 	if headerBreak >= 0 then
@@ -124,20 +129,28 @@ local function processMessage( tvb, pinfo, tree, offset )
 		local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
 
 		-- Pass the header-node to the MessageType for further processing
-		local info = messageType:markupHeaders( headerNode, headerRange )
-		addHeaderInformation( headerNode, info )
+		headerInfo = messageType:markupHeaders( headerNode, headerRange )
+		addHeaderInformation( headerNode, headerInfo )
 
-		if headerBreak +1 <= (contentRange:len() -1) then
+		if headerBreak + 1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
 			local bodyRange = contentRange:range( headerBreak +1 )
 
+			if headerInfo.topic ~= nil and headerInfo.topic.topic ~= nil and headerInfo.topic.topic.string == SERVICE_TOPIC then
+				serviceInfo = parseAsV4ServiceMessage( bodyRange )
+			end
+
 			local records = messageType:markupBody( msgDetails, contentNode, bodyRange )
-			addBody( contentNode , records )
+			if serviceInfo ~= nil then
+				addServiceInformation( messageTree, serviceInfo, records )
+			else
+				addBody( contentNode , records )
+			end
 		end
 	end
 	
 	-- Set the Info column of the tabular display -- NB: this must be called last
-	pinfo.cols.info = messageType:getDescription()
+	addDescription( pinfo, messageType, headerInfo, serviceInfo )
 
 	return offset
 end

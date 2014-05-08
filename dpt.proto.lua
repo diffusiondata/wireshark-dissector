@@ -8,6 +8,7 @@ if master.proto ~= nil then
 	return master.proto
 end
 
+local v5 = diffusion.v5
 
 local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
 
@@ -63,6 +64,44 @@ local clientTypesByValue = {
     [0x1f] = "Introspector"
 }
 
+local serviceIdentity = {
+	[v5.SERVICE_PING] = "Ping",
+	[v5.SERVICE_FETCH] = "Fetch",
+	[v5.SERVICE_SUBSCRIBE] = "Subscribe",
+	[v5.SERVICE_UNSUBSCRIBE] = "Unsubscribe",
+	-- TODO: Other services
+	[v5.SERVICE_TOPIC_SOURCE_REGISTRATION] = "Topic Source Registration",
+	[v5.SERVICE_ADD_TOPIC] = "Topic Add",
+	[v5.SERVICE_REMOVE_TOPIC] = "Topic Remove"
+}
+
+local modeValues = {
+	[v5.MODE_ERROR] = "Error",
+	[v5.MODE_REQUEST] = "Request",
+	[v5.MODE_RESPONSE] = "Response"
+}
+
+local topicTypeBytes = {
+	[0x01] = "STATELESS",
+	[0x02] = "DELEGATED",
+	[0x03] = "SINGLE_VALUE",
+	[0x04] = "RECORD",
+	[0x05] = "PROTOCOL_BUFFER",
+	[0x06] = "CUSTOM",
+	[0x07] = "SLAVE",
+	[0x08] = "SERVICE",
+	[0x09] = "PAGED_STRING",
+	[0x10] = "PAGED_RECORD",
+	[0x11] = "TOPIC_NOTIFY",
+	[0x12] = "ROUTING",
+	[0x13] = "CHILD_LIST"
+}
+
+local statusResponseBytes = {
+	[0x00] = "OK",
+	[0x01] = "UNMATCHED_SELECTOR",
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
@@ -105,10 +144,26 @@ dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message 
 -- Ack message field
 dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement ID" )
 
+-- Service fields
+dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
+dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, serviceIdentity )
+dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, modeValues )
+dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
+dptProto.fields.metadata = ProtoField.string( "dpt.service.metadata", "Metadata" )
+dptProto.fields.topicId = ProtoField.uint32( "dpt.service.metadata.topicId", "Topic ID" )
+dptProto.fields.topicPath = ProtoField.string( "dpt.service.metadata.topicPath", "Topic Path" )
+dptProto.fields.topicType = ProtoField.uint8( "dpt.service.metadata.topicType", "Topic Type", base.HEX, topicTypeBytes )
+dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic selector" )
+dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
+dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
+
 
 -- Package footer
 master.proto = {
-	dptProto = dptProto
+	dptProto = dptProto,
+	serviceIdentity = serviceIdentity,
+	modeValues = modeValues,
+	statusResponseBytes = statusResponseBytes
 }
 diffusion = master
 return master.proto

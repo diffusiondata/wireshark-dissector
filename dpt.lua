@@ -7,6 +7,7 @@
 -- require looks in wireshark directories.
 dofile( USER_DIR.."dpt.utilities.lua" )
 dofile( USER_DIR.."dpt.info.lua" )
+dofile( USER_DIR.."dpt.v5.lua" )
 dofile( USER_DIR.."dpt.parse.lua" )
 dofile( USER_DIR.."dpt.messages.lua" )
 dofile( USER_DIR.."dpt.proto.lua" )
