@@ -24,6 +24,9 @@ local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
 
+local parseConnectionRequest = diffusion.parse.parseConnectionRequest
+local parseConnectionResponse = diffusion.parse.parseConnectionResponse
+
 local addClientConnectionInformation = diffusion.display.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
 local addBody = diffusion.display.addBody
@@ -36,8 +39,6 @@ local DIFFUSION_MAGIC_NUMBER = 0x23
 
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
-	local offset = 0
-
 	-- Is this a client or server packet?
 	local tcpStream, host, port = f_tcp_stream().value, srcHost(), f_tcp_srcport().value
 
@@ -45,78 +46,13 @@ local function dissectConnection( tvb, pinfo )
 	local server = tcpConnections[tcpStream].server
 	local isClient = client:matches( host, port )
 
-	-- Get the magic number 
-	local magicNumberRange = tvb( offset, 1 )
-	local magicNumber = magicNumberRange:uint()
-	offset = offset +1
-	
-	-- get the protocol version number
-	local protoVerRange = tvb( offset, 1 )
-	client.protoVersion = protoVerRange:uint()
-	offset = offset +1
-
 	if isClient then
 		pinfo.cols.info = string.format( "Connection request" )
-
-		-- the 1 byte connection type
-		local connectionTypeRange = tvb( offset, 1 )
-		client.connectionType = connectionTypeRange:uint()
-		offset = offset +1
-
-		-- the 1 byte capabilities value
-		local capabilitiesRange = tvb( offset, 1 )
-		client.capabilities = capabilitiesRange:uint()
-		offset = offset +1
-
-		local creds, topicset
-		-- TODO: load credentials <RD> data <MD>
-		local range = tvb( offset )
-		local rdBreak = range:bytes():index( RD )
-		if rdBreak >= 0 then
-			-- Mark up the creds - if there are any
-			local credsRange = range(0, rdBreak )
-			local credsString = credsRange:string():toRecordString()
-			if credsRange:len() > 0 then
-				creds = { range = credsRange, string = credsString }
-			end
-
-			-- Mark up the login topicset - if there are any
-			local topicsetRange = range( rdBreak +1, ( range:len() -2 ) -rdBreak ) -- fiddly handling of trailing null character
-			if topicsetRange:len() > 0 then
-				topicset = topicsetRange
-			end
-
-		end
-
-		return { request = true, magicNumberRange = magicNumberRange,
-			protoVerRange = protoVerRange, connectionTypeRange = connectionTypeRange,
-			capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset }
-
+		return parseConnectionRequest( tvb, client )
 	else
-		-- Is a server response
 		pinfo.cols.info = string.format( "Connection response" )
-		
-		local connectionResponseRange = tvb( offset, 1 )
-		local connectionResponse = connectionResponseRange:uint()
-		offset = offset +1
-
-		-- The size field
-		local messageLengthSizeRange = tvb( offset, 1 )
-		local messageLengthSize = messageLengthSizeRange:uint() 
-		offset = offset +1
-
-		-- the client ID (the rest of this)
-		local clientIDRange = tvb( offset, (tvb:len() -1) -offset )  -- fiddly handling of trailing null character
-		local clientID = clientIDRange:string()
-
-		client.clientId = clientIDRange:string()
-
-		return { request = false, magicNumberRange = magicNumberRange,
-			protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
-			messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
+		return parseConnectionResponse( tvb, client )
 	end
-
-	--TODO: dissect this as a client or as a server packet
 end
 
 -- Process an individual DPT message
