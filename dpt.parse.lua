@@ -120,10 +120,9 @@ local function parseConnectionRequest( tvb, client )
 	-- the 1 byte capabilities value
 	local capabilitiesRange = tvb( 3, 1 )
 	client.capabilities = capabilitiesRange:uint()
-	local offset = 4
 
-	local creds, topicset
-	local range = tvb( offset )
+	local creds, topicset, topicSetOffset
+	local range = tvb( 4 )
 	local rdBreak = range:bytes():index( RD )
 
 	if rdBreak >= 0 then
@@ -133,13 +132,17 @@ local function parseConnectionRequest( tvb, client )
 		if credsRange:len() > 0 then
 			creds = { range = credsRange, string = credsString }
 		end
-		offset = offset + rdBreak + 1
+		topicSetOffset = rdBreak + 1
+	else
+		topicSetOffset = 0
 	end
 
-	-- Mark up the login topicset - if there are any
-	local topicsetRange = range( offset, ( range:len() -1 ) - offset ) -- fiddly handling of trailing null character
-	if topicsetRange:len() > 0 then
-		topicset = topicsetRange
+	if topicSetOffset < range:len() then
+		-- Mark up the login topicset - if there are any
+		local topicsetRange = range( topicSetOffset, ( range:len() - 1 ) - topicSetOffset ) -- fiddly handling of trailing null character
+		if topicsetRange:len() > 0 then
+			topicset = topicsetRange
+		end
 	end
 
 	return { request = true, magicNumberRange = magicNumberRange,
