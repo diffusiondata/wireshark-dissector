@@ -38,7 +38,7 @@ function MessageType.index( typeArray )
 end
 
 -- Populate the headers tree with separate fixed headers and user headers
-function MessageType:markupHeaders( treeNode, headerRange )
+function MessageType:markupHeaders( headerRange )
 	-- Find the RD marking the fixed|user boundary
 	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
 	if headerBreak == -1 then
@@ -53,7 +53,7 @@ function MessageType:markupHeaders( treeNode, headerRange )
 	end
 end
 
-function MessageType:markupBody( messageDetails, parentTreeNode, bodyRange )
+function MessageType:markupBody( messageDetails, bodyRange )
 	-- the payload, everything after the headers
 
 	if messageDetails.msgEncoding == 0 then
@@ -85,7 +85,7 @@ end
 
 local topicLoadType = MessageType:new( 0x14, "Topic Load", 1 )
 
-function topicLoadType:markupHeaders( treeNode, headerRange )
+function topicLoadType:markupHeaders( headerRange )
 	-- Parse topic
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
@@ -114,7 +114,7 @@ end
 
 local deltaType = MessageType:new( 0x15, "Delta", 1 )
 
-function deltaType:markupHeaders( treeNode, headerRange )
+function deltaType:markupHeaders( headerRange )
 	-- Parse topic
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
@@ -144,7 +144,7 @@ end
 
 local subscribeType = MessageType:new( 0x16, "Subscribe", 1 )
 
-function subscribeType:markupHeaders( treeNode, headerRange )
+function subscribeType:markupHeaders( headerRange )
 	-- A single header, with a topic-selector
 	self.subscriptionDescription = string.format( "Subscribe to '%s'", headerRange:string() )
 	return { fixedHeaders = { range = headerRange, string = headerRange:string() } }
@@ -157,7 +157,7 @@ end
 -- Functionality specific to Command Messages
 local commandMessageType = MessageType:new( 0x24, "Command Message", 2 )
 
-function commandMessageType:markupHeaders( treeNode, headerRange )
+function commandMessageType:markupHeaders( headerRange )
 	-- Parse topic
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
@@ -197,7 +197,7 @@ end
 -- Functionality specific to Command Topic Load
 local commandTopicLoadType = MessageType:new( 0x28, "Command Topic Load", 3 )
 
-function commandTopicLoadType:markupHeaders( treeNode, headerRange )
+function commandTopicLoadType:markupHeaders( headerRange )
 	-- Parse topic
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
@@ -242,7 +242,7 @@ end
 -- Functionality specific to Command Topic Notification
 local commandTopicNotificationType = MessageType:new( 0x29, "Command Topic Notification", 2 )
 
-function commandTopicNotificationType:markupHeaders( treeNode, headerRange )
+function commandTopicNotificationType:markupHeaders( headerRange )
 	-- Parse topic
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
@@ -279,7 +279,7 @@ function commandTopicNotificationType:getDescription()
 end
 
 local fetchType = MessageType:new( 0x21, "Fetch", 1 )
-function fetchType:markupHeaders( treeNode, headerRange )
+function fetchType:markupHeaders( headerRange )
 	local info
 	headerRange, info = parseTopicHeader( headerRange )
 	self.fetchDescription = string.format( "Fetch '%s'", info.topic.string )
@@ -290,7 +290,7 @@ function fetchType:getDescription( )
 end
 
 local fetchReplyType = MessageType:new( 0x22, "Fetch Reply", 1 )
-function fetchReplyType:markupHeaders( treeNode, headerRange )
+function fetchReplyType:markupHeaders( headerRange )
 	local info
 	headerRange, info = parseTopicHeader( headerRange )
 	self.fetchDescription = string.format( "Fetch reply '%s'", info.topic.string )
@@ -301,7 +301,7 @@ function fetchReplyType:getDescription( )
 end
 
 local pingServer = MessageType:new( 0x18, "Ping Server", 2 )
-function pingServer:markupHeaders( treeNode, headerRange )
+function pingServer:markupHeaders( headerRange )
 	local timestampRange
 	timestampRange, headerRange = parseField( headerRange )
 	if headerRange ~= nil then
@@ -313,19 +313,19 @@ function pingServer:markupHeaders( treeNode, headerRange )
 	end
 end
 local pingClient = MessageType:new( 0x19, "Ping Client", 1 )
-function pingClient:markupHeaders( treeNode, headerRange )
+function pingClient:markupHeaders( headerRange )
 	local timestampRange, messageQueueRange
 	timestampRange, headerRange = parseField( headerRange )
 	return { timestamp = { range = timestampRange, string = timestampRange:string() } }
 end
 
 local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2)
-function topicLoadAckType:markupHeaders( treeNode, headerRange )
-	return topicLoadType.markupHeaders( self, treeNode, headerRange )
+function topicLoadAckType:markupHeaders( headerRange )
+	return topicLoadType.markupHeaders( self, headerRange )
 end
 
 local deltaAckType = MessageType:new( 0x1f, "Delta - ACK Required", 2 )
-function deltaAckType:markupHeaders( treeNode, headerRange )
+function deltaAckType:markupHeaders( headerRange )
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
@@ -353,7 +353,7 @@ function deltaAckType:getDescription()
 end
 
 local topicLoadAckType = MessageType:new( 0x1e, "Topic Load - ACK Required", 2 )
-function topicLoadAckType:markupHeaders( treeNode, headerRange )
+function topicLoadAckType:markupHeaders( headerRange )
 	local info, topic, alias
 	headerRange, info = parseTopicHeader( headerRange )
 	topic = info.topic.string
@@ -383,7 +383,7 @@ function topicLoadAckType:getDescription()
 end
 
 local ackType = MessageType:new( 0x20, "ACK - acknowledge", 1 )
-function ackType:markupHeaders( treeNode, headerRange )
+function ackType:markupHeaders( headerRange )
 	local ackIdObject
 	ackIdObject, headerRange = parseAckId( headerRange )
 	self.ackDescription = string.format( "Ack ID %s", ackIdObject.string )
