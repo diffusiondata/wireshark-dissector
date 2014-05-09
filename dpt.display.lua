@@ -8,8 +8,8 @@ if master.display ~= nil then
 	return master.display
 end
 local dptProto = diffusion.proto.dptProto
-local serviceIdentity = diffusion.proto.serviceIdentity
-local modeValues = diffusion.proto.modeValues
+local serviceIdentity = diffusion.v5.serviceIdentity
+local modeValues = diffusion.v5.modeValues
 local statusResponseBytes = diffusion.proto.statusResponseBytes
 
 local v5 = diffusion.v5

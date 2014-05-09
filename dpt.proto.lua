@@ -64,23 +64,6 @@ local clientTypesByValue = {
     [0x1f] = "Introspector"
 }
 
-local serviceIdentity = {
-	[v5.SERVICE_PING] = "Ping",
-	[v5.SERVICE_FETCH] = "Fetch",
-	[v5.SERVICE_SUBSCRIBE] = "Subscribe",
-	[v5.SERVICE_UNSUBSCRIBE] = "Unsubscribe",
-	-- TODO: Other services
-	[v5.SERVICE_TOPIC_SOURCE_REGISTRATION] = "Topic Source Registration",
-	[v5.SERVICE_ADD_TOPIC] = "Topic Add",
-	[v5.SERVICE_REMOVE_TOPIC] = "Topic Remove"
-}
-
-local modeValues = {
-	[v5.MODE_ERROR] = "Error",
-	[v5.MODE_REQUEST] = "Request",
-	[v5.MODE_RESPONSE] = "Response"
-}
-
 local topicTypeBytes = {
 	[0x01] = "STATELESS",
 	[0x02] = "DELEGATED",
@@ -146,8 +129,8 @@ dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement 
 
 -- Service fields
 dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
-dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, serviceIdentity )
-dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, modeValues )
+dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, v5.serviceIdentity )
+dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, v5.modeValues )
 dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
 dptProto.fields.metadata = ProtoField.string( "dpt.service.metadata", "Metadata" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.metadata.topicId", "Topic ID" )
@@ -161,8 +144,6 @@ dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic N
 -- Package footer
 master.proto = {
 	dptProto = dptProto,
-	serviceIdentity = serviceIdentity,
-	modeValues = modeValues,
 	statusResponseBytes = statusResponseBytes
 }
 diffusion = master
