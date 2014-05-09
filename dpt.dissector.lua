@@ -116,21 +116,18 @@ local function processMessage( tvb, pinfo, tree, offset )
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN
 	local contentRange = tvb( offset, contentSize )
-	local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
 
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
-	local headerInfo, serviceInfo
+	local headerInfo, serviceInfo, records
 	-- The headers & body -- find the 1st RD in the content
 	local headerBreak = contentRange:bytes():index( RD )
 	if headerBreak >= 0 then
 		local headerRange = contentRange:range( 0, headerBreak )
-		local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
 
 		-- Pass the header-node to the MessageType for further processing
-		headerInfo = messageType:markupHeaders( headerNode, headerRange )
-		addHeaderInformation( headerNode, headerInfo )
+		headerInfo = messageType:markupHeaders( headerRange )
 
 		if headerBreak + 1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
@@ -140,10 +137,17 @@ local function processMessage( tvb, pinfo, tree, offset )
 				serviceInfo = parseAsV4ServiceMessage( bodyRange )
 			end
 
-			local records = messageType:markupBody( msgDetails, contentNode, bodyRange )
+			records = messageType:markupBody( msgDetails, bodyRange )
 			if serviceInfo ~= nil then
 				addServiceInformation( messageTree, serviceInfo, records )
-			else
+			end
+		end
+
+		if serviceInfo == nil then
+			local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
+			local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
+			addHeaderInformation( headerNode, headerInfo )
+			if records ~= nil then
 				addBody( contentNode , records )
 			end
 		end
