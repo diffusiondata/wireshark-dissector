@@ -94,16 +94,19 @@ local function parseAsV4ServiceMessage( range )
 		if mode == v5.MODE_REQUEST then
 			if service == v5.SERVICE_FETCH then
 				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.range, string = selector.range:string() }
+				result.selector = { range = selector.fullRange, string = selector.string }
 			elseif service == v5.SERVICE_SUBSCRIBE then
 				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.range, string = selector.range:string() }
+				result.selector = { range = selector.fullRange, string = selector.string }
 			elseif service == v5.SERVICE_UNSUBSCRIBE then
 				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.range, string = selector.range:string() }
+				result.selector = { range = selector.fullRange, string = selector.string }
 			elseif service == v5.SERVICE_ADD_TOPIC then
 				local topicName = lengthPrefixedString( serviceBodyRange )
 				result.topicName = topicName
+			elseif service == v5.SERVICE_REMOVE_TOPICS then
+				local selector = lengthPrefixedString( serviceBodyRange )
+				result.selector = { range = selector.fullRange, string = selector.string }
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			if service == v5.SERVICE_SUBSCRIBE or
