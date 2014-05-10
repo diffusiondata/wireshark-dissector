@@ -47,13 +47,14 @@ end
 local function lengthPrefixedString( range )
 	if range ~= nil then
 		local lengthRange, rRange, length = varint( range )
+		local fullLength = lengthRange:len() + length
 
 		local stringRange = rRange:range( 0, length )
 		if rRange:len() > length then
 			local remainingRange = rRange:range( length )
-			return { range = stringRange, remaining = remainingRange }
+			return { range = stringRange, remaining = remainingRange, fullRange = range( 0, fullLength ), string = stringRange:string() }
 		else
-			return { range = stringRange }
+			return { range = stringRange, fullRange = range( 0, fullLength ), string = stringRange:string() }
 		end
 	end
 end
