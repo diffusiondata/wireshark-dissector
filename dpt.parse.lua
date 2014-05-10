@@ -23,6 +23,12 @@ local function varint( range )
 	local sum = 0
 	local idx = 0
 	local shift = 0
+
+	if range:len() == 1 then
+		local r = range:range( 0, 1 )
+		return r, range:range( 0, 0 ), r:uint()
+	end
+
 	while idx + 1 < range:len() do
 		local byte = range:range( idx, idx + 1 ):uint()
 		if byte >= 128 then
