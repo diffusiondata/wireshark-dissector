@@ -73,12 +73,11 @@ end
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
 		-- Parse varints
-		local serviceRange, remaining, service = varint( range )
-		local modeRange, remaining, mode = varint( remaining )
-		local conversationRange, remaining, conversation = varint( remaining )
+		local serviceRange, modeR, service = varint( range )
+		local modeRange, conversationR, mode = varint( modeR )
+		local conversationRange, serviceBodyRange, conversation = varint( conversationR )
 		-- Get values for service node
 		local serviceNodeRange = range
-		local serviceBodyRange = remaining
 
 		local result = { range = serviceNodeRange, id = { range = serviceRange, int = service },
 			mode = { range = modeRange, int = mode },
@@ -101,8 +100,8 @@ local function parseAsV4ServiceMessage( range )
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			if service == v5.SERVICE_SUBSCRIBE or
-			v5.SERVICE_UNSUBSCRIBE or
-			v5.SERVICE_FETCH then
+					service == v5.SERVICE_UNSUBSCRIBE or
+					service == v5.SERVICE_FETCH then
 				result.status = parseStatus( serviceBodyRange )
 			end
 		end
