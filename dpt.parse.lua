@@ -109,11 +109,6 @@ local function parseAsV4ServiceMessage( range )
 				result.selector = { range = selector.fullRange, string = selector.string }
 			end
 		elseif  mode == v5.MODE_RESPONSE then
-			if service == v5.SERVICE_SUBSCRIBE or
-					service == v5.SERVICE_UNSUBSCRIBE or
-					service == v5.SERVICE_FETCH then
-				result.status = parseStatus( serviceBodyRange )
-			end
 		end
 
 		return result
