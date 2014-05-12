@@ -45,10 +45,8 @@ local encodingTypesByValue = {
 }
 
 local clientTypesByValue = {
-    --TODO: Generate these values from ConnectionTypes.xml
     [1] = "Event Publisher",
     [2] = "External Publisher",
-
     [0x10] = "Publisher",
     [0x14] = "Default type",
     [0x15] = "Java",
