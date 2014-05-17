@@ -45,21 +45,29 @@ local encodingTypesByValue = {
 }
 
 local clientTypesByValue = {
-    [1] = "Event Publisher",
-    [2] = "External Publisher",
-    [0x10] = "Publisher",
-    [0x14] = "Default type",
-    [0x15] = "Java",
-    [0x16] = ".NET",
-    [0x17] = "Flash (Plugin)",
-    [0x18] = "Silverlight (Plugin)",
-    [0x19] = "iPhone",
-    [0x1a] = "J2ME",
-    [0x1b] = "Android",
-    [0x1c] = "Blackberry",
-    [0x1d] = "C",
-    [0x1e] = "Perl",
-    [0x1f] = "Introspector"
+    [0x01] = "Event Publisher",
+    [0x02] = "UDP Event Publisher",
+    [0x10] = "Publisher Client",
+    [0x14] = "Unspecified Client",
+    [0x15] = "Java Client",
+    [0x16] = ".Net Client",
+    [0x17] = "Flash Bridge Client",
+    [0x18] = "Silverlight Bridge Client",
+    [0x19] = "iPhone Client",
+    [0x1a] = "J2ME Client",
+    [0x1b] = "Android Client",
+    [0x1c] = "Blackberry Client",
+    [0x1d] = "C Client",
+    [0x1e] = "Perl Client",
+    [0x1f] = "Introspector Client",
+    [0x20] = "Windows Phone Client",
+    [0x21] = "iPad Client",
+    [0x22] = "Flash Client",
+    [0x23] = "Silverlight Client",
+    [0x28] = "UDP Java Client",
+    [0x29] = "UDP .Net Client",
+    [0x2a] = "UDP Silverlight Client",
+    [0x2b] = "UDP Publisher Client"
 }
 
 local topicTypeBytes = {
