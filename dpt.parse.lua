@@ -10,6 +10,7 @@ end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local aliasTable = diffusion.info.aliasTable
+local topicIdTable = diffusion.info.topicIdTable
 local v5 = diffusion.v5
 
 local RD, FD = 1, 2
@@ -59,17 +60,56 @@ local function lengthPrefixedString( range )
 	end
 end
 
-local function parseMetadata( range )
+local function parseAttrubutes( range )
+	--TODO: Attribute parsing
+end
+
+local function parseSchema( range )
+	--TODO: Schema parsing
+end
+
+local function parseTopicDetails( detailsRange )
+	local any = detailsRange:range( 0, 1 )
+	if any:int() == 0 then
+		return { range = any, type = { type = 0, range = any } }
+	else
+		local type = detailsRange:range( 1, 1 )
+		local typeRange = detailsRange:range( 0, 2 )
+		if detailsRange:range( 2, 1 ):int() == 0 then
+			-- Basic
+			return { range = detailsRange:range( 0, 3 ), type = { type = type:int(), range = typeRange } }
+		else
+			-- Schema+
+			local schema = parseSchema( detailsRange:range( 3 ) )
+			return { range = typeRange, type = { type = type:int(), range = typeRange } }
+		end
+	end
+end
+
+local function parseSubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local path = lengthPrefixedString( remaining )
-	local typeRange = path.remaining:range( 0, 1 )
-	local metadata = {
+	local topicDetails = parseTopicDetails( path.remaining )
+	local tcpStream = f_tcp_stream().value
+	topicIdTable:setAlias( tcpStream, id, path.range:string() )
+	local topicInfo = {
 		range = range,
 		id = { range = idRange, int = id },
-		path = { range = path.range, string = path.range:string() },
-		type = { range = typeRange, int = typeRange:int() }
+		path = { range = path.fullRange, string = path.range:string() },
+		details = topicDetails
 	}
-	return metadata
+	return topicInfo
+end
+
+local function parseUnsubscriptionNotification( range )
+	local idRange, remaining, id = varint( range )
+	local reasonRange, remaining, reason = varint( remaining )
+	local tcpStream = f_tcp_stream().value
+	local topicName = topicIdTable:getAlias( tcpStream, id )
+	return {
+		topic = { name = topicName, range = idRange },
+		reason = { reason = reason, range = reasonRange }
+	}
 end
 
 local function parseStatus( range )
@@ -107,6 +147,10 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_REMOVE_TOPICS then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
+			elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
+				result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
+			elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
+				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 		end

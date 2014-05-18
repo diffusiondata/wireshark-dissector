@@ -37,6 +37,7 @@ function AliasTable:getAlias( tcpStream, alias )
 end
 
 local aliasTable = AliasTable:new()
+local topicIdTable = AliasTable:new()
 
 -- -----------------------------------
 -- Create and register a listener for TCP connections
@@ -53,7 +54,8 @@ end
 -- Package footer
 master.info = {
 	aliasTable = aliasTable,
-	tcpConnections = tcpConnections
+	tcpConnections = tcpConnections,
+	topicIdTable = topicIdTable
 }
 diffusion = master
 return master.info

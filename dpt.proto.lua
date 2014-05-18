@@ -70,25 +70,32 @@ local clientTypesByValue = {
     [0x2b] = "UDP Publisher Client"
 }
 
-local topicTypeBytes = {
-	[0x01] = "STATELESS",
-	[0x02] = "DELEGATED",
-	[0x03] = "SINGLE_VALUE",
-	[0x04] = "RECORD",
-	[0x05] = "PROTOCOL_BUFFER",
-	[0x06] = "CUSTOM",
-	[0x07] = "SLAVE",
-	[0x08] = "SERVICE",
-	[0x09] = "PAGED_STRING",
-	[0x10] = "PAGED_RECORD",
-	[0x11] = "TOPIC_NOTIFY",
-	[0x12] = "ROUTING",
-	[0x13] = "CHILD_LIST"
+local topicTypesByByte = {
+    [0x00] = "NONE",
+    [0x01] = "STATELESS",
+    [0x02] = "DELEGATED",
+    [0x03] = "SINGLE_VALUE",
+    [0x04] = "RECORD",
+    [0x05] = "PROTOCOL_BUFFER",
+    [0x06] = "CUSTOM",
+    [0x07] = "SLAVE",
+    [0x08] = "SERVICE",
+    [0x09] = "PAGED_STRING",
+    [0x0a] = "PAGED_RECORD",
+    [0x0b] = "TOPIC_NOTIFY",
+    [0x0c] = "ROUTING",
+    [0x0d] = "CHILD_LIST"
 }
 
 local statusResponseBytes = {
 	[0x00] = "OK",
-	[0x01] = "UNMATCHED_SELECTOR",
+	[0x01] = "UNMATCHED_SELECTOR"
+}
+
+local topicRemovalReasonByBytes = {
+	[0x00] = "Unsubscription requested",
+	[0x01] = "Control client or server unsubscription",
+	[0x02] = "Topic Removal",
 }
 
 -- Connection negotiation fields
@@ -138,13 +145,14 @@ dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
 dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, v5.modeValues )
 dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
-dptProto.fields.metadata = ProtoField.string( "dpt.service.metadata", "Metadata" )
-dptProto.fields.topicId = ProtoField.uint32( "dpt.service.metadata.topicId", "Topic ID" )
-dptProto.fields.topicPath = ProtoField.string( "dpt.service.metadata.topicPath", "Topic Path" )
-dptProto.fields.topicType = ProtoField.uint8( "dpt.service.metadata.topicType", "Topic Type", base.HEX, topicTypeBytes )
+dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
+dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
+dptProto.fields.topicPath = ProtoField.string( "dpt.service.topicInfo.topicPath", "Topic Path" )
+dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, topicTypesByByte )
 dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic selector" )
 dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
+dptProto.fields.topicUnSubReason = ProtoField.uint8( "dpt.service.topicUnsubscribeReason", "Reason", base.HEX, topicRemovalReasonByBytes )
 
 
 -- Package footer

@@ -14,7 +14,6 @@ local statusResponseBytes = diffusion.proto.statusResponseBytes
 
 local v5 = diffusion.v5
 
-
 -- Attach the connection request information to the dissection tree
 local function addConnectionRequest( tree , fullRange, pinfo, request )
 	pinfo.cols.info = string.format( "Connection request" )
@@ -152,6 +151,10 @@ local function addBody( parentTreeNode, records )
 	end
 end
 
+local function addTopicDetails( parentNode, details )
+	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+end
+
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
 		local serviceNodeDesc = string.format( "%d bytes", service.range:len() )
@@ -169,6 +172,17 @@ local function addServiceInformation( parentTreeNode, service )
 		end
 		if service.topicName ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.topicName.fullRange, service.topicName.string )
+		end
+		if service.topicInfo ~= nil then
+			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )
+			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
+			topicInfoNode:add( dptProto.fields.topicId, service.topicInfo.id.range, service.topicInfo.id.int )
+			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
+			addTopicDetails( topicInfoNode, service.topicInfo.details )
+		end
+		if service.topicUnsubscriptionInfo ~= nil then
+			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
+			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
 		end
 	end
 end
