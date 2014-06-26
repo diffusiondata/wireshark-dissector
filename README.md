@@ -64,4 +64,6 @@ following is a selection of useful fields.
 | dpt.connection.connectionType | Filter connection requests by the connection type | dpt.connection.connectionType == 0x17 |
 | dpt.connection.capabilities | Filter connection requests by the capabilities byte | dpt.connection.capabilities == 0x07 |
 | dpt.connection.responseCode | Filter connection responses by the response code | dpt.connection.responseCode == 100 |
+| dpt.service.identity | Filter service messages by the service | dpt.service.identity == 0x03 |
+| dpt.service.mode | Filter service messages by whether they are requests or responses | dpt.service.mode == 0x01 |
 

@@ -10,9 +10,156 @@ end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local aliasTable = diffusion.info.aliasTable
+local topicIdTable = diffusion.info.topicIdTable
+local v5 = diffusion.v5
 
 local RD, FD = 1, 2
 
+-- Decode the varint used by command serialiser
+-- Takes a range containing the varint
+-- Returns: a range containing the varint, a range excluding the varint, the
+-- numeric value of the varint
+-- TODO: Unit test
+local function varint( range )
+	local sum = 0
+	local idx = 0
+	local shift = 0
+
+	if range:len() == 1 then
+		local r = range:range( 0, 1 )
+		return r, range:range( 0, 0 ), r:uint()
+	end
+
+	while idx + 1 < range:len() do
+		local byte = range:range( idx, idx + 1 ):uint()
+		if byte >= 128 then
+			sum = sum + ( shift + byte - 128 )
+			idx = idx + 1
+			shift = shift + ( 2 ^ idx * 8 )
+		else
+			sum = sum + ( shift + byte )
+			idx = idx + 1
+			break
+		end
+	end
+	return range:range( 0, idx ), range:range( idx ), sum
+end
+
+local function lengthPrefixedString( range )
+	if range ~= nil then
+		local lengthRange, rRange, length = varint( range )
+		local fullLength = lengthRange:len() + length
+
+		local stringRange = rRange:range( 0, length )
+		if rRange:len() > length then
+			local remainingRange = rRange:range( length )
+			return { range = stringRange, remaining = remainingRange, fullRange = range( 0, fullLength ), string = stringRange:string() }
+		else
+			return { range = stringRange, fullRange = range( 0, fullLength ), string = stringRange:string() }
+		end
+	end
+end
+
+local function parseAttrubutes( range )
+	--TODO: Attribute parsing
+end
+
+local function parseSchema( range )
+	--TODO: Schema parsing
+end
+
+local function parseTopicDetails( detailsRange )
+	local any = detailsRange:range( 0, 1 )
+	if any:int() == 0 then
+		return { range = any, type = { type = 0, range = any } }
+	else
+		local type = detailsRange:range( 1, 1 )
+		local typeRange = detailsRange:range( 0, 2 )
+		if detailsRange:range( 2, 1 ):int() == 0 then
+			-- Basic
+			return { range = detailsRange:range( 0, 3 ), type = { type = type:int(), range = typeRange } }
+		else
+			-- Schema+
+			local schema = parseSchema( detailsRange:range( 3 ) )
+			return { range = typeRange, type = { type = type:int(), range = typeRange } }
+		end
+	end
+end
+
+local function parseSubscriptionNotification( range )
+	local idRange, remaining, id = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local topicDetails = parseTopicDetails( path.remaining )
+	local tcpStream = f_tcp_stream().value
+	topicIdTable:setAlias( tcpStream, id, path.range:string() )
+	local topicInfo = {
+		range = range,
+		id = { range = idRange, int = id },
+		path = { range = path.fullRange, string = path.range:string() },
+		details = topicDetails
+	}
+	return topicInfo
+end
+
+local function parseUnsubscriptionNotification( range )
+	local idRange, remaining, id = varint( range )
+	local reasonRange, remaining, reason = varint( remaining )
+	local tcpStream = f_tcp_stream().value
+	local topicName = topicIdTable:getAlias( tcpStream, id )
+	return {
+		topic = { name = topicName, range = idRange },
+		reason = { reason = reason, range = reasonRange }
+	}
+end
+
+local function parseStatus( range )
+	return { range = range }
+end
+
+-- Parse the message as a service request or response
+local function parseAsV4ServiceMessage( range )
+	if range ~= nil and range:len() >= 2 then
+		-- Parse varints
+		local serviceRange, modeR, service = varint( range )
+		local modeRange, conversationR, mode = varint( modeR )
+		local conversationRange, serviceBodyRange, conversation = varint( conversationR )
+		-- Get values for service node
+		local serviceNodeRange = range
+
+		local result = { range = serviceNodeRange, id = { range = serviceRange, int = service },
+			mode = { range = modeRange, int = mode },
+			conversation = { range = conversationRange, int = conversation },
+			body = serviceBodyRange }
+
+		if mode == v5.MODE_REQUEST then
+			if service == v5.SERVICE_FETCH then
+				local selector = lengthPrefixedString( serviceBodyRange )
+				result.selector = { range = selector.fullRange, string = selector.string }
+			elseif service == v5.SERVICE_SUBSCRIBE then
+				local selector = lengthPrefixedString( serviceBodyRange )
+				result.selector = { range = selector.fullRange, string = selector.string }
+			elseif service == v5.SERVICE_UNSUBSCRIBE then
+				local selector = lengthPrefixedString( serviceBodyRange )
+				result.selector = { range = selector.fullRange, string = selector.string }
+			elseif service == v5.SERVICE_ADD_TOPIC then
+				local topicName = lengthPrefixedString( serviceBodyRange )
+				result.topicName = topicName
+			elseif service == v5.SERVICE_REMOVE_TOPICS then
+				local selector = lengthPrefixedString( serviceBodyRange )
+				result.selector = { range = selector.fullRange, string = selector.string }
+			elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
+				result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
+			elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
+				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
+			end
+		elseif  mode == v5.MODE_RESPONSE then
+		end
+
+		return result
+	else
+		return {}
+	end
+end
 
 -- Parse the first header as a topic
 -- Takes the header range
@@ -186,7 +333,8 @@ master.parse = {
 	parseField = parseField,
 	parseAckId = parseAckId,
 	parseConnectionRequest = parseConnectionRequest,
-	parseConnectionResponse = parseConnectionResponse
+	parseConnectionResponse = parseConnectionResponse,
+	parseAsV4ServiceMessage = parseAsV4ServiceMessage
 }
 diffusion = master
 return master.parse

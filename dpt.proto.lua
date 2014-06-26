@@ -8,6 +8,7 @@ if master.proto ~= nil then
 	return master.proto
 end
 
+local v5 = diffusion.v5
 
 local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
 
@@ -29,7 +30,8 @@ local capabilities = {
     [0x04] = "Supports base 64 encoded data messages",
     [0x05] = "Supports encrypted and base 64 encoded data messages",
     [0x06] = "Supports compressed and base 64 encoded data messages",
-    [0x07] = "Supports encrypted, compressed and base 64 encoded data messages"
+    [0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
+    [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a feature based client"
 }
 
 local encodingTypesByValue = {
@@ -43,23 +45,57 @@ local encodingTypesByValue = {
 }
 
 local clientTypesByValue = {
-    --TODO: Generate these values from ConnectionTypes.xml
-    [1] = "Event Publisher",
-    [2] = "External Publisher",
+    [0x01] = "Event Publisher",
+    [0x02] = "UDP Event Publisher",
+    [0x10] = "Publisher Client",
+    [0x14] = "Unspecified Client",
+    [0x15] = "Java Client",
+    [0x16] = ".Net Client",
+    [0x17] = "Flash Bridge Client",
+    [0x18] = "Silverlight Bridge Client",
+    [0x19] = "iPhone Client",
+    [0x1a] = "J2ME Client",
+    [0x1b] = "Android Client",
+    [0x1c] = "Blackberry Client",
+    [0x1d] = "C Client",
+    [0x1e] = "Perl Client",
+    [0x1f] = "Introspector Client",
+    [0x20] = "Windows Phone Client",
+    [0x21] = "iPad Client",
+    [0x22] = "Flash Client",
+    [0x23] = "Silverlight Client",
+    [0x28] = "UDP Java Client",
+    [0x29] = "UDP .Net Client",
+    [0x2a] = "UDP Silverlight Client",
+    [0x2b] = "UDP Publisher Client"
+}
 
-    [0x10] = "Publisher",
-    [0x14] = "Default type",
-    [0x15] = "Java",
-    [0x16] = ".NET",
-    [0x17] = "Flash (Plugin)",
-    [0x18] = "Silverlight (Plugin)",
-    [0x19] = "iPhone",
-    [0x1a] = "J2ME",
-    [0x1b] = "Android",
-    [0x1c] = "Blackberry",
-    [0x1d] = "C",
-    [0x1e] = "Perl",
-    [0x1f] = "Introspector"
+local topicTypesByByte = {
+    [0x00] = "NONE",
+    [0x01] = "STATELESS",
+    [0x02] = "DELEGATED",
+    [0x03] = "SINGLE_VALUE",
+    [0x04] = "RECORD",
+    [0x05] = "PROTOCOL_BUFFER",
+    [0x06] = "CUSTOM",
+    [0x07] = "SLAVE",
+    [0x08] = "SERVICE",
+    [0x09] = "PAGED_STRING",
+    [0x0a] = "PAGED_RECORD",
+    [0x0b] = "TOPIC_NOTIFY",
+    [0x0c] = "ROUTING",
+    [0x0d] = "CHILD_LIST"
+}
+
+local statusResponseBytes = {
+	[0x00] = "OK",
+	[0x01] = "UNMATCHED_SELECTOR"
+}
+
+local topicRemovalReasonByBytes = {
+	[0x00] = "Unsubscription requested",
+	[0x01] = "Control client or server unsubscription",
+	[0x02] = "Topic Removal",
 }
 
 -- Connection negotiation fields
@@ -104,10 +140,25 @@ dptProto.fields.queueSize = ProtoField.string( "dpt.header.queueSize", "Message 
 -- Ack message field
 dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement ID" )
 
+-- Service fields
+dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
+dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, v5.serviceIdentity )
+dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, v5.modeValues )
+dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
+dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
+dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
+dptProto.fields.topicPath = ProtoField.string( "dpt.service.topicInfo.topicPath", "Topic Path" )
+dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, topicTypesByByte )
+dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic selector" )
+dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
+dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
+dptProto.fields.topicUnSubReason = ProtoField.uint8( "dpt.service.topicUnsubscribeReason", "Reason", base.HEX, topicRemovalReasonByBytes )
+
 
 -- Package footer
 master.proto = {
-	dptProto = dptProto
+	dptProto = dptProto,
+	statusResponseBytes = statusResponseBytes
 }
 diffusion = master
 return master.proto

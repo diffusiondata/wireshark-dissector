@@ -47,7 +47,6 @@ local function dump(o)
 	end
 end
 
-
 -- Package footer
 master.utilities = {
 	srcHost = srcHost,

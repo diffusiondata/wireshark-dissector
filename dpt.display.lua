@@ -8,7 +8,11 @@ if master.display ~= nil then
 	return master.display
 end
 local dptProto = diffusion.proto.dptProto
+local serviceIdentity = diffusion.v5.serviceIdentity
+local modeValues = diffusion.v5.modeValues
+local statusResponseBytes = diffusion.proto.statusResponseBytes
 
+local v5 = diffusion.v5
 
 -- Attach the connection request information to the dissection tree
 local function addConnectionRequest( tree , fullRange, pinfo, request )
@@ -147,13 +151,86 @@ local function addBody( parentTreeNode, records )
 	end
 end
 
+local function addTopicDetails( parentNode, details )
+	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+end
+
+local function addServiceInformation( parentTreeNode, service )
+	if service ~= nil and service.range ~= nil then
+		local serviceNodeDesc = string.format( "%d bytes", service.range:len() )
+		-- Create service node
+		local serviceNode = parentTreeNode:add( dptProto.fields.service, service.range, serviceNodeDesc )
+		serviceNode:add( dptProto.fields.serviceIdentity, service.id.range, service.id.int )
+		serviceNode:add( dptProto.fields.serviceMode, service.mode.range, service.mode.int )
+		serviceNode:add( dptProto.fields.conversation, service.conversation.range, service.conversation.int )
+
+		if service.selector ~= nil then
+			serviceNode:add( dptProto.fields.selector, service.selector.range, service.selector.string )
+		end
+		if service.status ~= nil then
+			serviceNode:add( dptProto.fields.status, service.status.range )
+		end
+		if service.topicName ~= nil then
+			serviceNode:add( dptProto.fields.topicName, service.topicName.fullRange, service.topicName.string )
+		end
+		if service.topicInfo ~= nil then
+			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )
+			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
+			topicInfoNode:add( dptProto.fields.topicId, service.topicInfo.id.range, service.topicInfo.id.int )
+			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
+			addTopicDetails( topicInfoNode, service.topicInfo.details )
+		end
+		if service.topicUnsubscriptionInfo ~= nil then
+			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
+			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
+		end
+	end
+end
+
+local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
+	if serviceInformation ~= nil then
+		local serviceId = serviceInformation.id.int
+		local mode = serviceInformation.mode.int
+		local serviceString = serviceIdentity[serviceId]
+		local modeString = modeValues[mode]
+		if serviceString == nil then
+			serviceString = string.format( "Unknown service (%d)", serviceId )
+		end
+		if serviceString == nil then
+			modeString = string.format( "Unknown mode (%d)", mode )
+		end
+		if serviceInformation.status ~= nil then
+			local status = serviceInformation.status.range:int()
+			local statusString = statusResponseBytes[status]
+			if statusString == nil then
+				statusString = string.format( "Unknown status (%d)", status )
+			end
+			modeString = string.format( "%s %s", modeString, statusString)
+		end
+		if serviceId == v5.SERVICE_FETCH or
+			serviceId == v5.SERVICE_SUBSCRIBE or
+			serviceId == v5.SERVICE_UNSUBSCRIBE then
+			if serviceInformation.selector ~= nil then
+				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
+			else
+				pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+			end
+		else
+			pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+		end
+		return
+	end
+	pinfo.cols.info = messageType:getDescription()
+end
 
 -- Package footer
 master.display = {
 	addConnectionHandshake = addConnectionHandshake,
 	addClientConnectionInformation = addClientConnectionInformation,
 	addHeaderInformation = addHeaderInformation,
-	addBody = addBody
+	addBody = addBody,
+	addServiceInformation = addServiceInformation,
+	addDescription = addDescription
 }
 diffusion = master
 return master.display
