@@ -223,16 +223,27 @@ local function parseRecordFields( recordRange )
 	local fieldBase = 0
 	local rangeString = recordRange:string()
 	local fields = rangeString:split( string.char( FD ) )
-	local fs = { num = #fields }
+	local fs = {}
 
+	local idx = 1
 	-- Break open into records & then fields
+	-- There is some duplication going on to get the field ranges
 	for i, field in ipairs(fields) do
 
 		local fieldRange = recordRange:range( fieldBase, #field )
-		fs[i] = { range = fieldRange, string = fieldRange:string() }
+		fs[idx] = { range = fieldRange, string = fieldRange:string() }
+		idx = idx + 1
 
-		fieldBase = fieldBase + #field + 1 -- +1 for the delimiter
+		-- Find any empty fields and the starting point of the next non-empty field
+		fieldBase = fieldBase + #field + 1
+		while recordRange:len() > fieldBase and recordRange:range( fieldBase, 1 ):int() == FD do
+			fs[idx] = { range = recordRange:range( fieldBase, 0 ), string = "" }
+			idx = idx + 1
+			fieldBase = fieldBase + 1
+		end
+
 	end
+	fs.num = idx - 1
 	return fs
 end
 
