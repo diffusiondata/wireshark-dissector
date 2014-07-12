@@ -57,21 +57,45 @@ function MessageType:markupBody( messageDetails, bodyRange )
 	-- the payload, everything after the headers
 
 	if messageDetails.msgEncoding == 0 then
-		local rangeBase = 0
-		local bodyString = bodyRange:string()
-		local records = bodyString:split( string.char( RD ) )
-		local recs = { num = #records, range = bodyRange }
+		local bytes = bodyRange:bytes()
+		local bytesLen = bytes:len()
+		local recs = { range = bodyRange }
 
-		-- Break open into records & then fields
-		for i, record in ipairs(records) do
+		local recordStart = 0
+		local pos = 0
+		local idx = 1
 
-			local recordRange = bodyRange:range( rangeBase, #record )
-			local fields = parseRecordFields( recordRange )
-			recs[i] = { range = recordRange, string = record:toRecordString(), fields = fields }
+		-- On each record delimiter add the previous record to result
+		while pos < bytesLen do
+			local byte = bytes:get_index(pos)
 
-			rangeBase = rangeBase + #record + 1 -- +1 for the delimiter
+			if byte == RD then
+				local recordRange = bodyRange:range( recordStart, pos - recordStart )
+				recs[idx] = { range = recordRange, string = recordRange:string():toRecordString(), fields = parseRecordFields( recordRange ) }
+				idx = idx + 1
+				pos = pos + 1
+				recordStart = pos
+			else
+				pos = pos + 1
+			end
+
 		end
+
+		-- Records are delimited so treat the end as another delimiter
+		-- Special handling is needed to get an empty range at the end for a trailing empty record and populate it with an empty field
+		if pos - recordStart == 0 then
+			local emptyRange = bodyRange:range( recordStart - 1, 0 )
+			local emptyFields = { num = 1 }
+			emptyFields[1] = { range = emptyRange, string = "" }
+			recs[idx] = { range = emptyRange, string = "", fields = emptyFields }
+		else
+			local recordRange = bodyRange:range( recordStart )
+			recs[idx] = { range = recordRange, string = recordRange:string():toRecordString(), fields = parseRecordFields( recordRange ) }
+		end
+
+		recs.num = idx
 		return recs
+
 	else
 		return {}
 	end
