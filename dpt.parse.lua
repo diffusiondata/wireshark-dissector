@@ -220,30 +220,40 @@ local function parseTopicHeader( headerRange )
 end
 
 local function parseRecordFields( recordRange )
-	local fieldBase = 0
-	local rangeString = recordRange:string()
-	local fields = rangeString:split( string.char( FD ) )
+	local bytes = recordRange:bytes()
+	local bytesLen = bytes:len()
 	local fs = {}
 
+	local fieldStart = 0
+	local pos = 0
 	local idx = 1
-	-- Break open into records & then fields
-	-- There is some duplication going on to get the field ranges
-	for i, field in ipairs(fields) do
 
-		local fieldRange = recordRange:range( fieldBase, #field )
-		fs[idx] = { range = fieldRange, string = fieldRange:string() }
-		idx = idx + 1
+	-- On each field delimiter add the previous field to result
+	while pos < bytesLen do
+		local byte = bytes:get_index(pos)
 
-		-- Find any empty fields and the starting point of the next non-empty field
-		fieldBase = fieldBase + #field + 1
-		while recordRange:len() > fieldBase and recordRange:range( fieldBase, 1 ):int() == FD do
-			fs[idx] = { range = recordRange:range( fieldBase, 0 ), string = "" }
+		if byte == FD then
+			local fieldRange = recordRange:range( fieldStart, pos - fieldStart )
+			fs[idx] = { range = fieldRange, string = fieldRange:string() }
 			idx = idx + 1
-			fieldBase = fieldBase + 1
+			pos = pos + 1
+			fieldStart = pos
+		else
+			pos = pos + 1
 		end
 
 	end
-	fs.num = idx - 1
+
+	-- Fields are delimited so treat the end as another delimiter
+	-- Special handling is needed to get an empty range at the end for a trailing empty field
+	if pos - fieldStart == 0 then
+		fs[idx] = { range = recordRange:range( fieldStart - 1, 0 ), string = "" }
+	else
+		local fieldRange = recordRange:range( fieldStart )
+		fs[idx] = { range = fieldRange, string = fieldRange:string() }
+	end
+
+	fs.num = idx
 	return fs
 end
 
