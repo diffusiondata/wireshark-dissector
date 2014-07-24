@@ -427,7 +427,7 @@ end
 
 local function nameByID(byte)
 	if byte >= 0x40 then
-		return MessageType.nameByID(byte - 0x40) .. " fragmented"
+		return messageTypesByValue[byte - 0x40].name .. " fragmented"
 	else
 		return messageTypesByValue[byte].name
 	end
