@@ -18,7 +18,7 @@ local responseCodes = {
     [103] = "One or more of the specified topics are invalid",
     [105] = "Reconnection Successful",
     [110] = "Topic already exists",
-    [110] = "Connection Rejected",
+    [111] = "Connection Rejected",
     [127] = "Undefined error"
 }
 
