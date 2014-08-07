@@ -28,6 +28,10 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	if request.topicsetRange ~= nil then
 		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
 	end
+	if request.clientIdRange ~= nil then
+		pinfo.cols.info = string.format( "Reconnection request" )
+		messageTree:add( dptProto.fields.clientID, request.clientIdRange )
+	end
 end
 
 -- Attach the connection response information to the dissection tree

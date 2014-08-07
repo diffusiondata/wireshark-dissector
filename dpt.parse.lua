@@ -279,7 +279,7 @@ local function parseConnectionRequest( tvb, client )
 	local capabilitiesRange = tvb( 3, 1 )
 	client.capabilities = capabilitiesRange:uint()
 
-	local creds, topicset, topicSetOffset
+	local creds, topicset, topicSetOffset, clientIdOffset, clientId
 	local range = tvb( 4 )
 	local rdBreak = range:bytes():index( RD )
 
@@ -295,17 +295,38 @@ local function parseConnectionRequest( tvb, client )
 		topicSetOffset = 0
 	end
 
-	if topicSetOffset < range:len() then
-		-- Mark up the login topicset - if there are any
-		local topicsetRange = range( topicSetOffset, ( range:len() - 1 ) - topicSetOffset ) -- fiddly handling of trailing null character
-		if topicsetRange:len() > 0 then
-			topicset = topicsetRange
+	local fdBreak = range( topicSetOffset ):bytes():index( FD )
+	if fdBreak >= 0 then
+		if topicSetOffset < range:len() then
+			-- Mark up the login topicset - if there are any
+			local topicsetRange = range( topicSetOffset, fdBreak )
+			if topicsetRange:len() > 0 then
+				topicset = topicsetRange
+			end
+			clientIdOffset = topicSetOffset + fdBreak + 1
+		else
+			clientIdOffset = topicSetOffset
+		end
+
+		if clientIdOffset < range:len() then
+			local clientIdRange = range( clientIdOffset, (range:len() - 1) - (clientIdOffset) )
+			if clientIdRange:len() > 0 then
+				clientId = clientIdRange
+			end
+		end
+	else
+		if topicSetOffset < range:len() then
+			-- Mark up the login topicset - if there are any
+			local topicsetRange = range( topicSetOffset, (range:len() - 1) - (topicSetOffset) )
+			if topicsetRange:len() > 0 then
+				topicset = topicsetRange
+			end
 		end
 	end
 
 	return { request = true, magicNumberRange = magicNumberRange,
 		protoVerRange = protoVerRange, connectionTypeRange = connectionTypeRange,
-		capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset }
+		capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset, clientIdRange = clientId }
 end
 
 local function parseConnectionResponse( tvb, client )
