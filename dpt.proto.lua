@@ -153,6 +153,7 @@ dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic sel
 dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
 dptProto.fields.topicUnSubReason = ProtoField.uint8( "dpt.service.topicUnsubscribeReason", "Reason", base.HEX, topicRemovalReasonByBytes )
+dptProto.fields.responseTime = ProtoField.string( "dpt.service.responseTime", "Response time" )
 
 
 -- Package footer

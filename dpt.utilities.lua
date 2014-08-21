@@ -55,6 +55,7 @@ master.utilities = {
 	f_tcp_stream  = Field.new("tcp.stream"),
 	f_tcp_srcport = Field.new("tcp.srcport"),
 	f_frame_number = Field.new("frame.number"),
+	f_time = Field.new("frame.time_epoch"),
 	RD = 1,
 	FD = 2
 }

@@ -9,11 +9,37 @@ if master.parse ~= nil then
 end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
+local f_time = diffusion.utilities.f_time
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
 local v5 = diffusion.v5
 
 local RD, FD = 1, 2
+
+-- Stores information about specific service requests
+local ServiceMessageTable = {}
+function ServiceMessageTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+
+-- Add information about a service request
+function ServiceMessageTable:addRequest( client, conversation, time )
+	local serviceConversation = self[client] or {}
+	serviceConversation[conversation] = {}
+	serviceConversation[conversation].time = time
+	self[client] = serviceConversation
+end
+
+-- Get the time of a service request
+function ServiceMessageTable:getRequestTime( client, conversation )
+	local serviceConversation = self[client]
+	return serviceConversation[conversation]
+end
+
+local serviceMessageTable = ServiceMessageTable:new()
 
 -- Decode the varint used by command serialiser
 -- Takes a range containing the varint
@@ -117,7 +143,7 @@ local function parseStatus( range )
 end
 
 -- Parse the message as a service request or response
-local function parseAsV4ServiceMessage( range )
+local function parseAsV4ServiceMessage( range, client )
 	if range ~= nil and range:len() >= 2 then
 		-- Parse varints
 		local serviceRange, modeR, service = varint( range )
@@ -132,6 +158,8 @@ local function parseAsV4ServiceMessage( range )
 			body = serviceBodyRange }
 
 		if mode == v5.MODE_REQUEST then
+			serviceMessageTable:addRequest( client, conversation, f_time().value )
+
 			if service == v5.SERVICE_FETCH then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
@@ -153,6 +181,8 @@ local function parseAsV4ServiceMessage( range )
 				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
 			end
 		elseif  mode == v5.MODE_RESPONSE then
+			local reqInfo = serviceMessageTable:getRequestTime( client, conversation )
+			result.responseTime = tostring( f_time().value - reqInfo.time )
 		end
 
 		return result

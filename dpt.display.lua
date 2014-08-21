@@ -188,6 +188,10 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
 			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
 		end
+		if service.responseTime ~= nil then
+			local node = serviceNode:add( dptProto.fields.responseTime, service.responseTime )
+			node:set_generated()
+		end
 	end
 end
 
