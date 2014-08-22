@@ -219,6 +219,9 @@ local function parseAsV4ServiceMessage( range )
 				local info = parseTopicControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info.controlRegInfo
 				result.handlerTopicPath = info.handlerTopicPath
+			elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
+				local info = parseControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			local reqTime
