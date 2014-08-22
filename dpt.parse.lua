@@ -30,7 +30,6 @@ end
 
 -- Add information about a service request
 function ServiceMessageTable:addRequest( tcpStream, requestSrc, conversation, time )
-	--info( string.format( "PUT %s %s %s %s", srcHost, srcPort, conversation, tostring(time) ) )
 	local serviceConversationStream = self[tcpStream] or {}
 	local serviceConversation = serviceConversationStream[requestSrc] or {}
 	serviceConversation[conversation] = {}
@@ -42,7 +41,6 @@ end
 -- Get the time of a service request
 function ServiceMessageTable:getRequestTime( tcpStream, requestSrc, conversation )
 	local res = self[tcpStream][requestSrc][conversation]
-	--info( string.format( "GET %s %s %s %s", srcHost, srcPort, conversation, tostring( res ) ) )
 	return res.time
 end
 
