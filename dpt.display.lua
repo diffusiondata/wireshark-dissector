@@ -199,6 +199,9 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.authHandlerName ~= nil then
 			serviceNode:add( dptProto.fields.authHandlerName, service.authHandlerName.fullRange, service.authHandlerName.string )
 		end
+		if service.handlerTopicPath ~= nil then
+			serviceNode:add( dptProto.fields.handlerTopicPath, service.handlerTopicPath.fullRange, service.handlerTopicPath.string )
+		end
 	end
 end
 

@@ -157,6 +157,7 @@ dptProto.fields.responseTime = ProtoField.string( "dpt.service.responseTime", "R
 dptProto.fields.authHandlerName = ProtoField.string( "dpt.service.authHandlerName", "Authentication handler name" )
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
+dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
 
 -- Package footer
 master.proto = {

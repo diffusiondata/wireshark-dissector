@@ -103,6 +103,12 @@ local function parseAuthenticationControlRegistrationRequest( range )
 	return { controlRegInfo = result, handlerName = handlerName }
 end
 
+local function parseTopicControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationRequest( range )
+	local topicPath = lengthPrefixedString( remaining )
+	return { controlRegInfo = result, handlerTopicPath = topicPath }
+end
+
 local function parseAttrubutes( range )
 	--TODO: Attribute parsing
 end
@@ -209,6 +215,10 @@ local function parseAsV4ServiceMessage( range )
 				local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info.controlRegInfo
 				result.authHandlerName = info.handlerName
+			elseif service == v5.SERVICE_TOPIC_CONTROL_REGISTRATION then
+				local info = parseTopicControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info.controlRegInfo
+				result.handlerTopicPath = info.handlerTopicPath
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			local reqTime
