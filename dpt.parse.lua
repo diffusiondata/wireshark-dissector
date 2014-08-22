@@ -109,6 +109,12 @@ local function parseTopicControlRegistrationRequest( range )
 	return { controlRegInfo = result, handlerTopicPath = topicPath }
 end
 
+local function parseTopicSourceRegistrationRequest( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+end
+
 local function parseAttrubutes( range )
 	--TODO: Attribute parsing
 end
@@ -222,6 +228,9 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
 				local info = parseControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info
+			elseif service == v5.SERVICE_TOPIC_SOURCE_REGISTRATION then
+				local info = parseTopicSourceRegistrationRequest( serviceBodyRange )
+				result.topicSourceInfo = info
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			local reqTime

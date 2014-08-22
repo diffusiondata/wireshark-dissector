@@ -158,6 +158,7 @@ dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Han
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
+dptProto.fields.topicSourceTopicPath = ProtoField.string( "dpt.service.topicSourceTopicPath", "Topic source topic path" )
 
 -- Package footer
 master.proto = {
