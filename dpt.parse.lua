@@ -62,7 +62,7 @@ local function varint( range )
 	end
 
 	while idx + 1 < range:len() do
-		local byte = range:range( idx, idx + 1 ):uint()
+		local byte = range:range( idx, 1 ):uint()
 		if byte >= 128 then
 			sum = sum + ( shift + byte - 128 )
 			idx = idx + 1
