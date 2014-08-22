@@ -214,7 +214,7 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
 				local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info.controlRegInfo
-				result.authHandlerName = info.handlerName
+				result.handlerName = info.handlerName
 			elseif service == v5.SERVICE_TOPIC_CONTROL_REGISTRATION then
 				local info = parseTopicControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info.controlRegInfo
