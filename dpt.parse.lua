@@ -91,6 +91,18 @@ local function lengthPrefixedString( range )
 	end
 end
 
+local function parseControlRegistrationRequest( range )
+	local serviceIdRange, remaining, serviceId = varint( range )
+	local controlGroup = lengthPrefixedString( remaining )
+	return { serviceId = { range = serviceIdRange, int = serviceId }, controlGroup = controlGroup }, controlGroup.remaining
+end
+
+local function parseAuthenticationControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationRequest( range )
+	local handlerName = lengthPrefixedString( remaining )
+	return { controlRegInfo = result, handlerName = handlerName }
+end
+
 local function parseAttrubutes( range )
 	--TODO: Attribute parsing
 end
@@ -193,6 +205,10 @@ local function parseAsV4ServiceMessage( range )
 				result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
 			elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
 				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
+			elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
+				local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info.controlRegInfo
+				result.authHandlerName = info.handlerName
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 			local reqTime

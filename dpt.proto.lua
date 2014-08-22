@@ -154,7 +154,9 @@ dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
 dptProto.fields.topicUnSubReason = ProtoField.uint8( "dpt.service.topicUnsubscribeReason", "Reason", base.HEX, topicRemovalReasonByBytes )
 dptProto.fields.responseTime = ProtoField.string( "dpt.service.responseTime", "Response time" )
-
+dptProto.fields.authHandlerName = ProtoField.string( "dpt.service.authHandlerName", "Authentication handler name" )
+dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
+dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 
 -- Package footer
 master.proto = {

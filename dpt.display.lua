@@ -192,6 +192,13 @@ local function addServiceInformation( parentTreeNode, service )
 			local node = serviceNode:add( dptProto.fields.responseTime, service.responseTime )
 			node:set_generated()
 		end
+		if service.controlRegInfo ~= nil then
+			serviceNode:add( dptProto.fields.regServiceId, service.controlRegInfo.serviceId.range, service.controlRegInfo.serviceId.int )
+			serviceNode:add( dptProto.fields.controlGroup, service.controlRegInfo.controlGroup.fullRange, service.controlRegInfo.controlGroup.string )
+		end
+		if service.authHandlerName ~= nil then
+			serviceNode:add( dptProto.fields.authHandlerName, service.authHandlerName.fullRange, service.authHandlerName.string )
+		end
 	end
 end
 
