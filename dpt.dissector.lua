@@ -134,7 +134,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 			local bodyRange = contentRange:range( headerBreak +1 )
 
 			if headerInfo.topic ~= nil and headerInfo.topic.topic ~= nil and headerInfo.topic.topic.string == SERVICE_TOPIC then
-				serviceInfo = parseAsV4ServiceMessage( bodyRange, client )
+				serviceInfo = parseAsV4ServiceMessage( bodyRange )
 			end
 
 			records = messageType:markupBody( msgDetails, bodyRange )

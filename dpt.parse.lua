@@ -10,8 +10,11 @@ end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time = diffusion.utilities.f_time
+local f_tcp_srcport = diffusion.utilities.f_tcp_srcport
+local srcHost = diffusion.utilities.srcHost
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
+local tcpConnections = diffusion.info.tcpConnections
 local v5 = diffusion.v5
 
 local RD, FD = 1, 2
@@ -26,17 +29,21 @@ function ServiceMessageTable:new()
 end
 
 -- Add information about a service request
-function ServiceMessageTable:addRequest( client, conversation, time )
-	local serviceConversation = self[client] or {}
+function ServiceMessageTable:addRequest( tcpStream, requestSrc, conversation, time )
+	--info( string.format( "PUT %s %s %s %s", srcHost, srcPort, conversation, tostring(time) ) )
+	local serviceConversationStream = self[tcpStream] or {}
+	local serviceConversation = serviceConversationStream[requestSrc] or {}
 	serviceConversation[conversation] = {}
 	serviceConversation[conversation].time = time
-	self[client] = serviceConversation
+	serviceConversationStream[requestSrc] = serviceConversation
+	self[tcpStream] = serviceConversationStream
 end
 
 -- Get the time of a service request
-function ServiceMessageTable:getRequestTime( client, conversation )
-	local serviceConversation = self[client]
-	return serviceConversation[conversation]
+function ServiceMessageTable:getRequestTime( tcpStream, requestSrc, conversation )
+	local res = self[tcpStream][requestSrc][conversation]
+	--info( string.format( "GET %s %s %s %s", srcHost, srcPort, conversation, tostring( res ) ) )
+	return res.time
 end
 
 local serviceMessageTable = ServiceMessageTable:new()
@@ -143,7 +150,7 @@ local function parseStatus( range )
 end
 
 -- Parse the message as a service request or response
-local function parseAsV4ServiceMessage( range, client )
+local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
 		-- Parse varints
 		local serviceRange, modeR, service = varint( range )
@@ -157,8 +164,17 @@ local function parseAsV4ServiceMessage( range, client )
 			conversation = { range = conversationRange, int = conversation },
 			body = serviceBodyRange }
 
+		local tcpStream = f_tcp_stream().value
 		if mode == v5.MODE_REQUEST then
-			serviceMessageTable:addRequest( client, conversation, f_time().value )
+			local session = tcpConnections[tcpStream]
+			local isClient = session.client:matches( srcHost(),f_tcp_srcport().value )
+			if isClient then
+				-- Request is from the client so the client created the conversation Id
+				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time().value )
+			else
+				-- Request is from the server so the server created the conversation Id
+				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time().value )
+			end
 
 			if service == v5.SERVICE_FETCH then
 				local selector = lengthPrefixedString( serviceBodyRange )
@@ -181,8 +197,17 @@ local function parseAsV4ServiceMessage( range, client )
 				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
 			end
 		elseif  mode == v5.MODE_RESPONSE then
-			local reqInfo = serviceMessageTable:getRequestTime( client, conversation )
-			result.responseTime = tostring( f_time().value - reqInfo.time )
+			local reqTime
+			local session = tcpConnections[tcpStream]
+			local isClient = session.client:matches( srcHost(),f_tcp_srcport().value )
+			if isClient then
+				-- Response is from the client so the server created the conversation Id
+				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
+			else
+				-- Response is from the server so the client created the conversation Id
+				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
+			end
+			result.responseTime = tostring( f_time().value - reqTime )
 		end
 
 		return result
