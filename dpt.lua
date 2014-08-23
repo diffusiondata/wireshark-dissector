@@ -18,6 +18,8 @@ local u = diffusion.utilities
 local i = diffusion.info
 local dptProto = diffusion.proto.dptProto
 local tcpConnections = diffusion.info.tcpConnections
+local clientTable = diffusion.info.clientTable
+local serverTable = diffusion.info.serverTable
 
 local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
 
@@ -38,24 +40,6 @@ function Client:isClient()
 	return true
 end
 
---------------------------------------
--- The Client Table
-ClientTable = {}
-function ClientTable:new()
-	local result = {}
-	setmetatable( result, self )
-	self.__index = self
-	return result
-end
-function ClientTable:add( host, port, client )
-	local machine = self[host] or {}
-	machine[port] = client
-	self[host] = machine
-end
-function ClientTable:get( host, port )
-	return self[host][port]
-end
-
 ---------------------------------------
 -- Server
 
@@ -73,24 +57,6 @@ function Server:isClient()
 	return false
 end
 
---------------------------------------
--- The Server Table
-ServerTable = {}
-function ServerTable:new()
-	local result = {}
-	setmetatable( result, self )
-	self.__index = self
-	return result
-end
-function ServerTable:add( host, port, server )
-	local machine = self[host] or {}
-	machine[port] = server
-	self[host] = machine
-end
-function ServerTable:get( host, port )
-	return self[host][port]
-end
-
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
@@ -98,12 +64,12 @@ function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream()
 
 	local client = Client:new( u.f_dst_host(), pinfo.dst_port )
-	ClientTable:add( u.f_dst_host(), pinfo.dst_port, client )
+	clientTable:add( u.f_dst_host(), pinfo.dst_port, client )
 	local server = Server:new( u.f_src_host(), pinfo.src_port )
-	ServerTable:add( u.f_dst_host(), pinfo.dst_port, server )
+	serverTable:add( u.f_dst_host(), pinfo.dst_port, server )
 
 	tcpConnections[streamNumber] = { 
-		client = client, 
+		client = client,
 		server = server
 	}
 

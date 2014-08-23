@@ -15,36 +15,10 @@ local f_src_host = diffusion.utilities.f_src_host
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
+local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
 
 local RD, FD = 1, 2
-
--- Stores information about specific service requests
-local ServiceMessageTable = {}
-function ServiceMessageTable:new()
-	local result = {}
-	setmetatable( result, self )
-	self.__index = self
-	return result
-end
-
--- Add information about a service request
-function ServiceMessageTable:addRequest( tcpStream, requestSrc, conversation, time )
-	local serviceConversationStream = self[tcpStream] or {}
-	local serviceConversation = serviceConversationStream[requestSrc] or {}
-	serviceConversation[conversation] = {}
-	serviceConversation[conversation].time = time
-	serviceConversationStream[requestSrc] = serviceConversation
-	self[tcpStream] = serviceConversationStream
-end
-
--- Get the time of a service request
-function ServiceMessageTable:getRequestTime( tcpStream, requestSrc, conversation )
-	local res = self[tcpStream][requestSrc][conversation]
-	return res.time
-end
-
-local serviceMessageTable = ServiceMessageTable:new()
 
 -- Decode the varint used by command serialiser
 -- Takes a range containing the varint
