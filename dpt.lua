@@ -96,7 +96,7 @@ local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 function tcpTap.packet( pinfo )
-	local streamNumber = f_tcp_stream().value
+	local streamNumber = f_tcp_stream()
 	local fNumber = f_frame_number().value
 
 	local client = Client:new( u.dstHost(), pinfo.dst_port )

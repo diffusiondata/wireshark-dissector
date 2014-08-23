@@ -44,7 +44,7 @@ local DIFFUSION_MAGIC_NUMBER = 0x23
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
 	-- Is this a client or server packet?
-	local tcpStream, host, port = f_tcp_stream().value, srcHost(), srcPort()
+	local tcpStream, host, port = f_tcp_stream(), srcHost(), srcPort()
 
 	local client = tcpConnections[tcpStream].client
 	local server = tcpConnections[tcpStream].server
@@ -63,7 +63,7 @@ end
 local function processMessage( tvb, pinfo, tree, offset ) 
 	local msgDetails = {}
 
-	local tcpStream = f_tcp_stream().value -- get the artificial 'tcp stream' number
+	local tcpStream = f_tcp_stream() -- get the artificial 'tcp stream' number
 	local conn = tcpConnections[tcpStream]
 	local client
 	if conn ~= nil then

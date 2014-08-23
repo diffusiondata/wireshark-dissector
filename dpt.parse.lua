@@ -152,7 +152,7 @@ local function parseSubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local path = lengthPrefixedString( remaining )
 	local topicDetails = parseTopicDetails( path.remaining )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	topicIdTable:setAlias( tcpStream, id, path.range:string() )
 	local topicInfo = {
 		range = range,
@@ -166,7 +166,7 @@ end
 local function parseUnsubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local reasonRange, remaining, reason = varint( remaining )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	local topicName = topicIdTable:getAlias( tcpStream, id )
 	return {
 		topic = { name = topicName, range = idRange },
@@ -193,7 +193,7 @@ local function parseAsV4ServiceMessage( range )
 			conversation = { range = conversationRange, int = conversation },
 			body = serviceBodyRange }
 
-		local tcpStream = f_tcp_stream().value
+		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
 			local session = tcpConnections[tcpStream]
 			local isClient = session.client:matches( srcHost(), srcPort() )
@@ -283,7 +283,7 @@ local function parseTopicHeader( headerRange )
 	end
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	local topicObject
 	local aliasObject
 	if delimIndex == 0 then
