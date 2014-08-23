@@ -18,7 +18,7 @@ local field_tcp_stream  = Field.new("tcp.stream")
 local field_time_epoch = Field.new("frame.time_epoch")
 
 -- Get the src host either from IPv4 or IPv6
-local function srcHost()
+local function f_src_host()
 	local ipv4SrcHost = field_ip_srchost()
 	if ipv4SrcHost == nil then
 		return field_ipv6_srchost().value
@@ -28,7 +28,7 @@ local function srcHost()
 end
 
 -- Get the dst host either from IPv4 or IPv6
-local function dstHost()
+local function f_dst_host()
 	local ipv4DstHost = field_ip_dsthost()
 	if ipv4DstHost == nil then
 		return field_ipv6_dsthost().value
@@ -38,7 +38,7 @@ local function dstHost()
 end
 
 -- Get the src port value
-local function srcPort()
+local function f_src_port()
 	return field_tcp_srcport().value
 end
 
@@ -67,9 +67,9 @@ end
 
 -- Package footer
 master.utilities = {
-	srcHost = srcHost,
-	dstHost = dstHost,
-	srcPort = srcPort,
+	f_src_host = f_src_host,
+	f_dst_host = f_dst_host,
+	f_src_port = f_src_port,
 	dump = dump,
 	f_tcp_stream  = f_tcp_stream,
 	f_time_epoch = f_time_epoch,

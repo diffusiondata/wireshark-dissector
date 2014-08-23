@@ -97,10 +97,10 @@ local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK p
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream()
 
-	local client = Client:new( u.dstHost(), pinfo.dst_port )
-	ClientTable:add( u.dstHost(), pinfo.dst_port, client )
-	local server = Server:new( u.srcHost(), pinfo.src_port )
-	ServerTable:add( u.dstHost(), pinfo.dst_port, server )
+	local client = Client:new( u.f_dst_host(), pinfo.dst_port )
+	ClientTable:add( u.f_dst_host(), pinfo.dst_port, client )
+	local server = Server:new( u.f_src_host(), pinfo.src_port )
+	ServerTable:add( u.f_dst_host(), pinfo.dst_port, server )
 
 	tcpConnections[streamNumber] = { 
 		client = client, 
