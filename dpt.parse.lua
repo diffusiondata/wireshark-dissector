@@ -10,7 +10,7 @@ end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time = diffusion.utilities.f_time
-local f_tcp_srcport = diffusion.utilities.f_tcp_srcport
+local srcPort = diffusion.utilities.srcPort
 local srcHost = diffusion.utilities.srcHost
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
@@ -196,7 +196,7 @@ local function parseAsV4ServiceMessage( range )
 		local tcpStream = f_tcp_stream().value
 		if mode == v5.MODE_REQUEST then
 			local session = tcpConnections[tcpStream]
-			local isClient = session.client:matches( srcHost(),f_tcp_srcport().value )
+			local isClient = session.client:matches( srcHost(), srcPort() )
 			if isClient then
 				-- Request is from the client so the client created the conversation Id
 				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time().value )
@@ -245,7 +245,7 @@ local function parseAsV4ServiceMessage( range )
 		elseif  mode == v5.MODE_RESPONSE then
 			local reqTime
 			local session = tcpConnections[tcpStream]
-			local isClient = session.client:matches( srcHost(),f_tcp_srcport().value )
+			local isClient = session.client:matches( srcHost(), srcPort() )
 			if isClient then
 				-- Response is from the client so the server created the conversation Id
 				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )

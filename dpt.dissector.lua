@@ -13,8 +13,8 @@ local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
 
 local srcHost = diffusion.utilities.srcHost
 local dstHost = diffusion.utilities.dstHost
+local srcPort = diffusion.utilities.srcPort
 local f_tcp_stream  = diffusion.utilities.f_tcp_stream
-local f_tcp_srcport = diffusion.utilities.f_tcp_srcport
 local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpConnections = diffusion.info.tcpConnections
@@ -44,7 +44,7 @@ local DIFFUSION_MAGIC_NUMBER = 0x23
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
 	-- Is this a client or server packet?
-	local tcpStream, host, port = f_tcp_stream().value, srcHost(), f_tcp_srcport().value
+	local tcpStream, host, port = f_tcp_stream().value, srcHost(), srcPort()
 
 	local client = tcpConnections[tcpStream].client
 	local server = tcpConnections[tcpStream].server
@@ -111,7 +111,7 @@ local function processMessage( tvb, pinfo, tree, offset )
 	typeNode:append_text( " = " .. messageTypeName )
 	messageTree:add( dptProto.fields.encodingHdr, msgEncodingRange )
 
-	addClientConnectionInformation( messageTree, tvb, client, srcHost(), f_tcp_srcport().value )
+	addClientConnectionInformation( messageTree, tvb, client, srcHost(), srcPort() )
 
 	-- The content range
 	local contentSize = msgDetails.msgSize - HEADER_LEN

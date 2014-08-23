@@ -13,6 +13,7 @@ local f_ip_dsthost  = Field.new("ip.dst_host")
 local f_ip_srchost  = Field.new("ip.src_host")
 local f_ipv6_dsthost  = Field.new("ipv6.dst_host")
 local f_ipv6_srchost  = Field.new("ipv6.src_host")
+local f_tcp_srcport = Field.new("tcp.srcport")
 
 -- Get the src host either from IPv4 or IPv6
 local function srcHost()
@@ -34,6 +35,11 @@ local function dstHost()
 	end
 end
 
+-- Get the src port value
+local function srcPort()
+	return f_tcp_srcport().value
+end
+
 local function dump(o)
 	if type(o) == 'table' then
 	local s = '{ '
@@ -51,9 +57,9 @@ end
 master.utilities = {
 	srcHost = srcHost,
 	dstHost = dstHost,
+	srcPort = srcPort,
 	dump = dump,
 	f_tcp_stream  = Field.new("tcp.stream"),
-	f_tcp_srcport = Field.new("tcp.srcport"),
 	f_frame_number = Field.new("frame.number"),
 	f_time = Field.new("frame.time_epoch"),
 	RD = 1,
