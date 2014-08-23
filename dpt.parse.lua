@@ -9,7 +9,7 @@ if master.parse ~= nil then
 end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
-local f_time = diffusion.utilities.f_time
+local f_time_epoch = diffusion.utilities.f_time_epoch
 local srcPort = diffusion.utilities.srcPort
 local srcHost = diffusion.utilities.srcHost
 local aliasTable = diffusion.info.aliasTable
@@ -199,10 +199,10 @@ local function parseAsV4ServiceMessage( range )
 			local isClient = session.client:matches( srcHost(), srcPort() )
 			if isClient then
 				-- Request is from the client so the client created the conversation Id
-				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time().value )
+				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time_epoch() )
 			else
 				-- Request is from the server so the server created the conversation Id
-				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time().value )
+				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time_epoch() )
 			end
 
 			if service == v5.SERVICE_FETCH then
@@ -253,7 +253,7 @@ local function parseAsV4ServiceMessage( range )
 				-- Response is from the server so the client created the conversation Id
 				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
 			end
-			result.responseTime = tostring( f_time().value - reqTime )
+			result.responseTime = tostring( f_time_epoch() - reqTime )
 		end
 
 		return result
