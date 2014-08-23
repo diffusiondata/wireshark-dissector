@@ -92,12 +92,10 @@ function ServerTable:get( host, port )
 end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
-local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream()
-	local fNumber = f_frame_number().value
 
 	local client = Client:new( u.dstHost(), pinfo.dst_port )
 	ClientTable:add( u.dstHost(), pinfo.dst_port, client )

@@ -15,7 +15,6 @@ local srcHost = diffusion.utilities.srcHost
 local dstHost = diffusion.utilities.dstHost
 local srcPort = diffusion.utilities.srcPort
 local f_tcp_stream  = diffusion.utilities.f_tcp_stream
-local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpConnections = diffusion.info.tcpConnections
 

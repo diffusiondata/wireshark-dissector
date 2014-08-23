@@ -47,6 +47,7 @@ local function f_tcp_stream()
 	return field_tcp_stream().value
 end
 
+-- Get the frame time stamp value
 local function f_time_epoch()
 	return field_time_epoch().value
 end
@@ -71,7 +72,6 @@ master.utilities = {
 	srcPort = srcPort,
 	dump = dump,
 	f_tcp_stream  = f_tcp_stream,
-	f_frame_number = Field.new("frame.number"),
 	f_time_epoch = f_time_epoch,
 	RD = 1,
 	FD = 2
