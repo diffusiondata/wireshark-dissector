@@ -9,8 +9,13 @@ if master.parse ~= nil then
 end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
+local f_time_epoch = diffusion.utilities.f_time_epoch
+local f_src_port = diffusion.utilities.f_src_port
+local f_src_host = diffusion.utilities.f_src_host
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
+local tcpConnections = diffusion.info.tcpConnections
+local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
 
 local RD, FD = 1, 2
@@ -31,7 +36,7 @@ local function varint( range )
 	end
 
 	while idx + 1 < range:len() do
-		local byte = range:range( idx, idx + 1 ):uint()
+		local byte = range:range( idx, 1 ):uint()
 		if byte >= 128 then
 			sum = sum + ( shift + byte - 128 )
 			idx = idx + 1
@@ -58,6 +63,37 @@ local function lengthPrefixedString( range )
 			return { range = stringRange, fullRange = range( 0, fullLength ), string = stringRange:string() }
 		end
 	end
+end
+
+local function parseControlRegistrationRequest( range )
+	local serviceIdRange, remaining, serviceId = varint( range )
+	local controlGroup = lengthPrefixedString( remaining )
+	return { serviceId = { range = serviceIdRange, int = serviceId }, controlGroup = controlGroup }, controlGroup.remaining
+end
+
+local function parseAuthenticationControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationRequest( range )
+	local handlerName = lengthPrefixedString( remaining )
+	return { controlRegInfo = result, handlerName = handlerName }
+end
+
+local function parseTopicControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationRequest( range )
+	local topicPath = lengthPrefixedString( remaining )
+	return { controlRegInfo = result, handlerTopicPath = topicPath }
+end
+
+local function parseTopicSourceRegistrationRequest( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+end
+
+local function parseTopicUpdateRequest( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	-- TODO: Update parsing
+	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
 end
 
 local function parseAttrubutes( range )
@@ -90,7 +126,7 @@ local function parseSubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local path = lengthPrefixedString( remaining )
 	local topicDetails = parseTopicDetails( path.remaining )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	topicIdTable:setAlias( tcpStream, id, path.range:string() )
 	local topicInfo = {
 		range = range,
@@ -104,7 +140,7 @@ end
 local function parseUnsubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local reasonRange, remaining, reason = varint( remaining )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	local topicName = topicIdTable:getAlias( tcpStream, id )
 	return {
 		topic = { name = topicName, range = idRange },
@@ -131,7 +167,18 @@ local function parseAsV4ServiceMessage( range )
 			conversation = { range = conversationRange, int = conversation },
 			body = serviceBodyRange }
 
+		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
+			local session = tcpConnections[tcpStream]
+			local isClient = session.client:matches( f_src_host(), f_src_port() )
+			if isClient then
+				-- Request is from the client so the client created the conversation Id
+				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time_epoch() )
+			else
+				-- Request is from the server so the server created the conversation Id
+				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time_epoch() )
+			end
+
 			if service == v5.SERVICE_FETCH then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
@@ -151,8 +198,36 @@ local function parseAsV4ServiceMessage( range )
 				result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
 			elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
 				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
+			elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
+				local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info.controlRegInfo
+				result.handlerName = info.handlerName
+			elseif service == v5.SERVICE_TOPIC_CONTROL_REGISTRATION then
+				local info = parseTopicControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info.controlRegInfo
+				result.handlerTopicPath = info.handlerTopicPath
+			elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
+				local info = parseControlRegistrationRequest( serviceBodyRange )
+				result.controlRegInfo = info
+			elseif service == v5.SERVICE_TOPIC_SOURCE_REGISTRATION then
+				local info = parseTopicSourceRegistrationRequest( serviceBodyRange )
+				result.topicSourceInfo = info
+			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
+				local info = parseTopicUpdateRequest( serviceBodyRange )
+				result.updateInfo = info
 			end
 		elseif  mode == v5.MODE_RESPONSE then
+			local reqTime
+			local session = tcpConnections[tcpStream]
+			local isClient = session.client:matches( f_src_host(), f_src_port() )
+			if isClient then
+				-- Response is from the client so the server created the conversation Id
+				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
+			else
+				-- Response is from the server so the client created the conversation Id
+				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
+			end
+			result.responseTime = tostring( f_time_epoch() - reqTime )
 		end
 
 		return result
@@ -182,7 +257,7 @@ local function parseTopicHeader( headerRange )
 	end
 
 	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
-	local tcpStream = f_tcp_stream().value
+	local tcpStream = f_tcp_stream()
 	local topicObject
 	local aliasObject
 	if delimIndex == 0 then

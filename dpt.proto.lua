@@ -153,7 +153,12 @@ dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic sel
 dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
 dptProto.fields.topicUnSubReason = ProtoField.uint8( "dpt.service.topicUnsubscribeReason", "Reason", base.HEX, topicRemovalReasonByBytes )
-
+dptProto.fields.responseTime = ProtoField.string( "dpt.service.responseTime", "Response time" )
+dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Handler name" )
+dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
+dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
+dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
+dptProto.fields.topicSourceTopicPath = ProtoField.string( "dpt.service.topicSourceTopicPath", "Topic source topic path" )
 
 -- Package footer
 master.proto = {
