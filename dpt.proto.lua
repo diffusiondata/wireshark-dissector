@@ -98,6 +98,13 @@ local topicRemovalReasonByBytes = {
 	[0x02] = "Topic Removal",
 }
 
+local updateSourceStateByBytes = {
+	[0x00] = "Init",
+	[0x01] = "Active",
+	[0x02] = "Closed",
+	[0x03] = "Standby"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
@@ -159,6 +166,7 @@ dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "C
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
 dptProto.fields.topicSourceTopicPath = ProtoField.string( "dpt.service.topicSourceTopicPath", "Topic source topic path" )
+dptProto.fields.updateSourceState = ProtoField.uint8( "dpt.service.updateSourceState", "Update source state", base.HEX, updateSourceStateByBytes )
 
 -- Package footer
 master.proto = {

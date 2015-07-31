@@ -106,10 +106,15 @@ local function parseStatus( range )
 	return { range = range }
 end
 
+local function parseUpdateSourceRegistrationResponse( range )
+	local stateByteRange = range:range( 0, 1 )
+	return { range = stateByteRange, int = stateByteRange:int() }
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
-		-- Parse varints
+		-- Parse service header
 		local serviceRange, modeR, service = varint( range )
 		local modeRange, conversationR, mode = varint( modeR )
 		local conversationRange, serviceBodyRange, conversation = varint( conversationR )
@@ -123,6 +128,7 @@ local function parseAsV4ServiceMessage( range )
 
 		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
+			-- Store the request so the response time can be caluclated
 			local session = tcpConnections[tcpStream]
 			local isClient = session.client:matches( f_src_host(), f_src_port() )
 			if isClient then
@@ -133,6 +139,7 @@ local function parseAsV4ServiceMessage( range )
 				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time_epoch() )
 			end
 
+			-- Parse the request for service specific information
 			if service == v5.SERVICE_FETCH then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
@@ -171,6 +178,14 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = info
 			end
 		elseif  mode == v5.MODE_RESPONSE then
+
+			-- Parse the response for service specific information
+			if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
+				local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
+				result.updateSourceState = info
+			end
+
+			-- Calculate the response time
 			local reqTime
 			local session = tcpConnections[tcpStream]
 			local isClient = session.client:matches( f_src_host(), f_src_port() )

@@ -208,6 +208,9 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.updateInfo ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.updateInfo.topicPath.fullRange, service.updateInfo.topicPath.string )
 		end
+		if service.updateSourceState ~= nil then
+			serviceNode:add( dptProto.fields.updateSourceState, service.updateSourceState.range, service.updateSourceState.int )
+		end
 	end
 end
 
