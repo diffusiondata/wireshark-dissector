@@ -43,11 +43,17 @@ local function parseTopicSourceRegistrationRequest( range )
 	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
 end
 
-local function parseTopicUpdateRequest( range )
+local function parseUpdateSourceUpdateRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
 	-- TODO: Update parsing
 	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+end
+
+local function parseNonExclusiveUpdateRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	-- TODO: Update parsing
+	return { topicPath = topicPath }
 end
 
 local function parseUpdateSourceStateRequest( range )
@@ -185,13 +191,17 @@ local function parseAsV4ServiceMessage( range )
 				local info = parseTopicSourceRegistrationRequest( serviceBodyRange )
 				result.topicSourceInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
-				local info = parseTopicUpdateRequest( serviceBodyRange )
+				local info = parseUpdateSourceUpdateRequest( serviceBodyRange )
 				result.updateInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
 				local info = parseUpdateSourceStateRequest( serviceBodyRange )
 				result.oldUpdateSourceState = info.oldUpdateSourceState
 				result.newUpdateSourceState = info.newUpdateSourceState
+			elseif service == v5.SERVICE_UPDATE_TOPIC then
+				local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
+				result.updateInfo = info
 			end
+
 		elseif  mode == v5.MODE_RESPONSE then
 
 			-- Parse the response for service specific information
