@@ -209,7 +209,7 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
 				local info = parseControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info
-			elseif service == v5.SERVICE_TOPIC_SOURCE_REGISTRATION then
+			elseif service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 				local info = parseTopicSourceRegistrationRequest( serviceBodyRange )
 				result.topicSourceInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
