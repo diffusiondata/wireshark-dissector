@@ -166,7 +166,8 @@ dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "C
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
 dptProto.fields.topicSourceTopicPath = ProtoField.string( "dpt.service.topicSourceTopicPath", "Topic source topic path" )
-dptProto.fields.updateSourceState = ProtoField.uint8( "dpt.service.updateSourceState", "Update source state", base.HEX, updateSourceStateByBytes )
+dptProto.fields.oldUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState.old", "Old update source state", base.HEX, updateSourceStateByBytes )
+dptProto.fields.newUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState", "New update source state", base.HEX, updateSourceStateByBytes )
 
 -- Package footer
 master.proto = {

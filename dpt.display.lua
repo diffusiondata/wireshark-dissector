@@ -164,10 +164,13 @@ local function addServiceInformation( parentTreeNode, service )
 		local serviceNodeDesc = string.format( "%d bytes", service.range:len() )
 		-- Create service node
 		local serviceNode = parentTreeNode:add( dptProto.fields.service, service.range, serviceNodeDesc )
+
+		-- Add command header
 		serviceNode:add( dptProto.fields.serviceIdentity, service.id.range, service.id.int )
 		serviceNode:add( dptProto.fields.serviceMode, service.mode.range, service.mode.int )
 		serviceNode:add( dptProto.fields.conversation, service.conversation.range, service.conversation.int )
 
+		-- Add service specific information
 		if service.selector ~= nil then
 			serviceNode:add( dptProto.fields.selector, service.selector.range, service.selector.string )
 		end
@@ -188,10 +191,6 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
 			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
 		end
-		if service.responseTime ~= nil then
-			local node = serviceNode:add( dptProto.fields.responseTime, service.responseTime )
-			node:set_generated()
-		end
 		if service.controlRegInfo ~= nil then
 			serviceNode:add( dptProto.fields.regServiceId, service.controlRegInfo.serviceId.range, service.controlRegInfo.serviceId.int )
 			serviceNode:add( dptProto.fields.controlGroup, service.controlRegInfo.controlGroup.fullRange, service.controlRegInfo.controlGroup.string )
@@ -208,8 +207,17 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.updateInfo ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.updateInfo.topicPath.fullRange, service.updateInfo.topicPath.string )
 		end
-		if service.updateSourceState ~= nil then
-			serviceNode:add( dptProto.fields.updateSourceState, service.updateSourceState.range, service.updateSourceState.int )
+		if service.newUpdateSourceState ~= nil then
+			serviceNode:add( dptProto.fields.newUpdateSourceState, service.newUpdateSourceState.range, service.newUpdateSourceState.int )
+		end
+		if service.oldUpdateSourceState ~= nil then
+			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
+		end
+
+		-- Add generated information
+		if service.responseTime ~= nil then
+			local node = serviceNode:add( dptProto.fields.responseTime, service.responseTime )
+			node:set_generated()
 		end
 	end
 end

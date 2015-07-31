@@ -50,6 +50,17 @@ local function parseTopicUpdateRequest( range )
 	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
 end
 
+local function parseUpdateSourceStateRequest( range )
+	local cIdRange, remaining, cId = varint( range )
+	local oldStateByteRange = remaining:range( 0, 1 )
+	local newStateByteRange = remaining:range( 1, 1 )
+	return {
+		converstationId = {range = cIdRange, int = cId},
+		oldUpdateSourceState = { range = oldStateByteRange, int = oldStateByteRange:int() },
+		newUpdateSourceState = { range = newStateByteRange, int = newStateByteRange:int() }
+	}
+end
+
 local function parseAttrubutes( range )
 	--TODO: Attribute parsing
 end
@@ -176,13 +187,17 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
 				local info = parseTopicUpdateRequest( serviceBodyRange )
 				result.updateInfo = info
+			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
+				local info = parseUpdateSourceStateRequest( serviceBodyRange )
+				result.oldUpdateSourceState = info.oldUpdateSourceState
+				result.newUpdateSourceState = info.newUpdateSourceState
 			end
 		elseif  mode == v5.MODE_RESPONSE then
 
 			-- Parse the response for service specific information
 			if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 				local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
-				result.updateSourceState = info
+				result.newUpdateSourceState = info
 			end
 
 			-- Calculate the response time
