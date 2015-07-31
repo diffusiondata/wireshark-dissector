@@ -43,17 +43,46 @@ local function parseUpdateSourceRegistrationRequest( range )
 	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
 end
 
+local function parseContent( range )
+	local encodingRange = range:range( 0, 1 )
+	local lengthRange, remaining, length = varint( range:range( 1 ) )
+	local bytesRange = remaining
+	return {
+		encoding = { range = encodingRange, int = encodingRange:int() },
+		length = { range = lengthRange, int = length },
+		bytes = { range = bytesRange }
+	}
+end
+
+local function parseUpdate( range )
+	local updateTypeRange = range:range( 0, 1 )
+	local updateType = updateTypeRange:int()
+	if updateType == 0x00 then
+		local actionRange = range:range( 1, 1 )
+		local content = parseContent( range:range( 2 ) )
+		return {
+			updateType = { range = updateTypeRange, int = updateType },
+			updateAction = { range = actionRange, int = actionRange:int() },
+			content = content
+		}
+	else
+		return {
+			updateType = { range = updateTypeRange, int = updateType }
+		}
+	end
+end
+
 local function parseUpdateSourceUpdateRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
-	-- TODO: Update parsing
-	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+	local update = parseUpdate( topicPath.remaining )
+	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath, update = update }
 end
 
 local function parseNonExclusiveUpdateRequest( range )
 	local topicPath = lengthPrefixedString( range )
-	-- TODO: Update parsing
-	return { topicPath = topicPath }
+	local update = parseUpdate( topicPath.remaining )
+	return { topicPath = topicPath, update = update }
 end
 
 local function parseUpdateSourceStateRequest( range )
