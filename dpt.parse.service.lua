@@ -37,7 +37,7 @@ local function parseTopicControlRegistrationRequest( range )
 	return { controlRegInfo = result, handlerTopicPath = topicPath }
 end
 
-local function parseTopicSourceRegistrationRequest( range )
+local function parseUpdateSourceRegistrationRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
 	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
@@ -188,8 +188,8 @@ local function parseAsV4ServiceMessage( range )
 				local info = parseControlRegistrationRequest( serviceBodyRange )
 				result.controlRegInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
-				local info = parseTopicSourceRegistrationRequest( serviceBodyRange )
-				result.topicSourceInfo = info
+				local info = parseUpdateSourceRegistrationRequest( serviceBodyRange )
+				result.updateSourceInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
 				local info = parseUpdateSourceUpdateRequest( serviceBodyRange )
 				result.updateInfo = info
