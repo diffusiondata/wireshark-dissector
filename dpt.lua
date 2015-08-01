@@ -13,6 +13,7 @@ dofile( USER_DIR.."dpt.parse.service.lua" )
 dofile( USER_DIR.."dpt.parse.lua" )
 dofile( USER_DIR.."dpt.messages.lua" )
 dofile( USER_DIR.."dpt.proto.lua" )
+dofile( USER_DIR.."dpt.ws.proto.lua" )
 dofile( USER_DIR.."dpt.display.lua" )
 dofile( USER_DIR.."dpt.dissector.lua" )
 
@@ -62,6 +63,7 @@ end
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 
 local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
+
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream()
 
@@ -81,7 +83,6 @@ end
 function tcpTap.reset()
 	info( "resetting tcpConnections" )
 end
-
 
 -- Find the delimeterCount-th occurance of ch in this, or -1. delimeterCount indexes from zero.
 function ByteArray:indexn(ch, delimiterCount)
@@ -113,6 +114,12 @@ end
 
 function string:toRecordString() 
 	return string.format( "[%s]", self:gsub( string.char(FD), ", " ) )
+end
+
+function string:startsWith( prefix )
+	local prefixLength = string.len( prefix )
+	local actualPrefix = string.sub( self, 1, prefixLength )
+	return actualPrefix == prefix
 end
 
 -- Split a string into fields by the given delimited

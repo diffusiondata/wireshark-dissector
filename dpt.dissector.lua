@@ -15,6 +15,10 @@ local f_src_host = diffusion.utilities.f_src_host
 local f_dst_host = diffusion.utilities.f_dst_host
 local f_src_port = diffusion.utilities.f_src_port
 local f_tcp_stream  = diffusion.utilities.f_tcp_stream
+local f_http_response_code = diffusion.utilities.f_http_response_code
+local f_http_connection = diffusion.utilities.f_http_connection
+local f_http_upgrade = diffusion.utilities.f_http_upgrade
+local f_http_uri = diffusion.utilities.f_http_uri
 
 local tcpConnections = diffusion.info.tcpConnections
 
@@ -40,6 +44,13 @@ local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
 local DIFFUSION_MAGIC_NUMBER = 0x23
 
+local tcp_dissector_table = DissectorTable.get("tcp.port")
+local http_dissector = tcp_dissector_table:get_dissector(80)
+
+local DPT_TYPE = "DPT_TYPE"
+local DPWS_TYPE = "DPWS_TYPE"
+local OTHER_TYPE = "OTHER_TYPE"
+
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
 	-- Is this a client or server packet?
@@ -56,6 +67,24 @@ local function dissectConnection( tvb, pinfo )
 		pinfo.cols.info = string.format( "Connection response" )
 		return parseConnectionResponse( tvb, client )
 	end
+end
+
+local function tryDissectWSConnection( tvb, pinfo )
+	local uri = f_http_uri()
+	if uri ~= nil then
+		if uri:startsWith("/diffusion") then
+			local protocolVersionRange = tvb( 15, 3 )
+			local protocolVersionValue = tvb( 17, 1 )
+			pinfo.cols.info = string.format( "Connection request" )
+			return {
+				request = true,
+				wsProtoVerRange = protocolVersionRange,
+				wsProtoVerValue = protocolVersionValue
+			}
+		end
+	end
+
+	return nil
 end
 
 -- Process an individual DPT message
@@ -163,30 +192,63 @@ function dptProto.init()
 end
 
 function dptProto.dissector( tvb, pinfo, tree )
+	http_dissector:call( tvb, pinfo, tree)
 
-	-- Set the tabular display
-	pinfo.cols.protocol = dptProto.name
+	local streamNumber = f_tcp_stream()
+	local connection = f_http_connection()
+	local upgrade = f_http_upgrade()
 
 	-- Is this a connection negotiation?
+	-- Dissect connection and mark stream as DPT
 	local firstByte = tvb( 0, 1 ):uint()
-	if( firstByte == DIFFUSION_MAGIC_NUMBER ) then
+	if ( firstByte == DIFFUSION_MAGIC_NUMBER ) then
+		tcpConnections[streamNumber].type = DPT_TYPE
+
+		-- Set the tabular display
+		pinfo.cols.protocol = dptProto.name
+
 		-- process & skip over it, if it is.
 		local handshake = dissectConnection( tvb, pinfo )
 		addConnectionHandshake( tree, tvb(), pinfo, handshake )
+		pinfo.cols.info = "Some connection"
 		return {}
+	elseif connection == "Upgrade" and upgrade == "WebSocket" then
+		local handshake = tryDissectWSConnection( tvb, pinfo )
+		if handshake ~= nil then
+			pinfo.cols.protocol = "DP-WS"
+			pinfo.cols.info = "HELLO"
+			tcpConnections[streamNumber].type = DPWS_TYPE
+			addConnectionHandshake( tree, tvb(), pinfo, handshake )
+			pinfo.cols.info = "I MEAN IT"
+			return {}
+		end
 	end
 
-	local offset, messageCount = 0, 0
-	repeat
-		-- -1 indicates incomplete read
-		 offset = processMessage( tvb, pinfo, tree, offset )
-		 messageCount = messageCount +1
-	until ( offset == -1 or offset >= tvb:len() )
-	
-	-- Summarise
-	if messageCount > 1 then
-		pinfo.cols.info = string.format( "%d messages", messageCount )
+	if tcpConnections[streamNumber].type == DPT_TYPE then
+		-- Set the tabular display
+		pinfo.cols.protocol = dptProto.name
+
+		local offset, messageCount = 0, 0
+		repeat
+			-- -1 indicates incomplete read
+			 offset = processMessage( tvb, pinfo, tree, offset )
+			 messageCount = messageCount +1
+		until ( offset == -1 or offset >= tvb:len() )
+		
+		-- Summarise
+		if messageCount > 1 then
+			pinfo.cols.info = string.format( "%d messages", messageCount )
+		end
 	end
+
+	if tcpConnections[streamNumber].type == DPWS_TYPE then
+		pinfo.cols.protocol = "DP-WS"
+	end
+
+	if tcpConnections[streamNumber].type == nil then
+		--pinfo.cols.protocol = "OTHER"
+	end
+
 end
 
 -- Package footer

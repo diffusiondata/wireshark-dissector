@@ -10,7 +10,7 @@ end
 
 local v5 = diffusion.v5
 
-local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
+local dptProto = Proto( "DPT", "Diffusion Protocol")
 
 local responseCodes = {
     [100] = "OK - Connection Successful", 
@@ -126,6 +126,8 @@ dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", 
 dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
 dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
+dptProto.fields.wsConnectionProto = ProtoField.string( "dpt.ws.connection.protocolVersion.parameter", "Protocol parameter" )
+dptProto.fields.wsConnectionProtoNumber= ProtoField.string( "dpt.ws.connection.protocolVersion", "Protocol number" )
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield

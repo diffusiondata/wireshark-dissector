@@ -16,6 +16,10 @@ local field_ipv6_srchost  = Field.new("ipv6.src_host")
 local field_tcp_srcport = Field.new("tcp.srcport")
 local field_tcp_stream  = Field.new("tcp.stream")
 local field_time_epoch = Field.new("frame.time_epoch")
+local field_http_response_code = Field.new("http.response.code");
+local field_http_connection = Field.new("http.connection");
+local field_http_upgrade = Field.new("http.upgrade");
+local field_http_uri = Field.new("http.request.uri");
 
 -- Get the src host either from IPv4 or IPv6
 local function f_src_host()
@@ -65,6 +69,42 @@ local function dump(o)
 	end
 end
 
+local function f_http_response_code()
+	local f = field_http_response_code()
+	if f ~= nil then
+		return f.value
+	else
+		return nil
+	end
+end
+
+local function f_http_connection()
+	local f = field_http_connection()
+	if f ~= nil then
+		return f.value
+	else
+		return nil
+	end
+end
+
+local function f_http_upgrade()
+	local f = field_http_upgrade()
+	if f ~= nil then
+		return f.value
+	else
+		return nil
+	end
+end
+
+local function f_http_uri()
+	local f = field_http_uri()
+	if f ~= nil then
+		return f.value
+	else
+		return nil
+	end
+end
+
 -- Package footer
 master.utilities = {
 	f_src_host = f_src_host,
@@ -73,6 +113,10 @@ master.utilities = {
 	dump = dump,
 	f_tcp_stream  = f_tcp_stream,
 	f_time_epoch = f_time_epoch,
+	f_http_response_code = f_http_response_code,
+	f_http_connection = f_http_connection,
+	f_http_upgrade = f_http_upgrade,
+	f_http_uri = f_http_uri,
 	RD = 1,
 	FD = 2
 }

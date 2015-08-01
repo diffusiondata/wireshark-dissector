@@ -18,10 +18,24 @@ local v5 = diffusion.v5
 local function addConnectionRequest( tree , fullRange, pinfo, request )
 	pinfo.cols.info = string.format( "Connection request" )
 	local messageTree = tree:add( dptProto, fullRange )
-	messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
-	messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
-	messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
-	messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
+	if request.magicNumberRange ~= nil then
+		messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
+	end
+	if request.protoVerRange ~= nil then
+		messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
+	end
+	if request.wsProtoVerRange ~= nil then
+		messageTree:add( dptProto.fields.wsConnectionProto, request.wsProtoVerRange )
+	end
+	if request.wsProtoVerValue ~= nil then
+		messageTree:add( dptProto.fields.wsConnectionProtoNumber, request.wsProtoVerValue )
+	end
+	if request.connectionTypeRange ~= nil then
+		messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
+	end
+	if request.capabilitiesRange ~= nil then
+		messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
+	end
 	if request.creds ~= nil then
 		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
 	end
