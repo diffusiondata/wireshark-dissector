@@ -61,10 +61,8 @@ local function dissectConnection( tvb, pinfo )
 	local isClient = client:matches( host, port )
 
 	if isClient then
-		pinfo.cols.info = string.format( "Connection request" )
 		return parseConnectionRequest( tvb, client )
 	else
-		pinfo.cols.info = string.format( "Connection response" )
 		return parseConnectionResponse( tvb, client )
 	end
 end
@@ -75,7 +73,6 @@ local function tryDissectWSConnection( tvb, pinfo )
 		if uri:startsWith("/diffusion") then
 			local protocolVersionRange = tvb( 15, 3 )
 			local protocolVersionValue = tvb( 17, 1 )
-			pinfo.cols.info = string.format( "Connection request" )
 			return {
 				request = true,
 				wsProtoVerRange = protocolVersionRange,
@@ -85,6 +82,12 @@ local function tryDissectWSConnection( tvb, pinfo )
 	end
 
 	return nil
+end
+
+local function tryDissectWSConnectionResponse( tvb, pinfo )
+	return {
+		request = false
+	}
 end
 
 -- Process an individual DPT message
@@ -192,16 +195,13 @@ function dptProto.init()
 end
 
 function dptProto.dissector( tvb, pinfo, tree )
-	http_dissector:call( tvb, pinfo, tree)
 
 	local streamNumber = f_tcp_stream()
-	local connection = f_http_connection()
-	local upgrade = f_http_upgrade()
 
 	-- Is this a connection negotiation?
 	-- Dissect connection and mark stream as DPT
 	local firstByte = tvb( 0, 1 ):uint()
-	if ( firstByte == DIFFUSION_MAGIC_NUMBER ) then
+	if firstByte == DIFFUSION_MAGIC_NUMBER then
 		tcpConnections[streamNumber].type = DPT_TYPE
 
 		-- Set the tabular display
@@ -210,16 +210,21 @@ function dptProto.dissector( tvb, pinfo, tree )
 		-- process & skip over it, if it is.
 		local handshake = dissectConnection( tvb, pinfo )
 		addConnectionHandshake( tree, tvb(), pinfo, handshake )
-		pinfo.cols.info = "Some connection"
 		return {}
-	elseif connection == "Upgrade" and upgrade == "WebSocket" then
+	end
+
+	http_dissector:call( tvb, pinfo, tree)
+
+	local connection = f_http_connection()
+	local upgrade = f_http_upgrade()
+
+	if connection == "Upgrade" and upgrade == "WebSocket" then
 		local handshake = tryDissectWSConnection( tvb, pinfo )
 		if handshake ~= nil then
+			pinfo.cols.info:clear_fence()
 			pinfo.cols.protocol = "DP-WS"
-			pinfo.cols.info = "HELLO"
 			tcpConnections[streamNumber].type = DPWS_TYPE
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
-			pinfo.cols.info = "I MEAN IT"
 			return {}
 		end
 	end
@@ -234,7 +239,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 			 offset = processMessage( tvb, pinfo, tree, offset )
 			 messageCount = messageCount +1
 		until ( offset == -1 or offset >= tvb:len() )
-		
+
 		-- Summarise
 		if messageCount > 1 then
 			pinfo.cols.info = string.format( "%d messages", messageCount )
@@ -242,7 +247,15 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 
 	if tcpConnections[streamNumber].type == DPWS_TYPE then
+		pinfo.cols.info:clear_fence()
+
 		pinfo.cols.protocol = "DP-WS"
+
+		local response = f_http_response_code()
+		if response == 101 then
+			local handshake = tryDissectWSConnectionResponse( tvb, pinfo)
+			addConnectionHandshake( tree, tvb(), pinfo, handshake )
+		end
 	end
 
 	if tcpConnections[streamNumber].type == nil then

@@ -16,7 +16,6 @@ local v5 = diffusion.v5
 
 -- Attach the connection request information to the dissection tree
 local function addConnectionRequest( tree , fullRange, pinfo, request )
-	pinfo.cols.info = string.format( "Connection request" )
 	local messageTree = tree:add( dptProto, fullRange )
 	if request.magicNumberRange ~= nil then
 		messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
@@ -43,20 +42,33 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
 	end
 	if request.clientIdRange ~= nil then
-		pinfo.cols.info = string.format( "Reconnection request" )
+		pinfo.cols.info = "DPT Reconnection request"
 		messageTree:add( dptProto.fields.clientID, request.clientIdRange )
+	else
+		pinfo.cols.info = "DPT Connection request"
 	end
 end
 
 -- Attach the connection response information to the dissection tree
 local function addConnectionResponse( tree , fullRange, pinfo, response )
-	pinfo.cols.info = string.format( "Connection response" )
+	pinfo.cols.info = "DPT Connection response"
+
 	local messageTree = tree:add( dptProto, fullRange )
-	messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
-	messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
-	messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
-	messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
-	messageTree:add( dptProto.fields.clientID, response.clientIDRange )
+	if response.magicNumberRange ~= nil then
+		messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
+	end
+	if response.protoVerRange ~= nil then
+		messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
+	end
+	if response.connectionResponseRange ~= nil then
+		messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
+	end
+	if response.messageLengthSizeRange ~= nil then
+		messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
+	end
+	if response.clientIDRange ~= nil then
+		messageTree:add( dptProto.fields.clientID, response.clientIDRange )
+	end
 end
 
 -- Attach the handshake information to the dissection tree
