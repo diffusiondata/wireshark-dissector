@@ -23,20 +23,29 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	if request.protoVerRange ~= nil then
 		messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
 	end
-	if request.wsProtoVerRange ~= nil then
-		messageTree:add( dptProto.fields.wsConnectionProto, request.wsProtoVerRange )
-	end
-	if request.wsProtoVerValue ~= nil then
-		messageTree:add( dptProto.fields.wsConnectionProtoNumber, request.wsProtoVerValue )
+	if request.wsProtoVersion ~= nil then
+		messageTree:add( dptProto.fields.wsConnectionProtoNumber, request.wsProtoVersion )
 	end
 	if request.connectionTypeRange ~= nil then
 		messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
 	end
+	if request.wsConnectionType ~= nil then
+		messageTree:add( dptProto.fields.wsConnectionType, request.wsConnectionType )
+	end
 	if request.capabilitiesRange ~= nil then
 		messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
 	end
+	if request.wsCapabilities ~= nil then
+		messageTree:add( dptProto.fields.wsCapabilities, request.wsCapabilities )
+	end
 	if request.creds ~= nil then
 		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
+	end
+	if request.wsPrincipal ~= nil then
+		messageTree:add( dptProto.fields.wsPrincipal, request.wsPrincipal )
+	end
+	if request.wsCredentials ~= nil then
+		messageTree:add( dptProto.fields.wsCredentials, request.wsCredentials )
 	end
 	if request.topicsetRange ~= nil then
 		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )

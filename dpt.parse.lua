@@ -12,6 +12,8 @@ local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time_epoch = diffusion.utilities.f_time_epoch
 local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
+local f_http_uri = diffusion.utilities.f_http_uri
+local dump = diffusion.utilities.dump
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
@@ -227,6 +229,34 @@ local function parseConnectionResponse( tvb, client )
 		messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
 end
 
+local function uriToQueryParameters ( uri )
+	local parameterTable = {}
+	local queryString = string.gsub(uri, "/diffusion%?", "")
+	info( queryString )
+	-- Foreach '&' separated string split around '=' and store as key value pairs
+	info( "Parameters" )
+	string.gsub( queryString, "([^&]+)", function( parameterPair )
+		local parameterComponents = parameterPair:split("=")
+		parameterTable[parameterComponents[1]] = parameterComponents[2]
+	end )
+	info ( dump(parameterTable) )
+
+	return parameterTable
+end
+
+local function parseWSConnectionRequest ( tvb, client )
+	local uri = f_http_uri()
+	local parameters = uriToQueryParameters( uri )
+	return {
+		request = true,
+		wsProtoVersion = parameters["v"],
+		wsConnectionType = parameters["ty"],
+		wsCapabilities = parameters["ca"],
+		wsPrincipal = parameters["username"],
+		wsCredentials = parameters["password"]
+	}
+end
+
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
@@ -234,7 +264,8 @@ master.parse = {
 	parseField = parseField,
 	parseAckId = parseAckId,
 	parseConnectionRequest = parseConnectionRequest,
-	parseConnectionResponse = parseConnectionResponse
+	parseConnectionResponse = parseConnectionResponse,
+	parseWSConnectionRequest = parseWSConnectionRequest
 }
 diffusion = master
 return master.parse

@@ -120,14 +120,17 @@ local updateActionByBytes = {
 
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
-dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
+dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
 dptProto.fields.connectionType = ProtoField.uint8( "dpt.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
 dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
 dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
-dptProto.fields.wsConnectionProto = ProtoField.string( "dpt.ws.connection.protocolVersion.parameter", "Protocol parameter" )
-dptProto.fields.wsConnectionProtoNumber= ProtoField.string( "dpt.ws.connection.protocolVersion", "Protocol number" )
+dptProto.fields.wsConnectionProtoNumber= ProtoField.string( "dpt.ws.connection.protocolVersion", "Protocol version" )
+dptProto.fields.wsConnectionType = ProtoField.string( "dpt.ws.connection.connectionType", "Connection Type")
+dptProto.fields.wsCapabilities = ProtoField.string( "dpt.ws.connection.capabilities", "Client Capabilities")
+dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", "Principal")
+dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield

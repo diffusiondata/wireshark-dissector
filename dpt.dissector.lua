@@ -30,6 +30,7 @@ local dptProto = diffusion.proto.dptProto
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
+local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
 
 local addClientConnectionInformation = diffusion.display.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
@@ -71,13 +72,7 @@ local function tryDissectWSConnection( tvb, pinfo )
 	local uri = f_http_uri()
 	if uri ~= nil then
 		if uri:startsWith("/diffusion") then
-			local protocolVersionRange = tvb( 15, 3 )
-			local protocolVersionValue = tvb( 17, 1 )
-			return {
-				request = true,
-				wsProtoVerRange = protocolVersionRange,
-				wsProtoVerValue = protocolVersionValue
-			}
+			return parseWSConnectionRequest( tvb, client )
 		end
 	end
 
