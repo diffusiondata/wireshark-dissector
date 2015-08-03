@@ -98,6 +98,26 @@ local topicRemovalReasonByBytes = {
 	[0x02] = "Topic Removal",
 }
 
+local updateSourceStateByBytes = {
+	[0x00] = "Init",
+	[0x01] = "Active",
+	[0x02] = "Closed",
+	[0x03] = "Standby"
+}
+
+local updateTypeByBytes = {
+	[0x00] = "Content",
+	[0x01] = "Paged, ordered record",
+	[0x02] = "Paged, unordered record",
+	[0x03] = "Paged, ordered string",
+	[0x04] = "Paged, unordered string"
+}
+
+local updateActionByBytes = {
+	[0x00] = "Update",
+	[0x01] = "Replace"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
@@ -158,7 +178,12 @@ dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Han
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
-dptProto.fields.topicSourceTopicPath = ProtoField.string( "dpt.service.topicSourceTopicPath", "Topic source topic path" )
+dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
+dptProto.fields.oldUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState.old", "Old update source state", base.HEX, updateSourceStateByBytes )
+dptProto.fields.newUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState", "New update source state", base.HEX, updateSourceStateByBytes )
+dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update type", base.HEX, updateTypeByBytes )
+dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
+dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
 
 -- Package footer
 master.proto = {

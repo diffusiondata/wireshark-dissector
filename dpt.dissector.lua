@@ -23,7 +23,7 @@ local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
 
-local parseAsV4ServiceMessage = diffusion.parse.parseAsV4ServiceMessage
+local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 
