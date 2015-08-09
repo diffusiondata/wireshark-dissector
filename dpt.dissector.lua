@@ -9,7 +9,7 @@ if master.dissector ~= nil then
 	return master.dissector
 end
 
-local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
+local RD, FD, WSMD = diffusion.utilities.RD, diffusion.utilities.FD, diffusion.utilities.WSMD
 
 local f_src_host = diffusion.utilities.f_src_host
 local f_dst_host = diffusion.utilities.f_dst_host
@@ -199,12 +199,11 @@ local function processWSMessage( tvb, pinfo, tree, start )
 	msgDetails.msgType = msgTypeRange:uint()
 	offset = offset + 1
 	msgDetails.msgEncoding = 0
+	local messageType = messageTypeLookup(msgDetails.msgType)
 
 	-- Find message end, either end of WS message or 0x08
-	local msgSize = offset
-	while msgSize < tvb:len() do
-		msgSize = msgSize + 1
-	end
+	local msgSize = tvb( start ):bytes():index( WSMD )
+	if msgSize < 1 then msgSize = tvb:len() end
 	msgDetails.msgSize = msgSize
 
 	-- Add to the GUI the size-header, type-header & encoding-header
@@ -215,7 +214,6 @@ local function processWSMessage( tvb, pinfo, tree, start )
 	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
 	local messageTypeName = nameByID( msgDetails.msgType )
 	typeNode:append_text( " = " .. messageTypeName )
-	local messageType = messageTypeLookup(msgDetails.msgType)
 
 	-- Stop if there is no content
 	if tvb:len() == offset then
@@ -299,13 +297,17 @@ function dptProto.dissector( tvb, pinfo, tree )
 			local handshake = tryDissectWSConnectionResponse( tvb, pinfo)
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
 			else
-				local offset, messageCount = 0, 0
-				local payload = f_ws_b_payload()
-				repeat
-					-- -1 indicates incomplete read
-					 offset = processWSMessage( payload, pinfo, tree, offset )
-					 messageCount = messageCount + 1
-				until ( offset == -1 or offset >= payload:len() )
+				local messageCount = 0
+				local payloads = f_ws_b_payload()
+				for i in pairs(payloads) do
+					local offset = 0
+					local payload = payloads[i]
+					repeat
+						-- -1 indicates incomplete read
+						offset = processWSMessage( payload, pinfo, tree, offset )
+						messageCount = messageCount + 1
+					until ( offset == -1 or offset >= payload:len() )
+				end
 
 				-- Summarise
 				if messageCount > 1 then

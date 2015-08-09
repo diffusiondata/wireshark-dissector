@@ -107,9 +107,13 @@ local function f_http_uri()
 end
 
 local function f_ws_b_payload()
-	local f = field_ws_binary_payload()
+	local f = {field_ws_binary_payload()}
 	if f ~= nil then
-		return f.range
+		local payloads = {}
+		for i in pairs(f) do
+			payloads[i] = f[i].range
+		end
+		return payloads
 	else
 		return nil
 	end
@@ -128,8 +132,9 @@ master.utilities = {
 	f_http_upgrade = f_http_upgrade,
 	f_http_uri = f_http_uri,
 	f_ws_b_payload = f_ws_b_payload,
-	RD = 1,
-	FD = 2
+	RD = 0x01,
+	FD = 0x02,
+	WSMD = 0x08
 }
 diffusion = master
 return master.utilities
