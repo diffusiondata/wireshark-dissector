@@ -19,6 +19,7 @@ local f_http_response_code = diffusion.utilities.f_http_response_code
 local f_http_connection = diffusion.utilities.f_http_connection
 local f_http_upgrade = diffusion.utilities.f_http_upgrade
 local f_http_uri = diffusion.utilities.f_http_uri
+local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 
 local tcpConnections = diffusion.info.tcpConnections
 
@@ -85,8 +86,46 @@ local function tryDissectWSConnectionResponse( tvb, pinfo )
 	}
 end
 
+local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
+	local headerInfo, serviceInfo, records
+	-- The headers & body -- find the 1st RD in the content
+	local headerBreak = contentRange:bytes():index( RD )
+	if headerBreak >= 0 then
+		local headerRange = contentRange:range( 0, headerBreak )
+
+		-- Pass the header-node to the MessageType for further processing
+		headerInfo = messageType:markupHeaders( headerRange )
+
+		if headerBreak + 1 <= (contentRange:len() -1) then
+			-- Only markup up the body if there is one (there needn't be)
+			local bodyRange = contentRange:range( headerBreak +1 )
+
+			if headerInfo.topic ~= nil and headerInfo.topic.topic ~= nil and headerInfo.topic.topic.string == SERVICE_TOPIC then
+				serviceInfo = parseAsV4ServiceMessage( bodyRange )
+			end
+
+			records = messageType:markupBody( msgDetails, bodyRange )
+			if serviceInfo ~= nil then
+				addServiceInformation( messageTree, serviceInfo, records )
+			end
+		end
+
+		if serviceInfo == nil then
+			local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentRange:len() ) )
+			local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
+			addHeaderInformation( headerNode, headerInfo )
+			if records ~= nil then
+				addBody( contentNode , records )
+			end
+		end
+	end
+
+	-- Set the Info column of the tabular display -- NB: this must be called last
+	addDescription( pinfo, messageType, headerInfo, serviceInfo )
+end
+
 -- Process an individual DPT message
-local function processMessage( tvb, pinfo, tree, offset ) 
+local function processMessage( tvb, pinfo, tree, offset )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream() -- get the artificial 'tcp stream' number
@@ -146,41 +185,50 @@ local function processMessage( tvb, pinfo, tree, offset )
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
-	local headerInfo, serviceInfo, records
-	-- The headers & body -- find the 1st RD in the content
-	local headerBreak = contentRange:bytes():index( RD )
-	if headerBreak >= 0 then
-		local headerRange = contentRange:range( 0, headerBreak )
+	processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
 
-		-- Pass the header-node to the MessageType for further processing
-		headerInfo = messageType:markupHeaders( headerRange )
+	return offset
+end
 
-		if headerBreak + 1 <= (contentRange:len() -1) then
-			-- Only markup up the body if there is one (there needn't be)
-			local bodyRange = contentRange:range( headerBreak +1 )
+-- Process an individual DP-WS message
+local function processWSMessage( tvb, pinfo, tree, start )
+	local msgDetails = {}
+	local offset = start
+	-- Get the type by
+	local msgTypeRange = tvb( offset, 1 )
+	msgDetails.msgType = msgTypeRange:uint()
+	offset = offset + 1
+	msgDetails.msgEncoding = 0
 
-			if headerInfo.topic ~= nil and headerInfo.topic.topic ~= nil and headerInfo.topic.topic.string == SERVICE_TOPIC then
-				serviceInfo = parseAsV4ServiceMessage( bodyRange )
-			end
-
-			records = messageType:markupBody( msgDetails, bodyRange )
-			if serviceInfo ~= nil then
-				addServiceInformation( messageTree, serviceInfo, records )
-			end
-		end
-
-		if serviceInfo == nil then
-			local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentSize ) )
-			local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
-			addHeaderInformation( headerNode, headerInfo )
-			if records ~= nil then
-				addBody( contentNode , records )
-			end
-		end
+	-- Find message end, either end of WS message or 0x08
+	local msgSize = offset
+	while msgSize < tvb:len() do
+		msgSize = msgSize + 1
 	end
-	
-	-- Set the Info column of the tabular display -- NB: this must be called last
-	addDescription( pinfo, messageType, headerInfo, serviceInfo )
+	msgDetails.msgSize = msgSize
+
+	-- Add to the GUI the size-header, type-header & encoding-header
+	local messageRange = tvb( start, msgDetails.msgSize )
+	local messageTree = tree:add( dptProto, messageRange )
+
+	messageTree:add( dptProto.fields.sizeHdr, messageRange, msgSize )
+	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
+	local messageTypeName = nameByID( msgDetails.msgType )
+	typeNode:append_text( " = " .. messageTypeName )
+	local messageType = messageTypeLookup(msgDetails.msgType)
+
+	-- Stop if there is no content
+	if tvb:len() == offset then
+		addDescription( pinfo, messageType, nil )
+		return -1
+	end
+
+	-- The content range
+	local contentSize = msgDetails.msgSize - 1
+	local contentRange = tvb( offset, contentSize )
+
+	offset = offset + contentSize
+	processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
 
 	return offset
 end
@@ -250,6 +298,19 @@ function dptProto.dissector( tvb, pinfo, tree )
 		if response == 101 then
 			local handshake = tryDissectWSConnectionResponse( tvb, pinfo)
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
+			else
+				local offset, messageCount = 0, 0
+				local payload = f_ws_b_payload()
+				repeat
+					-- -1 indicates incomplete read
+					 offset = processWSMessage( payload, pinfo, tree, offset )
+					 messageCount = messageCount + 1
+				until ( offset == -1 or offset >= payload:len() )
+
+				-- Summarise
+				if messageCount > 1 then
+					pinfo.cols.info = string.format( "%d messages", messageCount )
+				end
 		end
 	end
 

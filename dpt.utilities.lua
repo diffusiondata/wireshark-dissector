@@ -20,6 +20,7 @@ local field_http_response_code = Field.new("http.response.code");
 local field_http_connection = Field.new("http.connection");
 local field_http_upgrade = Field.new("http.upgrade");
 local field_http_uri = Field.new("http.request.uri");
+local field_ws_binary_payload = Field.new("websocket.payload.binary");
 
 -- Get the src host either from IPv4 or IPv6
 local function f_src_host()
@@ -105,6 +106,15 @@ local function f_http_uri()
 	end
 end
 
+local function f_ws_b_payload()
+	local f = field_ws_binary_payload()
+	if f ~= nil then
+		return f.range
+	else
+		return nil
+	end
+end
+
 -- Package footer
 master.utilities = {
 	f_src_host = f_src_host,
@@ -117,6 +127,7 @@ master.utilities = {
 	f_http_connection = f_http_connection,
 	f_http_upgrade = f_http_upgrade,
 	f_http_uri = f_http_uri,
+	f_ws_b_payload = f_ws_b_payload,
 	RD = 1,
 	FD = 2
 }
