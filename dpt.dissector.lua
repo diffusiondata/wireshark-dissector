@@ -80,10 +80,14 @@ local function tryDissectWSConnection( tvb, pinfo )
 	return nil
 end
 
-local function tryDissectWSConnectionResponse( tvb, pinfo )
-	return {
-		request = false
-	}
+local function tryDissectWSConnectionResponse( tvb, pinfo, tree )
+	-- Get the payload of the websocket response, assumes 1 byte per character
+	local _, websocketResponseStart = tvb:range():string():find("\r\n\r\n");
+	local websocketResponseRange = tvb:range( websocketResponseStart + 2 );
+
+	local tcpStream = f_tcp_stream()
+	local client = tcpConnections[tcpStream].client
+	return parseConnectionResponse( websocketResponseRange, client )
 end
 
 local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
@@ -294,7 +298,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 
 		local response = f_http_response_code()
 		if response == 101 then
-			local handshake = tryDissectWSConnectionResponse( tvb, pinfo)
+			local handshake = tryDissectWSConnectionResponse( tvb, pinfo, tree)
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
 			else
 				local messageCount = 0
