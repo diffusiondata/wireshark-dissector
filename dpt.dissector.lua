@@ -301,23 +301,23 @@ function dptProto.dissector( tvb, pinfo, tree )
 		if response == 101 then
 			local handshake = tryDissectWSConnectionResponse( tvb, pinfo, tree)
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
-			else
-				local messageCount = 0
-				local payloads = f_ws_b_payload()
-				for i in pairs(payloads) do
-					local offset = 0
-					local payload = payloads[i]
-					repeat
-						-- -1 indicates incomplete read
-						offset = processWSMessage( payload, pinfo, tree, offset )
-						messageCount = messageCount + 1
-					until ( offset == -1 or offset >= payload:len() )
-				end
+		else
+			local messageCount = 0
+			local payloads = f_ws_b_payload()
+			for i in pairs(payloads) do
+				local offset = 0
+				local payload = payloads[i]
+				repeat
+					-- -1 indicates incomplete read
+					offset = processWSMessage( payload, pinfo, tree, offset )
+					messageCount = messageCount + 1
+				until ( offset == -1 or offset >= payload:len() )
+			end
 
-				-- Summarise
-				if messageCount > 1 then
-					pinfo.cols.info = string.format( "%d messages", messageCount )
-				end
+			-- Summarise
+			if messageCount > 1 then
+				pinfo.cols.info = string.format( "%d messages", messageCount )
+			end
 		end
 	end
 
