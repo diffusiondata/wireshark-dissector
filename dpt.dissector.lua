@@ -20,6 +20,7 @@ local f_http_connection = diffusion.utilities.f_http_connection
 local f_http_upgrade = diffusion.utilities.f_http_upgrade
 local f_http_uri = diffusion.utilities.f_http_uri
 local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
+local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
 
 local tcpConnections = diffusion.info.tcpConnections
 
@@ -74,7 +75,8 @@ local function tryDissectWSConnection( tvb, pinfo )
 	local uri = f_http_uri()
 	if uri ~= nil then
 		if uri:startsWith("/diffusion") then
-			return parseWSConnectionRequest( tvb, client )
+			local tcpStream = f_tcp_stream()
+			return parseWSConnectionRequest( tvb, tcpConnections[tcpStream].client )
 		end
 	end
 
@@ -195,7 +197,6 @@ local function processMessage( tvb, pinfo, tree, offset )
 	return offset
 end
 
--- Process an individual DP-WS message
 local function processWSMessage( tvb, pinfo, tree, start )
 	local msgDetails = {}
 	local offset = start
@@ -305,7 +306,13 @@ function dptProto.dissector( tvb, pinfo, tree )
 			end
 		else
 			local messageCount = 0
-			local payloads = f_ws_b_payload()
+			local payloads
+			local client = tcpConnections[f_tcp_stream()].client
+			if client.protoVersion > 4 then
+				payloads = f_ws_b_payload()
+			else
+				payloads = f_ws_t_payload()
+			end
 			for i in pairs(payloads) do
 				local offset = 0
 				local payload = payloads[i]
