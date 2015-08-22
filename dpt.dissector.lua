@@ -300,7 +300,9 @@ function dptProto.dissector( tvb, pinfo, tree )
 		local response = f_http_response_code()
 		if response == 101 then
 			local handshake = tryDissectWSConnectionResponse( tvb, pinfo, tree)
-			addConnectionHandshake( tree, tvb(), pinfo, handshake )
+			if handshake ~= nil then
+				addConnectionHandshake( tree, tvb(), pinfo, handshake )
+			end
 		else
 			local messageCount = 0
 			local payloads = f_ws_b_payload()

@@ -69,8 +69,14 @@ local function addConnectionResponse( tree , fullRange, pinfo, response )
 	if response.protoVerRange ~= nil then
 		messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
 	end
+	if response.protoVerCharRange ~= nil then
+		messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerCharRange, tonumber( response.protoVerCharRange:string() ) )
+	end
 	if response.connectionResponseRange ~= nil then
 		messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
+	end
+	if response.connectionResponseStringRange ~= nil then
+		messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseStringRange, tonumber(response.connectionResponseStringRange:string()) )
 	end
 	if response.messageLengthSizeRange ~= nil then
 		messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )

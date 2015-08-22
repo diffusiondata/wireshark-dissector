@@ -258,10 +258,33 @@ local function parseWSConnectionRequest ( tvb, client )
 end
 
 local function parseWS4ConnectionResponse( tvb, client, result )
+	local result = {
+		request = false
+	}
+	-- get the protocol version number
+	result.protoVerCharRange = tvb( 0, 1 )
+	client.protoVersion = tonumber( result.protoVerCharRange:string() )
+
+	result.connectionResponseStringRange = tvb( 2, 3 )
+
+	result.clientIDRange = tvb( 6 )
+	result.clientID = result.clientIDRange:string()
+	client.clientId = result.clientID
+
 	return result
 end
 
-local function parseWS5ConnectionResponse( tvb, client, result )
+local function parseWS5ConnectionResponse( tvb, client )
+	local result = {
+		request = false
+	}
+
+	-- Get the magic number 
+	result.magicNumberRange = tvb( 0, 1 )
+
+	-- get the protocol version number
+	result.protoVerRange = tvb( 1, 1 )
+	client.protoVersion = result.protoVerRange:uint()
 
 	-- Parse response
 	result.connectionResponseRange = tvb( 2, 1 )
@@ -271,7 +294,7 @@ local function parseWS5ConnectionResponse( tvb, client, result )
 	result.sessionId.serverIdentity = tvb( 3, 8 ):int64()
 	result.sessionId.clientIdentity = tvb( 11, 8 ):int64()
 	result.sessionId.range = tvb( 3, 16 )
-	client.clientId = string.format( "%016X-%016X", result.sessionId.serverIdentity:tonumber(), result.sessionId.clientIdentity:tonumber()
+	client.clientId = string.format( "%016X-%016X", result.sessionId.serverIdentity:tonumber(), result.sessionId.clientIdentity:tonumber() )
 
 	-- Parse session token
 	result.sessionTokenRange = tvb( 19, 24 )
@@ -280,28 +303,20 @@ local function parseWS5ConnectionResponse( tvb, client, result )
 end
 
 local function parseWSConnectionResponse( tvb, client )
-	-- Get the magic number 
-	local magicNumberRange = tvb( 0, 1 )
-	local magicNumber = magicNumberRange:uint()
-
-	if magicNumber ~= 0x23 then
-		return nil
-	end
-
-	-- get the protocol version number
-	local protoVerRange = tvb( 1, 1 )
-	client.protoVersion = protoVerRange:uint()
-
-	local result = {
-		request = false,
-		magicNumberRange = magicNumberRange,
-		protoVerRange = protoVerRange
-	}
-
-	if client.protoVersion > 4 then
-		return parseWS5ConnectionResponse( tvb, client, result )
+	-- Get the first byte
+	local firstByte = tvb( 0, 1 ):uint()
+	if firstByte == 0x34 then -- ASCII 4
+		return parseWS4ConnectionResponse( tvb, client )
+	elseif firstByte == 0x23 then
+		local protoVersion = tvb( 1, 1 ):uint()
+		if protoVersion > 4 then
+			return parseWS5ConnectionResponse( tvb, client )
+		else
+			return nil
+		end
 	else
-		return parseWS4ConnectionResponse( tvb, client, result )
+		info( string.format( "Unknown first byte %x", firstByte) )
+		return nil
 	end
 end
 
