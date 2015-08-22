@@ -131,6 +131,8 @@ dptProto.fields.wsConnectionType = ProtoField.string( "dpt.ws.connection.connect
 dptProto.fields.wsCapabilities = ProtoField.string( "dpt.ws.connection.capabilities", "Client Capabilities")
 dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", "Principal")
 dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
+dptProto.fields.sessionId = ProtoField.string( "dpt.connection.sessionId", "Session Id")
+dptProto.fields.sessionToken = ProtoField.string( "dpt.connection.sessionToken", "Session Token")
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield

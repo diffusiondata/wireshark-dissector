@@ -32,6 +32,7 @@ local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
+local parseWSConnectionResponse = diffusion.parse.parseWSConnectionResponse
 
 local addClientConnectionInformation = diffusion.display.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
@@ -87,7 +88,7 @@ local function tryDissectWSConnectionResponse( tvb, pinfo, tree )
 
 	local tcpStream = f_tcp_stream()
 	local client = tcpConnections[tcpStream].client
-	return parseConnectionResponse( websocketResponseRange, client )
+	return parseWSConnectionResponse( websocketResponseRange, client )
 end
 
 local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails )

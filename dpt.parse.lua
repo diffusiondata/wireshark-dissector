@@ -257,6 +257,54 @@ local function parseWSConnectionRequest ( tvb, client )
 	}
 end
 
+local function parseWS4ConnectionResponse( tvb, client, result )
+	return result
+end
+
+local function parseWS5ConnectionResponse( tvb, client, result )
+
+	-- Parse response
+	result.connectionResponseRange = tvb( 2, 1 )
+
+	-- Parse Session ID
+	result.sessionId = {}
+	result.sessionId.serverIdentity = tvb( 3, 8 ):int64()
+	result.sessionId.clientIdentity = tvb( 11, 8 ):int64()
+	result.sessionId.range = tvb( 3, 16 )
+	client.clientId = string.format( "%016X-%016X", result.sessionId.serverIdentity:tonumber(), result.sessionId.clientIdentity:tonumber()
+
+	-- Parse session token
+	result.sessionTokenRange = tvb( 19, 24 )
+
+	return result
+end
+
+local function parseWSConnectionResponse( tvb, client )
+	-- Get the magic number 
+	local magicNumberRange = tvb( 0, 1 )
+	local magicNumber = magicNumberRange:uint()
+
+	if magicNumber ~= 0x23 then
+		return nil
+	end
+
+	-- get the protocol version number
+	local protoVerRange = tvb( 1, 1 )
+	client.protoVersion = protoVerRange:uint()
+
+	local result = {
+		request = false,
+		magicNumberRange = magicNumberRange,
+		protoVerRange = protoVerRange
+	}
+
+	if client.protoVersion > 4 then
+		return parseWS5ConnectionResponse( tvb, client, result )
+	else
+		return parseWS4ConnectionResponse( tvb, client, result )
+	end
+end
+
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
@@ -265,7 +313,8 @@ master.parse = {
 	parseAckId = parseAckId,
 	parseConnectionRequest = parseConnectionRequest,
 	parseConnectionResponse = parseConnectionResponse,
-	parseWSConnectionRequest = parseWSConnectionRequest
+	parseWSConnectionRequest = parseWSConnectionRequest,
+	parseWSConnectionResponse = parseWSConnectionResponse
 }
 diffusion = master
 return master.parse

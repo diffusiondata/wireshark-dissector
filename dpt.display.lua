@@ -78,6 +78,12 @@ local function addConnectionResponse( tree , fullRange, pinfo, response )
 	if response.clientIDRange ~= nil then
 		messageTree:add( dptProto.fields.clientID, response.clientIDRange )
 	end
+	if response.sessionId ~= nil then
+		messageTree:add( dptProto.fields.sessionId, response.sessionId.range , string.format( "%016X-%016X", response.sessionId.serverIdentity:tonumber(), response.sessionId.clientIdentity:tonumber() ) )
+	end
+	if response.sessionTokenRange ~= nil then
+		messageTree:add( dptProto.fields.sessionToken, response.sessionTokenRange )
+	end
 end
 
 -- Attach the handshake information to the dissection tree
