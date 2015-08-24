@@ -59,34 +59,70 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 end
 
 -- Attach the connection response information to the dissection tree
+-- Any information present is added to the dissection tree and no information is required
 local function addConnectionResponse( tree , fullRange, pinfo, response )
 	pinfo.cols.info = "DPT Connection response"
 
+	-- Add the Diffusion protocol element to the tree for the packet
 	local messageTree = tree:add( dptProto, fullRange )
+
+	-- Add the magic number
 	if response.magicNumberRange ~= nil then
 		messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
 	end
+
+	-- Add the protocol version when encoded as a byte
 	if response.protoVerRange ~= nil then
 		messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
 	end
+
+	-- Add the protocol version when encoded as a char
 	if response.protoVerCharRange ~= nil then
-		messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerCharRange, tonumber( response.protoVerCharRange:string() ) )
+		messageTree:add(
+			dptProto.fields.connectionProtoNumber,
+			response.protoVerCharRange,
+			tonumber( response.protoVerCharRange:string() )
+		)
 	end
+
+	-- Add the response range
 	if response.connectionResponseRange ~= nil then
 		messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
 	end
+
+	-- Add the connection response range when a string
 	if response.connectionResponseStringRange ~= nil then
-		messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseStringRange, tonumber(response.connectionResponseStringRange:string()) )
+		messageTree:add(
+			dptProto.fields.connectionResponse,
+			response.connectionResponseStringRange,
+			tonumber(response.connectionResponseStringRange:string())
+		)
 	end
+
+	-- Add the message length
 	if response.messageLengthSizeRange ~= nil then
 		messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
 	end
+
+	-- Add the client ID when encoded as a string
 	if response.clientIDRange ~= nil then
 		messageTree:add( dptProto.fields.clientID, response.clientIDRange )
 	end
+
+	-- Add the session ID when encoded as two longs
 	if response.sessionId ~= nil then
-		messageTree:add( dptProto.fields.sessionId, response.sessionId.range , string.format( "%016X-%016X", response.sessionId.serverIdentity:tonumber(), response.sessionId.clientIdentity:tonumber() ) )
+		messageTree:add(
+			dptProto.fields.sessionId,
+			response.sessionId.range,
+			string.format(
+				"%016X-%016X",
+				response.sessionId.serverIdentity:tonumber(),
+				response.sessionId.clientIdentity:tonumber()
+			)
+		)
 	end
+
+	-- Add the session token
 	if response.sessionTokenRange ~= nil then
 		messageTree:add( dptProto.fields.sessionToken, response.sessionTokenRange )
 	end
@@ -277,18 +313,25 @@ local function addServiceInformation( parentTreeNode, service )
 	end
 end
 
+-- Add the description of the packet to the displayed columns
 local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
+	-- Add the description from the service information
 	if serviceInformation ~= nil then
+		-- Lookup service and mode name
 		local serviceId = serviceInformation.id.int
 		local mode = serviceInformation.mode.int
 		local serviceString = serviceIdentity[serviceId]
 		local modeString = modeValues[mode]
+
+		-- Handle unknown values
 		if serviceString == nil then
 			serviceString = string.format( "Unknown service (%d)", serviceId )
 		end
-		if serviceString == nil then
+		if modeString == nil then
 			modeString = string.format( "Unknown mode (%d)", mode )
 		end
+
+		-- Lookup service status
 		if serviceInformation.status ~= nil then
 			local status = serviceInformation.status.range:int()
 			local statusString = statusResponseBytes[status]
@@ -297,9 +340,11 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 			end
 			modeString = string.format( "%s %s", modeString, statusString)
 		end
+
 		if serviceId == v5.SERVICE_FETCH or
 			serviceId == v5.SERVICE_SUBSCRIBE or
 			serviceId == v5.SERVICE_UNSUBSCRIBE then
+			-- Handle services that benefit from a selector in the description
 			if serviceInformation.selector ~= nil then
 				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
 			else
@@ -310,6 +355,8 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 		end
 		return
 	end
+
+	-- Add the description from the message type
 	pinfo.cols.info = messageType:getDescription()
 end
 
