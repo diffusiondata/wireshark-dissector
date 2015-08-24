@@ -15,6 +15,10 @@ local modeValues = diffusion.v5.modeValues
 local statusResponseBytes = diffusion.proto.statusResponseBytes
 local v5 = diffusion.v5
 
+local function addTopicDetails( parentNode, details )
+	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -87,6 +91,7 @@ local function addServiceInformation( parentTreeNode, service )
 	end
 end
 
+-- Lookup service name
 local function lookupServiceName( serviceId )
 	local serviceString = serviceIdentity[serviceId]
 
@@ -97,6 +102,7 @@ local function lookupServiceName( serviceId )
 	return serviceString
 end
 
+-- Lookup mode name
 local function lookupModeName( modeId )
 	local modeString = modeValues[modeId]
 	if modeString == nil then
@@ -106,6 +112,7 @@ local function lookupModeName( modeId )
 	return modeString
 end
 
+-- Lookup status name
 local function lookupStatusName( statusId )
 	local statusString = statusResponseBytes[statusId]
 	if statusString == nil then
@@ -115,12 +122,21 @@ local function lookupStatusName( statusId )
 	return statusString
 end
 
+-- Should the description show selector information
+local function hasSelector( serviceId )
+	return serviceId == v5.SERVICE_FETCH or
+		serviceId == v5.SERVICE_SUBSCRIBE or
+		serviceId == v5.SERVICE_UNSUBSCRIBE or
+		serviceId == v5.SERVICE_REMOVE_TOPICS
+end
+
 -- Package footer
 master.displayService = {
 	addServiceInformation = addServiceInformation,
 	lookupServiceName = lookupServiceName,
 	lookupModeName = lookupModeName,
-	lookupStatusName = lookupStatusName
+	lookupStatusName = lookupStatusName,
+	hasSelector = hasSelector
 }
 diffusion = master
 return master.displayService

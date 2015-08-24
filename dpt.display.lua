@@ -8,10 +8,10 @@ if master.display ~= nil then
 	return master.display
 end
 local dptProto = diffusion.proto.dptProto
-local v5 = diffusion.v5
 local lookupServiceName = diffusion.displayService.lookupServiceName
 local lookupModeName = diffusion.displayService.lookupModeName
 local lookupStatusName = diffusion.displayService.lookupStatusName
+local hasSelector = diffusion.displayService.hasSelector
 
 -- Add topic and alias information to dissection tree
 local function addTopicHeaderInformation( treeNode, info )
@@ -97,10 +97,6 @@ local function addBody( parentTreeNode, records )
 	end
 end
 
-local function addTopicDetails( parentNode, details )
-	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
-end
-
 -- Add the description of the packet to the displayed columns
 local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
 	-- Add the description from the service information
@@ -118,9 +114,7 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 			modeString = string.format( "%s %s", modeString, statusString)
 		end
 
-		if serviceId == v5.SERVICE_FETCH or
-			serviceId == v5.SERVICE_SUBSCRIBE or
-			serviceId == v5.SERVICE_UNSUBSCRIBE then
+		if hasSelector( serviceId ) then
 			-- Handle services that benefit from a selector in the description
 			if serviceInformation.selector ~= nil then
 				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
