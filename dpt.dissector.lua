@@ -40,7 +40,7 @@ local addClientConnectionInformation = diffusion.displayConnection.addClientConn
 local addHeaderInformation = diffusion.display.addHeaderInformation
 local addBody = diffusion.display.addBody
 local addConnectionHandshake = diffusion.displayConnection.addConnectionHandshake
-local addServiceInformation = diffusion.display.addServiceInformation
+local addServiceInformation = diffusion.displayService.addServiceInformation
 local addDescription = diffusion.display.addDescription
 
 local SERVICE_TOPIC = diffusion.v5.SERVICE_TOPIC

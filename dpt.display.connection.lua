@@ -146,9 +146,9 @@ local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPo
 
 		-- Indicate direction of message
 		if client:matches( srcHost, srcPort ) then
-			rootNode:add( dptProto.fields.direction, tvb(0,0), "Client to Server" ):set_generated()
+			connectionNode:add( dptProto.fields.direction, tvb(0,0), "Client to Server" ):set_generated()
 		else
-			rootNode:add( dptProto.fields.direction, tvb(0,0), "Server to Client" ):set_generated()
+			connectionNode:add( dptProto.fields.direction, tvb(0,0), "Server to Client" ):set_generated()
 		end
 	else
 		-- Handle missing information
