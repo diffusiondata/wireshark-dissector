@@ -9,6 +9,7 @@ if master.dissector ~= nil then
 	return master.dissector
 end
 
+-- Import from other packages
 local RD, FD, WSMD = diffusion.utilities.RD, diffusion.utilities.FD, diffusion.utilities.WSMD
 
 local f_src_host = diffusion.utilities.f_src_host
@@ -35,10 +36,10 @@ local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
 local parseWSConnectionResponse = diffusion.parse.parseWSConnectionResponse
 
-local addClientConnectionInformation = diffusion.display.addClientConnectionInformation
+local addClientConnectionInformation = diffusion.displayConnection.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
 local addBody = diffusion.display.addBody
-local addConnectionHandshake = diffusion.display.addConnectionHandshake
+local addConnectionHandshake = diffusion.displayConnection.addConnectionHandshake
 local addServiceInformation = diffusion.display.addServiceInformation
 local addDescription = diffusion.display.addDescription
 
