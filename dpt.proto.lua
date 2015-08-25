@@ -31,7 +31,8 @@ local capabilities = {
     [0x05] = "Supports encrypted and base 64 encoded data messages",
     [0x06] = "Supports compressed and base 64 encoded data messages",
     [0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
-    [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a feature based client"
+    [0x08] = "Is a Unified API client",
+    [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a Unified API client"
 }
 
 local encodingTypesByValue = {
@@ -127,8 +128,7 @@ dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseC
 dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
 dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
 dptProto.fields.wsConnectionProtoNumber= ProtoField.string( "dpt.ws.connection.protocolVersion", "Protocol version" )
-dptProto.fields.wsConnectionType = ProtoField.string( "dpt.ws.connection.connectionType", "Connection Type")
-dptProto.fields.wsCapabilities = ProtoField.string( "dpt.ws.connection.capabilities", "Client Capabilities")
+dptProto.fields.wsConnectionType = ProtoField.string( "dpt.ws.connection.connectionType", "Connection Type" )
 dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", "Principal")
 dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
 dptProto.fields.sessionId = ProtoField.string( "dpt.connection.sessionId", "Session Id")

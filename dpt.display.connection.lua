@@ -32,8 +32,8 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	if request.capabilitiesRange ~= nil then
 		messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
 	end
-	if request.wsCapabilities ~= nil then
-		messageTree:add( dptProto.fields.wsCapabilities, request.wsCapabilities )
+	if request.capabilities ~= nil then
+		messageTree:add( dptProto.fields.capabilities, fullRange( 0, 0 ), request.capabilities )
 	end
 	if request.creds ~= nil then
 		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
@@ -141,8 +141,15 @@ local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPo
 
 		connectionNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
 		connectionNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
-		connectionNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
-		connectionNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+		if client.connectionType ~= nil then
+			connectionNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
+		end
+		if client.wsConnectionType ~= nil then
+			connectionNode:add( dptProto.fields.wsConnectionType, tvb(0,0), client.wsConnectionType ):set_generated()
+		end
+		if client.capabilities ~= nil then
+			connectionNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
+		end
 
 		-- Indicate direction of message
 		if client:matches( srcHost, srcPort ) then

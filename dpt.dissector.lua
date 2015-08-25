@@ -222,6 +222,14 @@ local function processWSMessage( tvb, pinfo, tree, start )
 	local messageTypeName = nameByID( msgDetails.msgType )
 	typeNode:append_text( " = " .. messageTypeName )
 
+	local tcpStream = f_tcp_stream() -- get the artificial 'tcp stream' number
+	local conn = tcpConnections[tcpStream]
+	local client
+	if conn ~= nil then
+		client = conn.client
+	end
+	addClientConnectionInformation( messageTree, tvb, client, f_src_host(), f_src_port() )
+
 	-- Stop if there is no content
 	if tvb:len() == offset then
 		addDescription( pinfo, messageType, nil )

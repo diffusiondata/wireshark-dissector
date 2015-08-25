@@ -18,6 +18,7 @@ local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
+local lookupClientTypeByChar = diffusion.parseCommon.lookupClientTypeByChar
 local v5 = diffusion.v5
 
 local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
@@ -247,11 +248,16 @@ end
 local function parseWSConnectionRequest ( tvb, client )
 	local uri = f_http_uri()
 	local parameters = uriToQueryParameters( uri )
+
+	local clientType = lookupClientTypeByChar( parameters["ty"] )
+	client.wsConnectionType = clientType
+	client.capabilities = tonumber( parameters["ca"] )
+
 	return {
 		request = true,
 		wsProtoVersion = parameters["v"],
-		wsConnectionType = parameters["ty"],
-		wsCapabilities = parameters["ca"],
+		wsConnectionType = clientType,
+		capabilities = tonumber( parameters["ca"] ),
 		wsPrincipal = parameters["username"],
 		wsCredentials = parameters["password"]
 	}
