@@ -8,68 +8,10 @@ if master.display ~= nil then
 	return master.display
 end
 local dptProto = diffusion.proto.dptProto
-local serviceIdentity = diffusion.v5.serviceIdentity
-local modeValues = diffusion.v5.modeValues
-local statusResponseBytes = diffusion.proto.statusResponseBytes
-
-local v5 = diffusion.v5
-
--- Attach the connection request information to the dissection tree
-local function addConnectionRequest( tree , fullRange, pinfo, request )
-	pinfo.cols.info = string.format( "Connection request" )
-	local messageTree = tree:add( dptProto, fullRange )
-	messageTree:add( dptProto.fields.connectionMagicNumber, request.magicNumberRange )
-	messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
-	messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
-	messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
-	if request.creds ~= nil then
-		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
-	end
-	if request.topicsetRange ~= nil then
-		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
-	end
-	if request.clientIdRange ~= nil then
-		pinfo.cols.info = string.format( "Reconnection request" )
-		messageTree:add( dptProto.fields.clientID, request.clientIdRange )
-	end
-end
-
--- Attach the connection response information to the dissection tree
-local function addConnectionResponse( tree , fullRange, pinfo, response )
-	pinfo.cols.info = string.format( "Connection response" )
-	local messageTree = tree:add( dptProto, fullRange )
-	messageTree:add( dptProto.fields.connectionMagicNumber, response.magicNumberRange )
-	messageTree:add( dptProto.fields.connectionProtoNumber, response.protoVerRange )
-	messageTree:add( dptProto.fields.connectionResponse, response.connectionResponseRange )
-	messageTree:add( dptProto.fields.messageLengthSize, response.messageLengthSizeRange )
-	messageTree:add( dptProto.fields.clientID, response.clientIDRange )
-end
-
--- Attach the handshake information to the dissection tree
-local function addConnectionHandshake( tree , fullRange, pinfo, handshake )
-	if handshake.request then
-		addConnectionRequest( tree, fullRange, pinfo, handshake )
-	else
-		addConnectionResponse( tree, fullRange, pinfo, handshake )
-	end
-end
-
-local function addClientConnectionInformation( tree, tvb, client, srcHost, srcPort )
-	if client ~= nil then
-		local rootNode = tree:add( dptProto.fields.connection )
-		rootNode:add( dptProto.fields.clientID, tvb(0,0), client.clientId ):set_generated()
-		rootNode:add( dptProto.fields.connectionProtoNumber , tvb(0,0), client.protoVersion ):set_generated()
-		rootNode:add( dptProto.fields.connectionType, tvb(0,0), client.connectionType ):set_generated()
-		rootNode:add( dptProto.fields.capabilities, tvb(0,0), client.capabilities ):set_generated()
-		if client:matches( srcHost, srcPort ) then
-			rootNode:add( dptProto.fields.direction, tvb(0,0), "Client to Server" ):set_generated()
-		else
-			rootNode:add( dptProto.fields.direction, tvb(0,0), "Server to Client" ):set_generated()
-		end
-	else
-		tree:add( dptProto.fields.connection, tvb(0,0), "Connection unknown, partial capture" )
-	end
-end
+local lookupServiceName = diffusion.displayService.lookupServiceName
+local lookupModeName = diffusion.displayService.lookupModeName
+local lookupStatusName = diffusion.displayService.lookupStatusName
+local hasSelector = diffusion.displayService.hasSelector
 
 -- Add topic and alias information to dissection tree
 local function addTopicHeaderInformation( treeNode, info )
@@ -155,104 +97,25 @@ local function addBody( parentTreeNode, records )
 	end
 end
 
-local function addTopicDetails( parentNode, details )
-	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
-end
-
-local function addServiceInformation( parentTreeNode, service )
-	if service ~= nil and service.range ~= nil then
-		local serviceNodeDesc = string.format( "%d bytes", service.range:len() )
-		-- Create service node
-		local serviceNode = parentTreeNode:add( dptProto.fields.service, service.range, serviceNodeDesc )
-
-		-- Add command header
-		serviceNode:add( dptProto.fields.serviceIdentity, service.id.range, service.id.int )
-		serviceNode:add( dptProto.fields.serviceMode, service.mode.range, service.mode.int )
-		serviceNode:add( dptProto.fields.conversation, service.conversation.range, service.conversation.int )
-
-		-- Add service specific information
-		if service.selector ~= nil then
-			serviceNode:add( dptProto.fields.selector, service.selector.range, service.selector.string )
-		end
-		if service.status ~= nil then
-			serviceNode:add( dptProto.fields.status, service.status.range )
-		end
-		if service.topicName ~= nil then
-			serviceNode:add( dptProto.fields.topicName, service.topicName.fullRange, service.topicName.string )
-		end
-		if service.topicInfo ~= nil then
-			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )
-			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
-			topicInfoNode:add( dptProto.fields.topicId, service.topicInfo.id.range, service.topicInfo.id.int )
-			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
-			addTopicDetails( topicInfoNode, service.topicInfo.details )
-		end
-		if service.topicUnsubscriptionInfo ~= nil then
-			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
-			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
-		end
-		if service.controlRegInfo ~= nil then
-			serviceNode:add( dptProto.fields.regServiceId, service.controlRegInfo.serviceId.range, service.controlRegInfo.serviceId.int )
-			serviceNode:add( dptProto.fields.controlGroup, service.controlRegInfo.controlGroup.fullRange, service.controlRegInfo.controlGroup.string )
-		end
-		if service.handlerName ~= nil then
-			serviceNode:add( dptProto.fields.handlerName, service.handlerName.fullRange, service.handlerName.string )
-		end
-		if service.handlerTopicPath ~= nil then
-			serviceNode:add( dptProto.fields.handlerTopicPath, service.handlerTopicPath.fullRange, service.handlerTopicPath.string )
-		end
-		if service.updateSourceInfo ~= nil then
-			serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
-		end
-		if service.updateInfo ~= nil then
-			serviceNode:add( dptProto.fields.topicName, service.updateInfo.topicPath.fullRange, service.updateInfo.topicPath.string )
-			local update = service.updateInfo.update;
-			serviceNode:add( dptProto.fields.updateType, update.updateType.range, update.updateType.int )
-			if update.updateAction ~= nil then
-				serviceNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
-				serviceNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
-				serviceNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
-				serviceNode:add( dptProto.fields.content, update.content.bytes.range )
-			end
-		end
-		if service.newUpdateSourceState ~= nil then
-			serviceNode:add( dptProto.fields.newUpdateSourceState, service.newUpdateSourceState.range, service.newUpdateSourceState.int )
-		end
-		if service.oldUpdateSourceState ~= nil then
-			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
-		end
-
-		-- Add generated information
-		if service.responseTime ~= nil then
-			local node = serviceNode:add( dptProto.fields.responseTime, service.responseTime )
-			node:set_generated()
-		end
-	end
-end
-
+-- Add the description of the packet to the displayed columns
 local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
+	-- Add the description from the service information
 	if serviceInformation ~= nil then
+		-- Lookup service and mode name
 		local serviceId = serviceInformation.id.int
 		local mode = serviceInformation.mode.int
-		local serviceString = serviceIdentity[serviceId]
-		local modeString = modeValues[mode]
-		if serviceString == nil then
-			serviceString = string.format( "Unknown service (%d)", serviceId )
-		end
-		if serviceString == nil then
-			modeString = string.format( "Unknown mode (%d)", mode )
-		end
+		local serviceString = lookupServiceName( serviceId )
+		local modeString = lookupModeName( mode )
+
+		-- Lookup service status
 		if serviceInformation.status ~= nil then
 			local status = serviceInformation.status.range:int()
-			local statusString = statusResponseBytes[status]
-			if statusString == nil then
-				statusString = string.format( "Unknown status (%d)", status )
-			end
+			local statusString = lookupStatusName( status )
 			modeString = string.format( "%s %s", modeString, statusString)
 		end
-		if serviceId == v5.SERVICE_FETCH or
-			serviceId == v5.SERVICE_SUBSCRIBE or
-			serviceId == v5.SERVICE_UNSUBSCRIBE then
+
+		if hasSelector( serviceId ) then
+			-- Handle services that benefit from a selector in the description
 			if serviceInformation.selector ~= nil then
 				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
 			else
@@ -263,16 +126,15 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 		end
 		return
 	end
+
+	-- Add the description from the message type
 	pinfo.cols.info = messageType:getDescription()
 end
 
 -- Package footer
 master.display = {
-	addConnectionHandshake = addConnectionHandshake,
-	addClientConnectionInformation = addClientConnectionInformation,
 	addHeaderInformation = addHeaderInformation,
 	addBody = addBody,
-	addServiceInformation = addServiceInformation,
 	addDescription = addDescription
 }
 diffusion = master

@@ -10,7 +10,7 @@ end
 
 local v5 = diffusion.v5
 
-local dptProto = Proto( "DPT", "Diffusion Protocol over TCP")
+local dptProto = Proto( "DPT", "Diffusion Protocol")
 
 local responseCodes = {
     [100] = "OK - Connection Successful", 
@@ -31,7 +31,8 @@ local capabilities = {
     [0x05] = "Supports encrypted and base 64 encoded data messages",
     [0x06] = "Supports compressed and base 64 encoded data messages",
     [0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
-    [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a feature based client"
+    [0x08] = "Is a Unified API client",
+    [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a Unified API client"
 }
 
 local encodingTypesByValue = {
@@ -120,12 +121,18 @@ local updateActionByBytes = {
 
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
-dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol number" )
+dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
 dptProto.fields.connectionType = ProtoField.uint8( "dpt.connection.connectionType", "Connection Type", base.HEX, clientTypesByValue )
 dptProto.fields.capabilities = ProtoField.uint8( "dpt.connection.capabilities", "Client Capabilities", base.HEX, capabilities )
 dptProto.fields.connectionResponse = ProtoField.uint8( "dpt.connection.responseCode", "Connection Response", base.DEC, responseCodes )
 dptProto.fields.clientID = ProtoField.string( "dpt.clientID", "Client ID" )
 dptProto.fields.direction = ProtoField.string( "dpt.direction", "Direction" )
+dptProto.fields.wsConnectionProtoNumber= ProtoField.string( "dpt.ws.connection.protocolVersion", "Protocol version" )
+dptProto.fields.wsConnectionType = ProtoField.string( "dpt.ws.connection.connectionType", "Connection Type" )
+dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", "Principal")
+dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
+dptProto.fields.sessionId = ProtoField.string( "dpt.connection.sessionId", "Session Id")
+dptProto.fields.sessionToken = ProtoField.string( "dpt.connection.sessionToken", "Session Token")
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield

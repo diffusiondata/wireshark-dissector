@@ -12,10 +12,13 @@ local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time_epoch = diffusion.utilities.f_time_epoch
 local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
+local f_http_uri = diffusion.utilities.f_http_uri
+local dump = diffusion.utilities.dump
 local aliasTable = diffusion.info.aliasTable
 local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
+local lookupClientTypeByChar = diffusion.parseCommon.lookupClientTypeByChar
 local v5 = diffusion.v5
 
 local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
@@ -227,6 +230,102 @@ local function parseConnectionResponse( tvb, client )
 		messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
 end
 
+local function uriToQueryParameters ( uri )
+	local parameterTable = {}
+	local queryString = string.gsub(uri, "/diffusion%?", "")
+	info( queryString )
+	-- Foreach '&' separated string split around '=' and store as key value pairs
+	info( "Parameters" )
+	string.gsub( queryString, "([^&]+)", function( parameterPair )
+		local parameterComponents = parameterPair:split("=")
+		parameterTable[parameterComponents[1]] = parameterComponents[2]
+	end )
+	info ( dump(parameterTable) )
+
+	return parameterTable
+end
+
+local function parseWSConnectionRequest ( tvb, client )
+	local uri = f_http_uri()
+	local parameters = uriToQueryParameters( uri )
+
+	local clientType = lookupClientTypeByChar( parameters["ty"] )
+	client.wsConnectionType = clientType
+	client.capabilities = tonumber( parameters["ca"] )
+
+	return {
+		request = true,
+		wsProtoVersion = parameters["v"],
+		wsConnectionType = clientType,
+		capabilities = tonumber( parameters["ca"] ),
+		wsPrincipal = parameters["username"],
+		wsCredentials = parameters["password"]
+	}
+end
+
+local function parseWS4ConnectionResponse( tvb, client, result )
+	local result = {
+		request = false
+	}
+	-- get the protocol version number
+	result.protoVerCharRange = tvb( 0, 1 )
+	client.protoVersion = tonumber( result.protoVerCharRange:string() )
+
+	result.connectionResponseStringRange = tvb( 2, 3 )
+
+	result.clientIDRange = tvb( 6 )
+	result.clientID = result.clientIDRange:string()
+	client.clientId = result.clientID
+
+	return result
+end
+
+local function parseWS5ConnectionResponse( tvb, client )
+	local result = {
+		request = false
+	}
+
+	-- Get the magic number 
+	result.magicNumberRange = tvb( 0, 1 )
+
+	-- get the protocol version number
+	result.protoVerRange = tvb( 1, 1 )
+	client.protoVersion = result.protoVerRange:uint()
+
+	-- Parse response
+	result.connectionResponseRange = tvb( 2, 1 )
+
+	-- Parse Session ID
+	result.sessionId = {}
+	result.sessionId.serverIdentity = tvb( 3, 8 ):int64()
+	result.sessionId.clientIdentity = tvb( 11, 8 ):int64()
+	result.sessionId.range = tvb( 3, 16 )
+	client.clientId = string.format( "%016X-%016X", result.sessionId.serverIdentity:tonumber(), result.sessionId.clientIdentity:tonumber() )
+
+	-- Parse session token
+	result.sessionTokenRange = tvb( 19, 24 )
+
+	return result
+end
+
+local function parseWSConnectionResponse( tvb, client )
+	-- Get the first byte
+	local firstByte = tvb( 0, 1 ):uint()
+	if firstByte == 0x34 then -- ASCII 4
+		return parseWS4ConnectionResponse( tvb, client )
+	elseif firstByte == 0x23 then
+		local protoVersion = tvb( 1, 1 ):uint()
+		if protoVersion > 4 then
+			return parseWS5ConnectionResponse( tvb, client )
+		else
+			return nil
+		end
+	else
+		info( string.format( "Unknown first byte %x", firstByte) )
+		return nil
+	end
+end
+
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
@@ -234,7 +333,9 @@ master.parse = {
 	parseField = parseField,
 	parseAckId = parseAckId,
 	parseConnectionRequest = parseConnectionRequest,
-	parseConnectionResponse = parseConnectionResponse
+	parseConnectionResponse = parseConnectionResponse,
+	parseWSConnectionRequest = parseWSConnectionRequest,
+	parseWSConnectionResponse = parseWSConnectionResponse
 }
 diffusion = master
 return master.parse
