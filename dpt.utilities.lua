@@ -20,8 +20,24 @@ local field_http_response_code = Field.new("http.response.code");
 local field_http_connection = Field.new("http.connection");
 local field_http_upgrade = Field.new("http.upgrade");
 local field_http_uri = Field.new("http.request.uri");
-local field_ws_binary_payload = Field.new("websocket.payload.binary");
-local field_ws_text_payload = Field.new("websocket.payload.text");
+local field_ws_binary_payload
+local field_ws_text_payload
+
+-- Attempt to set the websocket fields to those used by Wireshark 1.12
+local function set_version_112_fields()
+	field_ws_binary_payload = Field.new("websocket.payload.binary")
+	field_ws_text_payload = Field.new("websocket.payload.text")
+end
+
+-- Attempt to set the websocket fields to those used by Wireshark 1.99
+local function set_version_199_fields()
+	field_ws_binary_payload = Field.new("data.data")
+	field_ws_text_payload = Field.new("data-text-lines")
+end
+
+if not pcall(set_version_112_fields) then
+	set_version_199_fields()
+end
 
 -- Get the src host either from IPv4 or IPv6
 local function f_src_host()
