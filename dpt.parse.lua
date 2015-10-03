@@ -272,10 +272,13 @@ local function parseWS4ConnectionResponse( tvb, client, result )
 	client.protoVersion = tonumber( result.protoVerCharRange:string() )
 
 	result.connectionResponseStringRange = tvb( 2, 3 )
+	local connectionResponse = result.connectionResponseStringRange:string()
 
-	result.clientIDRange = tvb( 6 )
-	result.clientID = result.clientIDRange:string()
-	client.clientId = result.clientID
+	if connectionResponse == "100" or connectionResponse == "105" then
+		result.clientIDRange = tvb( 6 )
+		result.clientID = result.clientIDRange:string()
+		client.clientId = result.clientID
+	end
 
 	return result
 end
