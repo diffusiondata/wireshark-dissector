@@ -297,20 +297,23 @@ local function parseWS5ConnectionResponse( tvb, client )
 
 	-- Parse response
 	result.connectionResponseRange = tvb( 2, 1 )
+	local connectionResponse = result.connectionResponseRange:uint()
 
-	-- Parse Session ID
-	result.sessionId = {}
-	result.sessionId.serverIdentity = tvb( 3, 8 ):uint64()
-	result.sessionId.clientIdentity = tvb( 11, 8 ):uint64()
-	result.sessionId.range = tvb( 3, 16 )
-	client.clientId = string.format(
-		"%s-%s",
-		string.upper( result.sessionId.serverIdentity:tohex() ),
-		string.upper( result.sessionId.clientIdentity:tohex() )
-	)
+	if connectionResponse == 100 or connectionResponse == 105 then
+		-- Parse Session ID
+		result.sessionId = {}
+		result.sessionId.serverIdentity = tvb( 3, 8 ):uint64()
+		result.sessionId.clientIdentity = tvb( 11, 8 ):uint64()
+		result.sessionId.range = tvb( 3, 16 )
+		client.clientId = string.format(
+			"%s-%s",
+			string.upper( result.sessionId.serverIdentity:tohex() ),
+			string.upper( result.sessionId.clientIdentity:tohex() )
+		)
 
-	-- Parse session token
-	result.sessionTokenRange = tvb( 19, 24 )
+		-- Parse session token
+		result.sessionTokenRange = tvb( 19, 24 )
+	end
 
 	return result
 end
