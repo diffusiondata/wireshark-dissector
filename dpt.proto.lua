@@ -19,6 +19,12 @@ local responseCodes = {
     [105] = "Reconnection Successful",
     [110] = "Topic already exists",
     [111] = "Connection Rejected",
+    [112] = "Connection type not supported by connector",
+    [113] = "Connection rejected due to license limit",
+    [114] = "Reconnection not supported by connector",
+    [115] = "Connection failed - protocol error",
+    [116] = "Authentication failed",
+    [117] = "Reconnection failed - the session is unknown",
     [127] = "Undefined error"
 }
 
