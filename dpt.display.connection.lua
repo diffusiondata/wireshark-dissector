@@ -112,9 +112,9 @@ local function addConnectionResponse( tree , fullRange, pinfo, response )
 			dptProto.fields.sessionId,
 			response.sessionId.range,
 			string.format(
-				"%016X-%016X",
-				response.sessionId.serverIdentity:tonumber(),
-				response.sessionId.clientIdentity:tonumber()
+				"%s-%s",
+				string.upper( response.sessionId.serverIdentity:tohex() ),
+				string.upper( response.sessionId.clientIdentity:tohex() )
 			)
 		)
 	end
