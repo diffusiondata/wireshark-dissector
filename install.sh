@@ -1,7 +1,7 @@
 #!/bin/sh
 # Install the DPT wireshark dissector
 
-known_init_locations=(/Applications/Wireshark.app/Contents/Resources/share/wireshark/init.lua)
+known_init_locations=(/Applications/Wireshark.app/Contents/Resources/share/wireshark/init.lua /etc/wireshark/init.lua)
 init_file=""
 
 # Install the dissector into the user directory
@@ -25,6 +25,7 @@ function find_init_file {
             return
         fi
     done
+
     echo "Failed to find init.lua file."
     echo "Manual work needed to complete installation."
     echo "The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the users wireshark directory."
