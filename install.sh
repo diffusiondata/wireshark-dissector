@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Install the DPT wireshark dissector
 
 known_init_locations=(/Applications/Wireshark.app/Contents/Resources/share/wireshark/init.lua /etc/wireshark/init.lua)
