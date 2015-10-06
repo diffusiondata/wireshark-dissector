@@ -44,10 +44,12 @@ function update_init_file {
     grep dpt.lua ${init_file} > /dev/null
     if [ $? -eq 1 ]; then
         if [ -w ${init_file} ]; then
-            echo '\ndofile(USER_DIR.."dpt.lua")\n' >> ${init_file}
+            echo >> ${init_file}
+            echo 'dofile(USER_DIR.."dpt.lua")' >> ${init_file}
+            echo >> ${init_file}
         else
             echo "File ${init_file} not writable, attempting to update with sudo."
-            sudo sh -c "echo '\ndofile(USER_DIR..\"dpt.lua\")\n' >> /etc/wireshark/init.lua"
+            sudo sh -c "echo >> /etc/wireshark/init.lua ; echo 'dofile(USER_DIR..\"dpt.lua\")' >> /etc/wireshark/init.lua ; echo >> /etc/wireshark/init.lua ;"
         fi
 
         if [ $? -eq 1 ]; then
