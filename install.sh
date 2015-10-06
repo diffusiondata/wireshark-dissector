@@ -13,7 +13,7 @@ init_file_needed="The init.lua file used by wireshark to setup the Lua environme
 # Install the dissector into the user directory
 function install_dissector {
     # Clean up existing files and copy new ones
-    rm -f ~/.wireshark/dpt.*.lua && cp ./dpt.*.lua ~/.wireshark
+    rm -f ~/.wireshark/dpt*.lua && cp ./dpt*.lua ~/.wireshark
 
     if [ $? -eq 1 ]; then
         echo "Failed to install the dissector into the user's wireshark directory."
