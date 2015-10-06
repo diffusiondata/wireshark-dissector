@@ -36,7 +36,7 @@ function find_init_file {
 function update_init_file {
     grep dpt.lua ${init_file} > /dev/null
     if [ $? -eq 1 ]; then
-        echo '\ndofile(USER_DIR.."dpt.lua")\n' >> $1
+        echo '\ndofile(USER_DIR.."dpt.lua")\n' >> ${init_file}
     fi
 }
 
