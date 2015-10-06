@@ -1,8 +1,14 @@
 #!/bin/bash
 # Install the DPT wireshark dissector
 
+# Possible init.lua file locations
 known_init_locations=(/Applications/Wireshark.app/Contents/Resources/share/wireshark/init.lua /etc/wireshark/init.lua)
 init_file=""
+
+# Error messages
+more_work="Manual work needed to complete installation."
+dissector_needed="The lua files in the git repository need to be copied to the user's wireshark directory."
+init_file_needed="The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the user's wireshark directory."
 
 # Install the dissector into the user directory
 function install_dissector {
@@ -10,10 +16,11 @@ function install_dissector {
     rm -f ~/.wireshark/dpt.*.lua && cp ./dpt.*.lua ~/.wireshark
 
     if [ $? -eq 1 ]; then
-        echo "Failed to install the dissector into the users wireshark directory."
-        echo "Manual work needed to complete installation."
-        echo "The lua files in the git repository need to be copied to the users wireshark directory."
-        echo "The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the users wireshark directory."
+        echo "Failed to install the dissector into the user's wireshark directory."
+        echo ${more_work}
+        echo ${dissector_needed}
+        echo ${init_file_needed}
+        exit 1
     fi
 }
 
@@ -27,8 +34,8 @@ function find_init_file {
     done
 
     echo "Failed to find init.lua file."
-    echo "Manual work needed to complete installation."
-    echo "The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the users wireshark directory."
+    echo ${more_work}
+    echo ${init_file_needed}
     exit 1
 }
 
@@ -45,8 +52,9 @@ function update_init_file {
 
         if [ $? -eq 1 ]; then
             echo "Failed to update file ${init_file}."
-            echo "Manual work needed to complete installation."
-            echo "The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the users wireshark directory."
+            echo ${more_work}
+            echo ${init_file_needed}
+            exit 1
         fi
     fi
 }
