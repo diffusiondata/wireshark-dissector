@@ -36,12 +36,25 @@ function find_init_file {
 function update_init_file {
     grep dpt.lua ${init_file} > /dev/null
     if [ $? -eq 1 ]; then
-        echo '\ndofile(USER_DIR.."dpt.lua")\n' >> ${init_file}
+        if [ -w ${init_file} ]; then
+            echo '\ndofile(USER_DIR.."dpt.lua")\n' >> ${init_file}
+        else
+            echo "File ${init_file} not writable, attempting to update with sudo."
+            sudo sh -c "echo '\ndofile(USER_DIR..\"dpt.lua\")\n' >> /etc/wireshark/init.lua"
+        fi
+
+        if [ $? -eq 1 ]; then
+            echo "Failed to update file ${init_file}."
+            echo "Manual work needed to complete installation."
+            echo "The init.lua file used by wireshark to setup the Lua environment must load the dpt.lua file from the users wireshark directory."
+        fi
     fi
 }
 
+# Go through the install steps
 install_dissector
 find_init_file
 update_init_file
 echo "Install complete"
 exit 0
+
