@@ -9,18 +9,26 @@ Installation
 ============
 
 + Ensure your Wireshark has Lua installed
-+ Minimum version of Wireshark?
++ The dissector has been tested on both 1.12 and 1.99 versions of Wireshark
++ Attempt to run the install.sh script using bash, this may call out to sudo to update the init.lua file
+
+If the install script fails or you are using Windows:
 + Copy all the .lua files into ~/.wireshark
-+ Edit init.lua in your Wireshark installation directory to include dofile(USER_DIR.."dpt.lua")
++ Edit init.lua in your Wireshark installation directory to include the line `dofile(USER_DIR.."dpt.lua")`
 
 The files that need to be installed are:
 + dpt.lua
 + dpt.utilities.lua
 + dpt.info.lua
 + dpt.parse.lua
++ dpt.parse.common.lua
++ dpt.parse.service.lua
 + dpt.messages.lua
 + dpt.proto.lua
 + dpt.display.lua
++ dpt.display.connection.lua
++ dpt.display.service.lua
++ dpt.v5.lua
 + dpt.dissector.lua
 
 Displayed Information
@@ -66,4 +74,3 @@ following is a selection of useful fields.
 | dpt.connection.responseCode | Filter connection responses by the response code | dpt.connection.responseCode == 100 |
 | dpt.service.identity | Filter service messages by the service | dpt.service.identity == 0x03 |
 | dpt.service.mode | Filter service messages by whether they are requests or responses | dpt.service.mode == 0x01 |
-
