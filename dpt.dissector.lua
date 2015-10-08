@@ -274,7 +274,12 @@ function dptProto.dissector( tvb, pinfo, tree )
 	local connection = f_http_connection()
 	local upgrade = f_http_upgrade()
 
-	if connection == "Upgrade" and upgrade == "WebSocket" then
+	-- Detect if it is a websocket connection
+	if connection ~= nil and
+			upgrade ~=nil and
+			string.lower( connection ) == "upgrade" and
+			string.lower( upgrade ) == "websocket" then
+
 		local handshake = tryDissectWSConnection( tvb, pinfo )
 		if handshake ~= nil then
 			pinfo.cols.info:clear_fence()
