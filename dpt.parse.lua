@@ -234,89 +234,33 @@ local function parseConnectionRequest( tvb, client )
 		capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset, clientIdRange = clientId }
 end
 
-local function parseConnectionResponse( tvb, client )
-	-- Get the magic number 
-	local magicNumberRange = tvb( 0, 1 )
-	local magicNumber = magicNumberRange:uint()
-
-	-- get the protocol version number
-	local protoVerRange = tvb( 1, 1 )
-	client.protoVersion = protoVerRange:uint()
-
-	-- Is a server response
-
-	local connectionResponseRange = tvb( 2, 1 )
-	local connectionResponse = connectionResponseRange:uint()
-
-	-- The size field
-	local messageLengthSizeRange = tvb( 3, 1 )
-	local messageLengthSize = messageLengthSizeRange:uint() 
-
--- the client ID (the rest of this)
-	local clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
-	local clientID = clientIDRange:string()
-
-	client.clientId = clientIDRange:string()
-
-	return { request = false, magicNumberRange = magicNumberRange,
-		protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
-		messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
-end
-
-local function uriToQueryParameters ( uri )
-	local parameterTable = {}
-	local queryString = string.gsub(uri, "/diffusion%?", "")
-	info( queryString )
-	-- Foreach '&' separated string split around '=' and store as key value pairs
-	info( "Parameters" )
-	string.gsub( queryString, "([^&]+)", function( parameterPair )
-		local parameterComponents = parameterPair:split("=")
-		parameterTable[parameterComponents[1]] = parameterComponents[2]
-	end )
-	info ( dump(parameterTable) )
-
-	return parameterTable
-end
-
-local function parseWSConnectionRequest ( tvb, client )
-	local uri = f_http_uri()
-	local parameters = uriToQueryParameters( uri )
-
-	local clientType = lookupClientTypeByChar( parameters["ty"] )
-	client.wsConnectionType = clientType
-	client.capabilities = tonumber( parameters["ca"] )
-
-	return {
-		request = true,
-		wsProtoVersion = parameters["v"],
-		wsConnectionType = clientType,
-		capabilities = tonumber( parameters["ca"] ),
-		wsPrincipal = parameters["username"],
-		wsCredentials = parameters["password"]
-	}
-end
-
-local function parseWS4ConnectionResponse( tvb, client, result )
+-- Parse V4 connection responses
+local function parseV4ConnectionResponse( tvb, client )
 	local result = {
 		request = false
 	}
+
+	-- Get the magic number 
+	result.magicNumberRange = tvb( 0, 1 )
+
 	-- get the protocol version number
-	result.protoVerCharRange = tvb( 0, 1 )
-	client.protoVersion = tonumber( result.protoVerCharRange:string() )
+	result.protoVerRange = tvb( 1, 1 )
+	client.protoVersion = result.protoVerRange:uint()
 
-	result.connectionResponseStringRange = tvb( 2, 3 )
-	local connectionResponse = result.connectionResponseStringRange:string()
+	result.connectionResponseRange = tvb( 2, 1 )
 
-	if connectionResponse == "100" or connectionResponse == "105" then
-		result.clientIDRange = tvb( 6 )
-		result.clientID = result.clientIDRange:string()
-		client.clientId = result.clientID
-	end
+	-- The size field
+	result.messageLengthSizeRange = tvb( 3, 1 ) 
+
+	-- the client ID (the rest of this)
+	result.clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
+	client.clientId = result.clientIDRange:string()
 
 	return result
 end
 
-local function parseWS5ConnectionResponse( tvb, client )
+-- Parse V5 and later connection responses
+local function parseV5ConnectionResponse( tvb, client )
 	local result = {
 		request = false
 	}
@@ -351,15 +295,88 @@ local function parseWS5ConnectionResponse( tvb, client )
 	return result
 end
 
+-- Identify how to parse the DPT connection response and call the correct parser
+local function parseConnectionResponse( tvb, client )
+	-- Check the magic number
+	local magicNumber = tvb( 0, 1 ):uint()
+	if magicNumber ~= 0x23 then
+		info( string.format( "Unknown first byte %x", magicNumber) )
+		return nil
+	end
+
+	-- Check the protocol version number
+	local protoVersion = tvb( 1, 1 ):uint()
+	if protoVersion > 4 then
+		return parseV5ConnectionResponse( tvb, client )
+	else
+		return parseV4ConnectionResponse( tvb, client )
+	end
+end
+
+local function uriToQueryParameters( uri )
+	local parameterTable = {}
+	local queryString = string.gsub(uri, "/diffusion%?", "")
+	info( queryString )
+	-- Foreach '&' separated string split around '=' and store as key value pairs
+	info( "Parameters" )
+	string.gsub( queryString, "([^&]+)", function( parameterPair )
+		local parameterComponents = parameterPair:split("=")
+		parameterTable[parameterComponents[1]] = parameterComponents[2]
+	end )
+	info ( dump(parameterTable) )
+
+	return parameterTable
+end
+
+local function parseWSConnectionRequest( tvb, client )
+	local uri = f_http_uri()
+	local parameters = uriToQueryParameters( uri )
+
+	local clientType = lookupClientTypeByChar( parameters["ty"] )
+	client.wsConnectionType = clientType
+	client.capabilities = tonumber( parameters["ca"] )
+
+	return {
+		request = true,
+		wsProtoVersion = parameters["v"],
+		wsConnectionType = clientType,
+		capabilities = tonumber( parameters["ca"] ),
+		wsPrincipal = parameters["username"],
+		wsCredentials = parameters["password"]
+	}
+end
+
+-- Parse V4 over WS connection responses
+local function parseV4WSConnectionResponse( tvb, client, result )
+	local result = {
+		request = false
+	}
+	-- get the protocol version number
+	result.protoVerCharRange = tvb( 0, 1 )
+	client.protoVersion = tonumber( result.protoVerCharRange:string() )
+
+	result.connectionResponseStringRange = tvb( 2, 3 )
+	local connectionResponse = result.connectionResponseStringRange:string()
+
+	if connectionResponse == "100" or connectionResponse == "105" then
+		result.clientIDRange = tvb( 6 )
+		result.clientID = result.clientIDRange:string()
+		client.clientId = result.clientID
+	end
+
+	return result
+end
+
+-- Identify how to parse the WS connection response and call the correct parser
 local function parseWSConnectionResponse( tvb, client )
 	-- Get the first byte
 	local firstByte = tvb( 0, 1 ):uint()
-	if firstByte == 0x34 then -- ASCII 4
-		return parseWS4ConnectionResponse( tvb, client )
-	elseif firstByte == 0x23 then
+	if firstByte == 0x34 then -- ASCII 4, classic WS protocol
+		return parseV4WSConnectionResponse( tvb, client )
+	elseif firstByte == 0x23 then -- Magic byte, DPT-like connection
 		local protoVersion = tvb( 1, 1 ):uint()
 		if protoVersion > 4 then
-			return parseWS5ConnectionResponse( tvb, client )
+			return parseV5ConnectionResponse( tvb, client )
 		else
 			return nil
 		end
