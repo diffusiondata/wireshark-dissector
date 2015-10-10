@@ -134,6 +134,24 @@ local function parseAckId( headerRange )
 	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
+local function parseV5ReconnectionRequest( tvb, client, result )
+
+	-- the 1 byte connection type
+	local connectionTypeRange = tvb( 3, 1 )
+	client.connectionType = connectionTypeRange:uint()
+	result.connectionTypeRange = connectionTypeRange
+
+	-- the 1 byte capabilities value
+	local capabilitiesRange = tvb( 4, 1 )
+	client.capabilities = capabilitiesRange:uint()
+	result.capabilitiesRange = capabilitiesRange
+
+	-- the session token
+	result.sessionTokenRange = tvb( 5, 24 )
+
+	return result
+end
+
 local function parseConnectionRequest( tvb, client )
 	-- Get the magic number 
 	local magicNumberRange = tvb( 0, 1 )
@@ -143,8 +161,23 @@ local function parseConnectionRequest( tvb, client )
 	local protoVerRange = tvb( 1, 1 )
 	client.protoVersion = protoVerRange:uint()
 
-	-- the 1 byte connection type
+	-- if the protocol version is 5 or above and the next byte is 2 then it is a reconnection attempt otherwise the byte
+	-- is the connection type
 	local connectionTypeRange = tvb( 2, 1 )
+
+	if connectionTypeRange:uint() == 2 then
+		return parseV5ReconnectionRequest(
+			tvb,
+			client,
+			{
+				request = true,
+				magicNumberRange = magicNumberRange,
+				protoVerRange = protoVerRange
+			}
+		)
+	end
+
+	-- the 1 byte connection type
 	client.connectionType = connectionTypeRange:uint()
 
 	-- the 1 byte capabilities value

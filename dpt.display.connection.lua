@@ -47,6 +47,11 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	if request.topicsetRange ~= nil then
 		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
 	end
+	-- Add the session token
+	if request.sessionTokenRange ~= nil then
+		messageTree:add( dptProto.fields.sessionToken, request.sessionTokenRange )
+	end
+
 	if request.clientIdRange ~= nil then
 		pinfo.cols.info = "DPT Reconnection request"
 		messageTree:add( dptProto.fields.clientID, request.clientIdRange )
