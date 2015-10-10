@@ -125,6 +125,13 @@ local updateActionByBytes = {
 	[0x01] = "Replace"
 }
 
+local detailTypeByBytes = {
+	[0x00] = "Summary",
+	[0x01] = "Location",
+	[0x02] = "Connector name",
+	[0x03] = "Server name"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -197,6 +204,8 @@ dptProto.fields.newUpdateSourceState = ProtoField.uint8( "dpt.service.updateSour
 dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update type", base.HEX, updateTypeByBytes )
 dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
+dptProto.fields.detailTypeSet = ProtoField.string( "dpt.service.detailTypeSet", "Detail type set" )
+dptProto.fields.detailType = ProtoField.uint8( "dpt.service.detailType", "Detail type", base.HEX, detailTypeByBytes )
 
 -- Package footer
 master.proto = {
