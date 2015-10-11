@@ -38,6 +38,35 @@ local function varint( range )
 	return range:range( 0, idx ), range:range( idx ), sum
 end
 
+local function varint64( range )
+	local idx = 0
+
+	if range:len() == 1 then
+		local r = range:range( 0, 1 )
+		return r, range:range( 0, 0 ), r:uint()
+	end
+
+	while idx + 1 < range:len() do
+		local byte = range:range( idx, 1 ):uint()
+		if byte >= 128 then
+			idx = idx + 1
+		else
+			idx = idx + 1
+			break
+		end
+	end
+
+	-- Get low 32
+	local lo = 0
+	-- TODO
+
+	-- Get hi 32
+	local hi = 0
+	-- TODO
+
+	return range:range( 0, idx ), range:range( idx ), UInt64.new( lo, hi )
+end
+
 local function lengthPrefixedString( range )
 	if range ~= nil then
 		local lengthRange, rRange, length = varint( range )
@@ -81,11 +110,47 @@ local function lookupClientTypeByChar( clientType )
 	end
 end
 
+-- Parse a session ID that uses fixed length encoding
+local function parseSessionId( tvb )
+	local serverIdentity = tvb( 0, 8 ):uint64()
+	local clientIdentity = tvb( 8, 8 ):uint64()
+	return {
+		serverIdentity = serverIdentity,
+		clientIdentity = clientIdentity,
+		range = tvb( 0, 16 ),
+		clientId = string.format(
+			"%s-%s",
+			string.upper( serverIdentity:tohex() ),
+			string.upper( clientIdentity:tohex() )
+		)
+	}
+end
+
+-- Parse a session ID that uses variable length encoding
+-- Currently parses the correct length but not value
+local function parseVarSessionId( tvb )
+	local serverIdentityRange, remaining, serverIdentity = varint64( tvb )
+	local clientIdentityRange, remaining, clientIdentity = varint64( remaining )
+
+	return {
+		serverIdentity = serverIdentity,
+		clientIdentity = clientIdentity,
+		range = tvb( 0, serverIdentityRange:len() + clientIdentityRange:len() ),
+		clientId = string.format(
+			"%s-%s",
+			string.upper( serverIdentity:tohex() ),
+			string.upper( clientIdentity:tohex() )
+		)
+	}, remaining
+end
+
 -- Package footer
 master.parseCommon = {
 	varint = varint,
 	lengthPrefixedString = lengthPrefixedString,
-	lookupClientTypeByChar = lookupClientTypeByChar
+	lookupClientTypeByChar = lookupClientTypeByChar,
+	parseSessionId = parseSessionId,
+	parseVarSessionId = parseVarSessionId
 }
 diffusion = master
 return master.parseCommon

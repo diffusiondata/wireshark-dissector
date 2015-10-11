@@ -19,6 +19,7 @@ local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local lookupClientTypeByChar = diffusion.parseCommon.lookupClientTypeByChar
+local parseSessionId = diffusion.parseCommon.parseSessionId
 local v5 = diffusion.v5
 
 local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
@@ -278,15 +279,8 @@ local function parseV5ConnectionResponse( tvb, client )
 
 	if connectionResponse == 100 or connectionResponse == 105 then
 		-- Parse Session ID
-		result.sessionId = {}
-		result.sessionId.serverIdentity = tvb( 3, 8 ):uint64()
-		result.sessionId.clientIdentity = tvb( 11, 8 ):uint64()
-		result.sessionId.range = tvb( 3, 16 )
-		client.clientId = string.format(
-			"%s-%s",
-			string.upper( result.sessionId.serverIdentity:tohex() ),
-			string.upper( result.sessionId.clientIdentity:tohex() )
-		)
+		result.sessionId = parseSessionId( tvb( 3 ) )
+		client.clientId = result.sessionId.clientId
 
 		-- Parse session token
 		result.sessionTokenRange = tvb( 19, 24 )

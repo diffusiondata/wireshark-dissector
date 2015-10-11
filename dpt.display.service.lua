@@ -92,6 +92,15 @@ local function addServiceInformation( parentTreeNode, service )
 				detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
 			end
 		end
+		if service.sessionListenerEventTypeRange ~= nil then
+			serviceNode:add( dptProto.fields.sessionListenerEventType, service.sessionListenerEventTypeRange )
+		end
+		if service.closeReasonRange ~= nil then
+			serviceNode:add( dptProto.fields.closeReason, service.closeReasonRange )
+		end
+		if service.sessionId ~= nil then
+			serviceNode:add( dptProto.fields.serviceSessionId, service.sessionId.range, service.sessionId.clientId )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
