@@ -12,7 +12,6 @@ end
 -- Takes a range containing the varint
 -- Returns: a range containing the varint, a range excluding the varint, the
 -- numeric value of the varint
--- TODO: Unit test
 local function varint( range )
 	local sum = 0
 	local idx = 0
@@ -23,48 +22,46 @@ local function varint( range )
 		return r, range:range( 0, 0 ), r:uint()
 	end
 
-	while idx + 1 < range:len() do
+	while shift < 32 do
 		local byte = range:range( idx, 1 ):uint()
-		if byte >= 128 then
-			sum = sum + ( shift + byte - 128 )
-			idx = idx + 1
-			shift = shift + ( 2 ^ idx * 8 )
-		else
-			sum = sum + ( shift + byte )
-			idx = idx + 1
+		sum = bit32.bor( sum, bit32.lshift( bit32.band( byte, 0x7F ), shift ) )
+
+		idx = idx + 1
+		if bit32.band( byte, 0x80 ) == 0 then
 			break
 		end
+
+		shift = shift + 7;
 	end
 	return range:range( 0, idx ), range:range( idx ), sum
 end
 
+-- Decode the varint used by command serialiser
+-- Takes a range containing the varint
+-- Returns: a range containing the varint, a range excluding the varint, the UInt64 value of the varint
 local function varint64( range )
-	local idx = 0
-
 	if range:len() == 1 then
 		local r = range:range( 0, 1 )
-		return r, range:range( 0, 0 ), r:uint()
+		return r, range:range( 0, 0 ), UInt64.new( r:uint(), 0 )
 	end
 
-	while idx + 1 < range:len() do
+	local idx = 0
+	local shift = 0
+
+	local sum = UInt64.new( 0, 0 )
+	while shift < 64 do
 		local byte = range:range( idx, 1 ):uint()
-		if byte >= 128 then
-			idx = idx + 1
-		else
-			idx = idx + 1
+		sum = sum:bor( UInt64.new( bit32.band( byte, 0x7F ), 0 ):lshift( shift ) )
+
+		idx = idx + 1
+		if bit32.band( byte, 0x80 ) == 0 then
 			break
 		end
+
+		shift = shift + 7;
 	end
 
-	-- Get low 32
-	local lo = 0
-	-- TODO
-
-	-- Get hi 32
-	local hi = 0
-	-- TODO
-
-	return range:range( 0, idx ), range:range( idx ), UInt64.new( lo, hi )
+	return range:range( 0, idx ), range:range( idx ), sum
 end
 
 local function lengthPrefixedString( range )
