@@ -12,7 +12,6 @@ end
 -- Takes a range containing the varint
 -- Returns: a range containing the varint, a range excluding the varint, the
 -- numeric value of the varint
--- TODO: Unit test
 local function varint( range )
 	local sum = 0
 	local idx = 0
@@ -23,18 +22,45 @@ local function varint( range )
 		return r, range:range( 0, 0 ), r:uint()
 	end
 
-	while idx + 1 < range:len() do
+	while shift < 32 do
 		local byte = range:range( idx, 1 ):uint()
-		if byte >= 128 then
-			sum = sum + ( shift + byte - 128 )
-			idx = idx + 1
-			shift = shift + ( 2 ^ idx * 8 )
-		else
-			sum = sum + ( shift + byte )
-			idx = idx + 1
+		sum = bit32.bor( sum, bit32.lshift( bit32.band( byte, 0x7F ), shift ) )
+
+		idx = idx + 1
+		if bit32.band( byte, 0x80 ) == 0 then
 			break
 		end
+
+		shift = shift + 7;
 	end
+	return range:range( 0, idx ), range:range( idx ), sum
+end
+
+-- Decode the varint used by command serialiser
+-- Takes a range containing the varint
+-- Returns: a range containing the varint, a range excluding the varint, the UInt64 value of the varint
+local function varint64( range )
+	if range:len() == 1 then
+		local r = range:range( 0, 1 )
+		return r, range:range( 0, 0 ), UInt64.new( r:uint(), 0 )
+	end
+
+	local idx = 0
+	local shift = 0
+
+	local sum = UInt64.new( 0, 0 )
+	while shift < 64 do
+		local byte = range:range( idx, 1 ):uint()
+		sum = sum:bor( UInt64.new( bit32.band( byte, 0x7F ), 0 ):lshift( shift ) )
+
+		idx = idx + 1
+		if bit32.band( byte, 0x80 ) == 0 then
+			break
+		end
+
+		shift = shift + 7;
+	end
+
 	return range:range( 0, idx ), range:range( idx ), sum
 end
 
@@ -81,11 +107,47 @@ local function lookupClientTypeByChar( clientType )
 	end
 end
 
+-- Parse a session ID that uses fixed length encoding
+local function parseSessionId( tvb )
+	local serverIdentity = tvb( 0, 8 ):uint64()
+	local clientIdentity = tvb( 8, 8 ):uint64()
+	return {
+		serverIdentity = serverIdentity,
+		clientIdentity = clientIdentity,
+		range = tvb( 0, 16 ),
+		clientId = string.format(
+			"%s-%s",
+			string.upper( serverIdentity:tohex() ),
+			string.upper( clientIdentity:tohex() )
+		)
+	}
+end
+
+-- Parse a session ID that uses variable length encoding
+-- Currently parses the correct length but not value
+local function parseVarSessionId( tvb )
+	local serverIdentityRange, remaining, serverIdentity = varint64( tvb )
+	local clientIdentityRange, remaining, clientIdentity = varint64( remaining )
+
+	return {
+		serverIdentity = serverIdentity,
+		clientIdentity = clientIdentity,
+		range = tvb( 0, serverIdentityRange:len() + clientIdentityRange:len() ),
+		clientId = string.format(
+			"%s-%s",
+			string.upper( serverIdentity:tohex() ),
+			string.upper( clientIdentity:tohex() )
+		)
+	}, remaining
+end
+
 -- Package footer
 master.parseCommon = {
 	varint = varint,
 	lengthPrefixedString = lengthPrefixedString,
-	lookupClientTypeByChar = lookupClientTypeByChar
+	lookupClientTypeByChar = lookupClientTypeByChar,
+	parseSessionId = parseSessionId,
+	parseVarSessionId = parseVarSessionId
 }
 diffusion = master
 return master.parseCommon

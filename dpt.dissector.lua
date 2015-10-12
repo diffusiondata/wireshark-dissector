@@ -208,16 +208,14 @@ local function processWSMessage( tvb, pinfo, tree, start )
 	msgDetails.msgEncoding = 0
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
-	-- Find message end, either end of WS message or 0x08
-	local msgSize = tvb( start ):bytes():index( WSMD )
-	if msgSize < 1 then msgSize = tvb:len() end
-	msgDetails.msgSize = msgSize
+	-- Find message end
+	msgDetails.msgSize = tvb:len()
 
 	-- Add to the GUI the size-header, type-header & encoding-header
 	local messageRange = tvb( start, msgDetails.msgSize )
 	local messageTree = tree:add( dptProto, messageRange )
 
-	messageTree:add( dptProto.fields.sizeHdr, messageRange, msgSize )
+	messageTree:add( dptProto.fields.sizeHdr, messageRange, msgDetails.msgSize )
 	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
 	local messageTypeName = nameByID( msgDetails.msgType )
 	typeNode:append_text( " = " .. messageTypeName )

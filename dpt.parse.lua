@@ -19,6 +19,7 @@ local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local lookupClientTypeByChar = diffusion.parseCommon.lookupClientTypeByChar
+local parseSessionId = diffusion.parseCommon.parseSessionId
 local v5 = diffusion.v5
 
 local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
@@ -134,6 +135,24 @@ local function parseAckId( headerRange )
 	return { range = ackIdRange, string = ackIdRange:string() }, headerRange
 end
 
+local function parseV5ReconnectionRequest( tvb, client, result )
+
+	-- the 1 byte connection type
+	local connectionTypeRange = tvb( 3, 1 )
+	client.connectionType = connectionTypeRange:uint()
+	result.connectionTypeRange = connectionTypeRange
+
+	-- the 1 byte capabilities value
+	local capabilitiesRange = tvb( 4, 1 )
+	client.capabilities = capabilitiesRange:uint()
+	result.capabilitiesRange = capabilitiesRange
+
+	-- the session token
+	result.sessionTokenRange = tvb( 5, 24 )
+
+	return result
+end
+
 local function parseConnectionRequest( tvb, client )
 	-- Get the magic number 
 	local magicNumberRange = tvb( 0, 1 )
@@ -143,8 +162,23 @@ local function parseConnectionRequest( tvb, client )
 	local protoVerRange = tvb( 1, 1 )
 	client.protoVersion = protoVerRange:uint()
 
-	-- the 1 byte connection type
+	-- if the protocol version is 5 or above and the next byte is 2 then it is a reconnection attempt otherwise the byte
+	-- is the connection type
 	local connectionTypeRange = tvb( 2, 1 )
+
+	if connectionTypeRange:uint() == 2 then
+		return parseV5ReconnectionRequest(
+			tvb,
+			client,
+			{
+				request = true,
+				magicNumberRange = magicNumberRange,
+				protoVerRange = protoVerRange
+			}
+		)
+	end
+
+	-- the 1 byte connection type
 	client.connectionType = connectionTypeRange:uint()
 
 	-- the 1 byte capabilities value
@@ -201,36 +235,79 @@ local function parseConnectionRequest( tvb, client )
 		capabilitiesRange = capabilitiesRange, creds = creds, topicsetRange = topicset, clientIdRange = clientId }
 end
 
-local function parseConnectionResponse( tvb, client )
+-- Parse V4 connection responses
+local function parseV4ConnectionResponse( tvb, client )
+	local result = {
+		request = false
+	}
+
 	-- Get the magic number 
-	local magicNumberRange = tvb( 0, 1 )
-	local magicNumber = magicNumberRange:uint()
+	result.magicNumberRange = tvb( 0, 1 )
 
 	-- get the protocol version number
-	local protoVerRange = tvb( 1, 1 )
-	client.protoVersion = protoVerRange:uint()
+	result.protoVerRange = tvb( 1, 1 )
+	client.protoVersion = result.protoVerRange:uint()
 
-	-- Is a server response
-
-	local connectionResponseRange = tvb( 2, 1 )
-	local connectionResponse = connectionResponseRange:uint()
+	result.connectionResponseRange = tvb( 2, 1 )
 
 	-- The size field
-	local messageLengthSizeRange = tvb( 3, 1 )
-	local messageLengthSize = messageLengthSizeRange:uint() 
+	result.messageLengthSizeRange = tvb( 3, 1 ) 
 
--- the client ID (the rest of this)
-	local clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
-	local clientID = clientIDRange:string()
+	-- the client ID (the rest of this)
+	result.clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
+	client.clientId = result.clientIDRange:string()
 
-	client.clientId = clientIDRange:string()
-
-	return { request = false, magicNumberRange = magicNumberRange,
-		protoVerRange = protoVerRange, connectionResponseRange = connectionResponseRange,
-		messageLengthSizeRange = messageLengthSizeRange, clientIDRange = clientIDRange }
+	return result
 end
 
-local function uriToQueryParameters ( uri )
+-- Parse V5 and later connection responses
+local function parseV5ConnectionResponse( tvb, client )
+	local result = {
+		request = false
+	}
+
+	-- Get the magic number 
+	result.magicNumberRange = tvb( 0, 1 )
+
+	-- get the protocol version number
+	result.protoVerRange = tvb( 1, 1 )
+	client.protoVersion = result.protoVerRange:uint()
+
+	-- Parse response
+	result.connectionResponseRange = tvb( 2, 1 )
+	local connectionResponse = result.connectionResponseRange:uint()
+
+	if connectionResponse == 100 or connectionResponse == 105 then
+		-- Parse Session ID
+		result.sessionId = parseSessionId( tvb( 3 ) )
+		client.clientId = result.sessionId.clientId
+
+		-- Parse session token
+		result.sessionTokenRange = tvb( 19, 24 )
+	end
+
+	return result
+end
+
+-- Identify how to parse the DPT connection response and call the correct parser
+local function parseConnectionResponse( tvb, client )
+	-- Check the magic number
+	local magicNumber = tvb( 0, 1 ):uint()
+	if magicNumber ~= 0x23 then
+		info( string.format( "Unknown first byte %x", magicNumber) )
+		return nil
+	end
+
+	-- Check the protocol version number
+	local protoVersion = tvb( 1, 1 ):uint()
+	if protoVersion > 4 then
+		return parseV5ConnectionResponse( tvb, client )
+	else
+		return parseV4ConnectionResponse( tvb, client )
+	end
+end
+
+local function uriToQueryParameters( uri )
 	local parameterTable = {}
 	local queryString = string.gsub(uri, "/diffusion%?", "")
 	info( queryString )
@@ -245,7 +322,7 @@ local function uriToQueryParameters ( uri )
 	return parameterTable
 end
 
-local function parseWSConnectionRequest ( tvb, client )
+local function parseWSConnectionRequest( tvb, client )
 	local uri = f_http_uri()
 	local parameters = uriToQueryParameters( uri )
 
@@ -263,7 +340,8 @@ local function parseWSConnectionRequest ( tvb, client )
 	}
 end
 
-local function parseWS4ConnectionResponse( tvb, client, result )
+-- Parse V4 over WS connection responses
+local function parseV4WSConnectionResponse( tvb, client, result )
 	local result = {
 		request = false
 	}
@@ -283,50 +361,16 @@ local function parseWS4ConnectionResponse( tvb, client, result )
 	return result
 end
 
-local function parseWS5ConnectionResponse( tvb, client )
-	local result = {
-		request = false
-	}
-
-	-- Get the magic number 
-	result.magicNumberRange = tvb( 0, 1 )
-
-	-- get the protocol version number
-	result.protoVerRange = tvb( 1, 1 )
-	client.protoVersion = result.protoVerRange:uint()
-
-	-- Parse response
-	result.connectionResponseRange = tvb( 2, 1 )
-	local connectionResponse = result.connectionResponseRange:uint()
-
-	if connectionResponse == 100 or connectionResponse == 105 then
-		-- Parse Session ID
-		result.sessionId = {}
-		result.sessionId.serverIdentity = tvb( 3, 8 ):uint64()
-		result.sessionId.clientIdentity = tvb( 11, 8 ):uint64()
-		result.sessionId.range = tvb( 3, 16 )
-		client.clientId = string.format(
-			"%s-%s",
-			string.upper( result.sessionId.serverIdentity:tohex() ),
-			string.upper( result.sessionId.clientIdentity:tohex() )
-		)
-
-		-- Parse session token
-		result.sessionTokenRange = tvb( 19, 24 )
-	end
-
-	return result
-end
-
+-- Identify how to parse the WS connection response and call the correct parser
 local function parseWSConnectionResponse( tvb, client )
 	-- Get the first byte
 	local firstByte = tvb( 0, 1 ):uint()
-	if firstByte == 0x34 then -- ASCII 4
-		return parseWS4ConnectionResponse( tvb, client )
-	elseif firstByte == 0x23 then
+	if firstByte == 0x34 then -- ASCII 4, classic WS protocol
+		return parseV4WSConnectionResponse( tvb, client )
+	elseif firstByte == 0x23 then -- Magic byte, DPT-like connection
 		local protoVersion = tvb( 1, 1 ):uint()
 		if protoVersion > 4 then
-			return parseWS5ConnectionResponse( tvb, client )
+			return parseV5ConnectionResponse( tvb, client )
 		else
 			return nil
 		end

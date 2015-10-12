@@ -82,6 +82,25 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.oldUpdateSourceState ~= nil then
 			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
 		end
+		if service.sessionListenerRegInfo ~= nil then
+			local conversation = service.sessionListenerRegInfo.conversationId
+			local detailTypeSet = service.sessionListenerRegInfo.detailTypeSet
+			serviceNode:add( dptProto.fields.conversation, conversation.range, conversation.int )
+			local detailTypeSetDesc = string.format( "%d details", detailTypeSet.length )
+			local detailTypeSetNode = serviceNode:add( dptProto.fields.detailTypeSet, detailTypeSet.range, detailTypeSetDesc )
+			for i = 0, detailTypeSet.length - 1 do
+				detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
+			end
+		end
+		if service.sessionListenerEventTypeRange ~= nil then
+			serviceNode:add( dptProto.fields.sessionListenerEventType, service.sessionListenerEventTypeRange )
+		end
+		if service.closeReasonRange ~= nil then
+			serviceNode:add( dptProto.fields.closeReason, service.closeReasonRange )
+		end
+		if service.sessionId ~= nil then
+			serviceNode:add( dptProto.fields.serviceSessionId, service.sessionId.range, service.sessionId.clientId )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

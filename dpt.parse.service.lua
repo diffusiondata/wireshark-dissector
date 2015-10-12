@@ -18,6 +18,41 @@ local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
 local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
+local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
+
+local function parseDetailTypeSet( range )
+	local numberOfDetailTypes = range:range( 0, 1 ):uint()
+	local set = { length = numberOfDetailTypes }
+	for i = 0, numberOfDetailTypes - 1 do
+		set[i] = range:range( 1 + i, 1 )
+	end
+	set.range = range:range( 0, numberOfDetailTypes + 1 )
+	return set, range:range( numberOfDetailTypes + 1 )
+end
+
+local function parseSessionDetailsEvent( range )
+	local result = {}
+	result.sessionListenerEventTypeRange = range:range( 0, 1 )
+	local eventType = result.sessionListenerEventTypeRange:uint()
+	if eventType < 125 then
+		result.closeReasonRange = result.sessionListenerEventTypeRange
+	end
+	result.sessionId = parseVarSessionId( range:range( 1 ) )
+	return result
+end
+
+local function parseSessionDetailsListenerRegistrationRequest( range )
+	local hasDetailTypes = range:range( 0, 1 ):uint()
+
+	if hasDetailTypes == 0 then
+		local cIdRange, remaining, cId = varint( range:range( 1 ) )
+		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
+	else
+		local detailTypeSet, remaining = parseDetailTypeSet( range:range( 1 ) )
+		local cIdRange, remaining, cId = varint( remaining )
+		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = detailTypeSet }
+	end
+end
 
 local function parseControlRegistrationRequest( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
@@ -229,6 +264,13 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_UPDATE_TOPIC then
 				local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
 				result.updateInfo = info
+			elseif service == v5.SERVICE_SESSION_LISTENER_REGISTRATION then
+				result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
+			elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
+				local info = parseSessionDetailsEvent( serviceBodyRange )
+				result.sessionListenerEventTypeRange = info.sessionListenerEventTypeRange
+				result.closeReasonRange = info.closeReasonRange
+				result.sessionId = info.sessionId
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

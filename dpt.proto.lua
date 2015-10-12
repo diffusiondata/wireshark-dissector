@@ -125,6 +125,45 @@ local updateActionByBytes = {
 	[0x01] = "Replace"
 }
 
+local detailTypeByBytes = {
+	[0x00] = "Summary",
+	[0x01] = "Location",
+	[0x02] = "Connector name",
+	[0x03] = "Server name"
+}
+
+local sessionDetailsEventByBytes = {
+	[0x7e] = "Open",
+	[0x7f] = "Update",
+	[0x00] = "Close",
+	[0x01] = "Close",
+	[0x02] = "Close",
+	[0x03] = "Close",
+	[0x04] = "Close",
+	[0x05] = "Close",
+	[0x06] = "Close",
+	[0x07] = "Close",
+	[0x08] = "Close",
+	[0x09] = "Close",
+	[0x0a] = "Close",
+	[0x0b] = "Close"
+}
+
+local closeReasonByBytes = {
+	[0x00] = "Connection lost",
+	[0x01] = "IO Exception",
+	[0x02] = "Client unresponsive",
+	[0x03] = "Message queue limit reached",
+	[0x04] = "Closed by client",
+	[0x05] = "Message too large",
+	[0x06] = "Internal error",
+	[0x07] = "Invalid inbound message",
+	[0x08] = "Aborted",
+	[0x09] = "Lost messages",
+	[0x0a] = "Server closing",
+	[0x0b] = "Closed by controller"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -197,6 +236,12 @@ dptProto.fields.newUpdateSourceState = ProtoField.uint8( "dpt.service.updateSour
 dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update type", base.HEX, updateTypeByBytes )
 dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
+dptProto.fields.detailTypeSet = ProtoField.string( "dpt.service.detailTypeSet", "Detail type set" )
+dptProto.fields.detailType = ProtoField.uint8( "dpt.service.detailType", "Detail type", base.HEX, detailTypeByBytes )
+dptProto.fields.sessionListenerEventType = ProtoField.uint8( "dpt.service.sessionListenerEventType", "Session listener event type", base.HEX, sessionDetailsEventByBytes )
+dptProto.fields.closeReason = ProtoField.uint8( "dpt.service.closeReason", "Close reason", base.HEX, closeReasonByBytes )
+dptProto.fields.serviceSessionId = ProtoField.string( "dpt.service.sessionId", "Session Id")
+
 
 -- Package footer
 master.proto = {
