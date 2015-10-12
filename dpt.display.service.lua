@@ -68,6 +68,19 @@ local function addSessionListenerEvent( parentNode, info )
 	end
 end
 
+-- Add add topic request information
+local function addAddTopicInformation( parentNode, info )
+	if info.topicName ~= nil then
+		parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+	end
+	if info.reference ~= nil then
+		parentNode:add( dptProto.fields.topicReference, info.reference.range, info.reference.int )
+	end
+	if info.topicDetails ~= nil then
+		addTopicDetails( parentNode, info.topicDetails )
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -89,6 +102,10 @@ local function addServiceInformation( parentTreeNode, service )
 		end
 		if service.topicName ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.topicName.fullRange, service.topicName.string )
+		end
+		if service.addTopic ~= nil then
+			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
+			addAddTopicInformation( addTopicNode, service.addTopic )
 		end
 		if service.topicInfo ~= nil then
 			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )

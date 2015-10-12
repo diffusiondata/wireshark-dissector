@@ -270,6 +270,10 @@ dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update
 dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
 
+-- Add topic
+dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
+dptProto.fields.topicReference = ProtoField.uint32( "dpt.service.topicReference", "Topic reference" )
+
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )
 dptProto.fields.detailTypeSet = ProtoField.string( "dpt.service.detailTypeSet", "Detail type set" )

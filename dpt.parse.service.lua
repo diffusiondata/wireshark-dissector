@@ -299,6 +299,21 @@ local function parseUpdateSourceRegistrationResponse( range )
 	return { range = stateByteRange, int = stateByteRange:int() }
 end
 
+-- Parse add topic request
+local function parseAddTopicRequest( range )
+	local topicName = lengthPrefixedString( range )
+	local referenceRange, remaining, reference = varint( topicName.remaining )
+	local topicDetails = parseTopicDetails( remaining )
+	return {
+		topicName = topicName,
+		reference = {
+			range = referenceRange,
+			int = reference
+		},
+		topicDetails = topicDetails
+	}
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -338,8 +353,8 @@ local function parseAsV4ServiceMessage( range )
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
 			elseif service == v5.SERVICE_ADD_TOPIC then
-				local topicName = lengthPrefixedString( serviceBodyRange )
-				result.topicName = topicName
+				local info = parseAddTopicRequest( serviceBodyRange )
+				result.addTopic = info
 			elseif service == v5.SERVICE_REMOVE_TOPICS then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
