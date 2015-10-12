@@ -164,6 +164,39 @@ local closeReasonByBytes = {
 	[0x0b] = "Closed by controller"
 }
 
+local v5ClientTypeByBytes = {
+	[0x00] = "JavaScrip Browser",
+	[0x01] = "JavaScrip Flash",
+	[0x02] = "JavaScrip Silverlight",
+	[0x03] = "Android",
+	[0x04] = "iOS",
+	[0x05] = "J2ME",
+	[0x06] = "Flash",
+	[0x07] = "Silverlight",
+	[0x08] = "Java",
+	[0x09] = ".NET",
+	[0x0a] = "C",
+	[0x0b] = "Internal"
+}
+
+local transportTypeByBytes = {
+	[0x00] = "WebSocket",
+	[0x01] = "HTTP Long Poll",
+	[0x02] = "IFrame Long Poll",
+	[0x03] = "IFrame Streaming",
+	[0x04] = "DPT",
+	[0x05] = "HTTP Streaming",
+	[0x06] = "HTTP Duplex",
+	[0x07] = "Other"
+}
+
+local addressTypeByBytes = {
+	[0x01] = "Global",
+	[0x02] = "Local",
+	[0x03] = "Loopback",
+	[0x04] = "Unknown"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -238,9 +271,26 @@ dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Up
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
 dptProto.fields.detailTypeSet = ProtoField.string( "dpt.service.detailTypeSet", "Detail type set" )
 dptProto.fields.detailType = ProtoField.uint8( "dpt.service.detailType", "Detail type", base.HEX, detailTypeByBytes )
-dptProto.fields.sessionListenerEventType = ProtoField.uint8( "dpt.service.sessionListenerEventType", "Session listener event type", base.HEX, sessionDetailsEventByBytes )
+
+-- Session listener notifications
+dptProto.fields.sessionListenerEvent = ProtoField.string( "dpt.service.sessionListenerEvent", "Session listener event" )
+dptProto.fields.sessionListenerEventType = ProtoField.uint8( "dpt.service.sessionListenerEventType", "Event type", base.HEX, sessionDetailsEventByBytes )
 dptProto.fields.closeReason = ProtoField.uint8( "dpt.service.closeReason", "Close reason", base.HEX, closeReasonByBytes )
 dptProto.fields.serviceSessionId = ProtoField.string( "dpt.service.sessionId", "Session Id")
+dptProto.fields.sessionDetails = ProtoField.string( "dpt.service.sessionDetails", "Session Details" )
+dptProto.fields.summary = ProtoField.string( "dpt.service.summary", "Summary" )
+dptProto.fields.servicePrincipal = ProtoField.string( "dpt.service.principal", "Principal")
+dptProto.fields.clientType = ProtoField.uint8( "dpt.service.clientType", "Client type", base.HEX, v5ClientTypeByBytes)
+dptProto.fields.transportType = ProtoField.uint8( "dpt.service.transportType", "Transport type", base.HEX, transportTypeByBytes)
+dptProto.fields.location = ProtoField.string( "dpt.service.location", "Location" )
+dptProto.fields.address = ProtoField.string( "dpt.service.address", "Address" )
+dptProto.fields.hostName = ProtoField.string( "dpt.service.hostName", "Hostname" )
+dptProto.fields.resolvedName = ProtoField.string( "dpt.service.resolvedName", "Resolved name" )
+dptProto.fields.addressType = ProtoField.uint8( "dpt.service.addressType", "Address type", base.HEX, addressTypeByBytes )
+dptProto.fields.country = ProtoField.string( "dpt.service.country", "Country" )
+dptProto.fields.language = ProtoField.string( "dpt.service.language", "Language" )
+dptProto.fields.connectorName = ProtoField.string( "dpt.service.connectorName", "Connector name" )
+dptProto.fields.serverName = ProtoField.string( "dpt.service.serverName", "Server name" )
 
 
 -- Package footer

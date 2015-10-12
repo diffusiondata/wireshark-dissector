@@ -20,6 +20,7 @@ local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 
+-- Parse a set of detail types
 local function parseDetailTypeSet( range )
 	local numberOfDetailTypes = range:range( 0, 1 ):uint()
 	local set = { length = numberOfDetailTypes }
@@ -30,6 +31,106 @@ local function parseDetailTypeSet( range )
 	return set, range:range( numberOfDetailTypes + 1 )
 end
 
+-- Parse a client summary
+local function parseSummary( range )
+	local principal = lengthPrefixedString( range )
+	local clientTypeRange = principal.remaining:range( 0, 1 )
+	local transportTypeRange = principal.remaining:range( 1, 1 )
+	return {
+		principal = principal,
+		clientType = clientTypeRange,
+		transportType = transportTypeRange,
+		range = range:range( 0, principal.fullRange:len() + 2 )
+	}
+end
+
+-- Parse a client location
+local function parseLocation( range )
+	local length = 0
+	local result = {}
+
+	result.address = lengthPrefixedString( range )
+	length = length + result.address.fullRange:len()
+
+	result.hostName = lengthPrefixedString( result.address.remaining )
+	length = length + result.hostName.fullRange:len()
+
+	result.resolvedName = lengthPrefixedString( result.hostName.remaining )
+	length = length + result.resolvedName.fullRange:len()
+
+	result.addressType = result.resolvedName.remaining:range( 0, 1 )
+	length = length + 1
+
+	result.country = lengthPrefixedString( result.resolvedName.remaining:range( 1 ) )
+	length = length + result.country.fullRange:len()
+
+	result.language = lengthPrefixedString( result.country.remaining )
+	length = length + result.language.fullRange:len()
+
+	-- TODO: Turn these into floats
+	local latitudeRange, longitudeR, latitude = varint( result.language.remaining )
+	length = length + latitudeRange:len()
+
+	local longitudeRange, remaining, longitude = varint( longitudeR )
+	length = length + longitudeRange:len()
+
+	result.remaining = remaining
+	result.range = range( 0, length )
+	return result
+end
+
+-- Parse session details
+local function parseSessionDetails( range )
+	local hasDetails = range:range( 0, 1 ):uint();
+	if hasDetails == 0 then
+		-- No details
+		return {
+			count = 0,
+			range = range:range( 0, 1 )
+		}
+	end
+	local result = {
+		count = 0
+	}
+	local offset = 1
+
+	local hasSummary = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasSummary ~= 0 then
+		result.count = result.count + 1
+		result.summary = parseSummary( range:range( offset ) )
+		offset = offset + result.summary.range:len()
+	end
+
+	local hasLocation = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasLocation ~= 0 then
+		result.count = result.count + 1
+		result.location = parseLocation( range:range( offset ) )
+		offset = offset + result.location.range:len()
+	end
+
+	local hasConnectorName = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasConnectorName ~= 0 then
+		result.count = result.count + 1
+		result.connector = lengthPrefixedString( range:range( offset ) )
+		offset = offset + result.connector.fullRange:len()
+	end
+
+	local hasServerName = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasServerName ~= 0 then
+		result.count = result.count + 1
+		result.server = lengthPrefixedString( range:range( offset ) )
+		offset = offset + result.server.fullRange:len()
+	end
+
+	result.range = range:range( 0, offset )
+	return result, range:range( offset )
+end
+
+-- Parse a session details listener notification event
 local function parseSessionDetailsEvent( range )
 	local result = {}
 	result.sessionListenerEventTypeRange = range:range( 0, 1 )
@@ -37,10 +138,16 @@ local function parseSessionDetailsEvent( range )
 	if eventType < 125 then
 		result.closeReasonRange = result.sessionListenerEventTypeRange
 	end
-	result.sessionId = parseVarSessionId( range:range( 1 ) )
+	local sessionId, sessionDetailsR = parseVarSessionId( range:range( 1 ) )
+	result.sessionId = sessionId
+	local sessionDetails, conversationR = parseSessionDetails( sessionDetailsR )
+	result.sessionDetails = sessionDetails
+	local cIdRange, remaining, cId = varint( conversationR )
+	result.conversationId = { range = cIdRange, int = cId }
 	return result
 end
 
+-- Parse a session listener registration
 local function parseSessionDetailsListenerRegistrationRequest( range )
 	local hasDetailTypes = range:range( 0, 1 ):uint()
 
@@ -267,10 +374,7 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_SESSION_LISTENER_REGISTRATION then
 				result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
 			elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
-				local info = parseSessionDetailsEvent( serviceBodyRange )
-				result.sessionListenerEventTypeRange = info.sessionListenerEventTypeRange
-				result.closeReasonRange = info.closeReasonRange
-				result.sessionId = info.sessionId
+				result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

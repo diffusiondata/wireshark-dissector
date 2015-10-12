@@ -19,6 +19,43 @@ local function addTopicDetails( parentNode, details )
 	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 end
 
+-- Add a description of a session details listener event to the tree
+local function addSessionListenerEvent( parentNode, info )
+	if info.sessionListenerEventTypeRange ~= nil then
+		parentNode:add( dptProto.fields.sessionListenerEventType, info.sessionListenerEventTypeRange )
+	end
+	if info.closeReasonRange ~= nil then
+		parentNode:add( dptProto.fields.closeReason, info.closeReasonRange )
+	end
+	if info.sessionId ~= nil then
+		parentNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+	end
+	if info.sessionDetails ~= nil then
+		local details = info.sessionDetails
+		local detailsNode = parentNode:add( dptProto.fields.sessionDetails, details.range, string.format( "%d details", details.count ) )
+		if details.summary ~= nil then
+			local summaryNode = detailsNode:add( dptProto.fields.summary, details.summary.range, "" )
+			summaryNode:add( dptProto.fields.servicePrincipal, details.summary.principal.fullRange, details.summary.principal.string )
+			summaryNode:add( dptProto.fields.clientType, details.summary.clientType, details.summary.clientType:uint() )
+			summaryNode:add( dptProto.fields.transportType, details.summary.transportType, details.summary.transportType:uint() )
+		end
+		if details.location ~= nil then
+			local locationNode = detailsNode:add( dptProto.fields.location, details.location.range, "" )
+			locationNode:add( dptProto.fields.address, details.location.address.fullRange, details.location.address.string )
+			locationNode:add( dptProto.fields.hostName, details.location.hostName.fullRange, details.location.hostName.string )
+			locationNode:add( dptProto.fields.resolvedName, details.location.resolvedName.fullRange, details.location.resolvedName.string )
+			locationNode:add( dptProto.fields.addressType, details.location.addressType )
+		end
+		if details.connector ~= nil then
+			detailsNode:add( dptProto.fields.connectorName, details.connector.fullRange, details.connector.string )
+		end
+		if details.server ~= nil then
+			detailsNode:add( dptProto.fields.serverName, details.server.fullRange, details.server.string )
+		end
+		parentNode:add( dptProto.fields.conversation, info.conversationId.range, info.conversationId.int )
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -92,14 +129,9 @@ local function addServiceInformation( parentTreeNode, service )
 				detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
 			end
 		end
-		if service.sessionListenerEventTypeRange ~= nil then
-			serviceNode:add( dptProto.fields.sessionListenerEventType, service.sessionListenerEventTypeRange )
-		end
-		if service.closeReasonRange ~= nil then
-			serviceNode:add( dptProto.fields.closeReason, service.closeReasonRange )
-		end
-		if service.sessionId ~= nil then
-			serviceNode:add( dptProto.fields.serviceSessionId, service.sessionId.range, service.sessionId.clientId )
+		if service.sessionListenerEventInfo ~= nil then
+			local eventNode = serviceNode:add( dptProto.fields.sessionListenerEvent, service.body, "" )
+			addSessionListenerEvent( eventNode, service.sessionListenerEventInfo )
 		end
 
 		-- Add generated information
