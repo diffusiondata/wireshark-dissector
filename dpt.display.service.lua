@@ -19,6 +19,18 @@ local function addTopicDetails( parentNode, details )
 	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 end
 
+-- Add a description of a session details listener registrations to the tree
+local function addSessionListenerRegistration( parentNode, info )
+	local conversation = info.conversationId
+	local detailTypeSet = info.detailTypeSet
+	parentNode:add( dptProto.fields.conversation, conversation.range, conversation.int )
+	local detailTypeSetDesc = string.format( "%d details", detailTypeSet.length )
+	local detailTypeSetNode = parentNode:add( dptProto.fields.detailTypeSet, detailTypeSet.range, detailTypeSetDesc )
+	for i = 0, detailTypeSet.length - 1 do
+		detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
+	end
+end
+
 -- Add a description of a session details listener event to the tree
 local function addSessionListenerEvent( parentNode, info )
 	if info.sessionListenerEventTypeRange ~= nil then
@@ -120,14 +132,8 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
 		end
 		if service.sessionListenerRegInfo ~= nil then
-			local conversation = service.sessionListenerRegInfo.conversationId
-			local detailTypeSet = service.sessionListenerRegInfo.detailTypeSet
-			serviceNode:add( dptProto.fields.conversation, conversation.range, conversation.int )
-			local detailTypeSetDesc = string.format( "%d details", detailTypeSet.length )
-			local detailTypeSetNode = serviceNode:add( dptProto.fields.detailTypeSet, detailTypeSet.range, detailTypeSetDesc )
-			for i = 0, detailTypeSet.length - 1 do
-				detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
-			end
+			local regNode = serviceNode:add( dptProto.fields.sessionListenerRegistration, service.body, "" )
+			addSessionListenerRegistration( regNode, service.sessionListenerRegInfo )
 		end
 		if service.sessionListenerEventInfo ~= nil then
 			local eventNode = serviceNode:add( dptProto.fields.sessionListenerEvent, service.body, "" )
