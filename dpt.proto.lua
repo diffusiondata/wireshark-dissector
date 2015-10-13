@@ -299,6 +299,9 @@ dptProto.fields.language = ProtoField.string( "dpt.service.language", "Language"
 dptProto.fields.connectorName = ProtoField.string( "dpt.service.connectorName", "Connector name" )
 dptProto.fields.serverName = ProtoField.string( "dpt.service.serverName", "Server name" )
 
+-- Get session details request
+dptProto.fields.lookupSessionDetails = ProtoField.string( "dpt.service.lookupSessionDetails", "Lookup" )
+
 
 -- Package footer
 master.proto = {

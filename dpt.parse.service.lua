@@ -28,7 +28,11 @@ local function parseDetailTypeSet( range )
 		set[i] = range:range( 1 + i, 1 )
 	end
 	set.range = range:range( 0, numberOfDetailTypes + 1 )
-	return set, range:range( numberOfDetailTypes + 1 )
+	if range:range( 0, numberOfDetailTypes + 1 ):len() == range:len() then
+		return set, range:range( 0, 0 )
+	else
+		return set, range:range( numberOfDetailTypes + 1 )
+	end
 end
 
 -- Parse a client summary
@@ -127,7 +131,11 @@ local function parseSessionDetails( range )
 	end
 
 	result.range = range:range( 0, offset )
-	return result, range:range( offset )
+	if offset == range:len() then
+		return result, range:range( 0, 0 )
+	else
+		return result, range:range( offset )
+	end
 end
 
 -- Parse a session details listener notification event
@@ -159,6 +167,15 @@ local function parseSessionDetailsListenerRegistrationRequest( range )
 		local cIdRange, remaining, cId = varint( remaining )
 		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = detailTypeSet }
 	end
+end
+
+local function parseGetSessionDetailsRequest( range )
+	local sessionId, detailTypeSetR = parseVarSessionId( range )
+	local detailTypeSet = parseDetailTypeSet( detailTypeSetR )
+	return {
+		sessionId = sessionId,
+		set = detailTypeSet
+	}
 end
 
 local function parseControlRegistrationRequest( range )
@@ -331,7 +348,7 @@ local function parseAsV4ServiceMessage( range )
 
 		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
-			-- Store the request so the response time can be caluclated
+			-- Store the request so the response time can be calculated
 			local session = tcpConnections[tcpStream]
 			local isClient = session.client:matches( f_src_host(), f_src_port() )
 			if isClient then
@@ -390,6 +407,8 @@ local function parseAsV4ServiceMessage( range )
 				result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
 			elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
 				result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
+			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+				result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then
@@ -398,6 +417,8 @@ local function parseAsV4ServiceMessage( range )
 			if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 				local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
 				result.newUpdateSourceState = info
+			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+				result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
 			end
 
 			-- Calculate the response time
