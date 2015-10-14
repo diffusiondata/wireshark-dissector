@@ -74,6 +74,10 @@ local function lengthPrefixedString( range )
 		local lengthRange, rRange, length = varint( range )
 		local fullLength = lengthRange:len() + length
 
+		if length == 0 then
+			return { range = range:range( 0, 0 ), fullRange = lengthRange, string = "", remaining = rRange }
+		end
+
 		local stringRange = rRange:range( 0, length )
 		if rRange:len() > length then
 			local remainingRange = rRange:range( length )

@@ -204,6 +204,15 @@ local function parseSetClientQueueThrottlerRequest( range )
 	}
 end
 
+local function parseCloseClient( range )
+	local sessionId, reasonR = parseVarSessionId( range )
+	local reason = lengthPrefixedString( reasonR )
+	return {
+		sessionId = sessionId,
+		reason = reason
+	}
+end
+
 local function parseControlRegistrationParameters( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
 	local controlGroup = lengthPrefixedString( remaining )
@@ -455,6 +464,8 @@ local function parseAsV4ServiceMessage( range )
 				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange )
 			elseif service == v5.SERVICE_SERVER_CONTROL_DEREGISTRATION then
 				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
+			elseif service == v5.SERVICE_CLOSE_CLIENT then
+				result.closeClientInfo = parseCloseClient( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

@@ -324,6 +324,10 @@ dptProto.fields.throttleClientQueue = ProtoField.string( "dpt.service.clientCont
 dptProto.fields.throttleClientQueueType = ProtoField.uint8( "dpt.service.clientControl.throttleQueue.type", "Throttler type", base.HEX, throttlerTypeByBytes )
 dptProto.fields.throttleClientQueueLimit = ProtoField.uint32( "dpt.service.clientControl.throttleQueue.limit", "Throttler limit" )
 
+-- Client close service
+dptProto.fields.clientClose = ProtoField.string( "dpt.service.clientControl.clientClose", "Client close" )
+dptProto.fields.clientCloseReason = ProtoField.string( "dpt.service.clientControl.clientClose.reason", "Client close reason" )
+
 -- Package footer
 master.proto = {
 	dptProto = dptProto,
