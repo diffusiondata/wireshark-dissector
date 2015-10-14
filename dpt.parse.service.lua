@@ -204,6 +204,15 @@ local function parseSetClientQueueThrottlerRequest( range )
 	}
 end
 
+local function parseControlRegistrationParameters( range )
+	local serviceIdRange, remaining, serviceId = varint( range )
+	local controlGroup = lengthPrefixedString( remaining )
+	return {
+		serviceId = { range = serviceIdRange, int = serviceId },
+		controlGroup = controlGroup
+	}, controlGroup.remaining
+end
+
 local function parseControlRegistrationRequest( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
 	local controlGroup = lengthPrefixedString( remaining )
@@ -443,7 +452,9 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
 				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange )
 			elseif service == v5.SERVICE_THROTTLE_CLIENT_QUEUE then
-				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange ) 
+				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_SERVER_CONTROL_DEREGISTRATION then
+				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

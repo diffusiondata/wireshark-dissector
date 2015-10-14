@@ -188,6 +188,10 @@ local function addServiceInformation( parentTreeNode, service )
 			throttlerNode:add( dptProto.fields.throttleClientQueueType, info.throttlerRange )
 			throttlerNode:add( dptProto.fields.throttleClientQueueLimit, info.limit.range, info.limit.int )
 		end
+		if service.controlDeregInfo ~= nil then
+			serviceNode:add( dptProto.fields.regServiceId, service.controlDeregInfo.serviceId.range, service.controlDeregInfo.serviceId.int )
+			serviceNode:add( dptProto.fields.controlGroup, service.controlDeregInfo.controlGroup.fullRange, service.controlDeregInfo.controlGroup.string )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
