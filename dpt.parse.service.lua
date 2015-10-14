@@ -161,11 +161,11 @@ local function parseSessionDetailsListenerRegistrationRequest( range )
 
 	if hasDetailTypes == 0 then
 		local cIdRange, remaining, cId = varint( range:range( 1 ) )
-		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
 	else
 		local detailTypeSet, remaining = parseDetailTypeSet( range:range( 1 ) )
 		local cIdRange, remaining, cId = varint( remaining )
-		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = detailTypeSet }
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = detailTypeSet }
 	end
 end
 
@@ -230,7 +230,7 @@ end
 local function parseUpdateSourceRegistrationRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
-	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+	return { conversationId = { range = cIdRange, int = cId }, topicPath = topicPath }
 end
 
 local function parseContent( range )
@@ -266,7 +266,7 @@ local function parseUpdateSourceUpdateRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
 	local update = parseUpdate( topicPath.remaining )
-	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath, update = update }
+	return { conversationId = { range = cIdRange, int = cId }, topicPath = topicPath, update = update }
 end
 
 local function parseNonExclusiveUpdateRequest( range )
@@ -280,7 +280,7 @@ local function parseUpdateSourceStateRequest( range )
 	local oldStateByteRange = remaining:range( 0, 1 )
 	local newStateByteRange = remaining:range( 1, 1 )
 	return {
-		converstationId = {range = cIdRange, int = cId},
+		conversationId = { range = cIdRange, int = cId },
 		oldUpdateSourceState = { range = oldStateByteRange, int = oldStateByteRange:int() },
 		newUpdateSourceState = { range = newStateByteRange, int = newStateByteRange:int() }
 	}
