@@ -174,6 +174,12 @@ local function addServiceInformation( parentTreeNode, service )
 			local lookupNode = serviceNode:add( dptProto.fields.lookupSessionDetails, service.body, "" )
 			addSessionDetails( lookupNode, service.lookupSessionDetailsResponse )
 		end
+		if service.clientQueueConflationInfo ~= nil then
+			local info = service.clientQueueConflationInfo
+			local conflateNode = serviceNode:add( dptProto.fields.conflateClientQueue, service.body, "" )
+			conflateNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+			conflateNode:add( dptProto.fields.conflateClientQueueEnabled, info.conflateEnabledRange )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

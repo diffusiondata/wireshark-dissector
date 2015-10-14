@@ -169,12 +169,23 @@ local function parseSessionDetailsListenerRegistrationRequest( range )
 	end
 end
 
+-- Parse a session details lookup request
 local function parseGetSessionDetailsRequest( range )
 	local sessionId, detailTypeSetR = parseVarSessionId( range )
 	local detailTypeSet = parseDetailTypeSet( detailTypeSetR )
 	return {
 		sessionId = sessionId,
 		set = detailTypeSet
+	}
+end
+
+-- Parse a set queue conflation request
+local function parseSetClientQueueConflationRequest( range )
+	local sessionId, conflateR = parseVarSessionId( range )
+	local conflateEnabled = conflateR:range( 0 , 1 )
+	return {
+		sessionId = sessionId,
+		conflateEnabledRange = conflateEnabled
 	}
 end
 
@@ -409,6 +420,8 @@ local function parseAsV4ServiceMessage( range )
 				result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
 			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 				result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
+				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange ) 
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

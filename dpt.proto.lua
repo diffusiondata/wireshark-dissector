@@ -197,6 +197,11 @@ local addressTypeByBytes = {
 	[0x04] = "Unknown"
 }
 
+local booleanByBtyes = {
+	[0x00] = "False",
+	[0x01] = "True"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -301,6 +306,11 @@ dptProto.fields.serverName = ProtoField.string( "dpt.service.serverName", "Serve
 
 -- Get session details request
 dptProto.fields.lookupSessionDetails = ProtoField.string( "dpt.service.lookupSessionDetails", "Lookup" )
+
+-- Conflate Client queue service
+dptProto.fields.conflateClientQueue = ProtoField.string( "dpt.service.clientControl.conflateQueue.enabled", "Conflate Client Queue" )
+dptProto.fields.conflateClientQueueEnabled = ProtoField.uint8( "dpt.service.clientControl.conflateQueue.enabled", "Conflate Client Queue", base.HEX, booleanByBtyes )
+
 
 
 -- Package footer
