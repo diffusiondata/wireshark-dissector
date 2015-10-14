@@ -33,7 +33,12 @@ local function varint( range )
 
 		shift = shift + 7;
 	end
-	return range:range( 0, idx ), range:range( idx ), sum
+
+	if idx == range:len() then
+		return range:range( 0, idx ), range:range( 0, 0 ), sum
+	else
+		return range:range( 0, idx ), range:range( idx ), sum
+	end
 end
 
 -- Decode the varint used by command serialiser

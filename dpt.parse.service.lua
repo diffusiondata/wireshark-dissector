@@ -189,6 +189,21 @@ local function parseSetClientQueueConflationRequest( range )
 	}
 end
 
+-- Parse a set queue throttler request
+local function parseSetClientQueueThrottlerRequest( range )
+	local sessionId, throttlerR = parseVarSessionId( range )
+	local throttlerRange = throttlerR:range( 0 , 1 )
+	local throttlerLimitRange, remaining, throttlerLimit = varint( throttlerR:range( 1 ) )
+	return {
+		sessionId = sessionId,
+		throttlerRange = throttlerRange,
+		limit = {
+			range = throttlerLimitRange,
+			int = throttlerLimit
+		}
+	}
+end
+
 local function parseControlRegistrationRequest( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
 	local controlGroup = lengthPrefixedString( remaining )
@@ -421,7 +436,9 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 				result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
 			elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
-				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange ) 
+				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_THROTTLE_CLIENT_QUEUE then
+				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange ) 
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

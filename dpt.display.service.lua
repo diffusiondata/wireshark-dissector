@@ -180,6 +180,13 @@ local function addServiceInformation( parentTreeNode, service )
 			conflateNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
 			conflateNode:add( dptProto.fields.conflateClientQueueEnabled, info.conflateEnabledRange )
 		end
+		if service.clientThrottlerInfo ~= nil then
+			local info = service.clientThrottlerInfo
+			local throttlerNode = serviceNode:add( dptProto.fields.throttleClientQueue, service.body, "" )
+			throttlerNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+			throttlerNode:add( dptProto.fields.throttleClientQueueType, info.throttlerRange )
+			throttlerNode:add( dptProto.fields.throttleClientQueueLimit, info.limit.range, info.limit.int )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

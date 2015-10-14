@@ -202,6 +202,14 @@ local booleanByBtyes = {
 	[0x01] = "True"
 }
 
+local throttlerTypeByBytes = {
+	[0x00] = "UNTHROTTLED",
+	[0x01] = "MESSAGE_PER_SECOND",
+	[0x02] = "BYTES_PER_SECOND",
+	[0x03] = "MESSAGE_INTERVAL",
+	[0x04] = "BUFFER_INTERVAL"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -308,10 +316,13 @@ dptProto.fields.serverName = ProtoField.string( "dpt.service.serverName", "Serve
 dptProto.fields.lookupSessionDetails = ProtoField.string( "dpt.service.lookupSessionDetails", "Lookup" )
 
 -- Conflate Client queue service
-dptProto.fields.conflateClientQueue = ProtoField.string( "dpt.service.clientControl.conflateQueue.enabled", "Conflate Client Queue" )
+dptProto.fields.conflateClientQueue = ProtoField.string( "dpt.service.clientControl.conflateQueue", "Conflate Client Queue" )
 dptProto.fields.conflateClientQueueEnabled = ProtoField.uint8( "dpt.service.clientControl.conflateQueue.enabled", "Conflate Client Queue", base.HEX, booleanByBtyes )
 
-
+-- Client throttler service
+dptProto.fields.throttleClientQueue = ProtoField.string( "dpt.service.clientControl.throttleQueue", "Throttle Client Queue" )
+dptProto.fields.throttleClientQueueType = ProtoField.uint8( "dpt.service.clientControl.throttleQueue.type", "Throttler type", base.HEX, throttlerTypeByBytes )
+dptProto.fields.throttleClientQueueLimit = ProtoField.uint32( "dpt.service.clientControl.throttleQueue.limit", "Throttler limit" )
 
 -- Package footer
 master.proto = {
