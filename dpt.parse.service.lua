@@ -207,7 +207,12 @@ end
 local function parseControlRegistrationRequest( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
 	local controlGroup = lengthPrefixedString( remaining )
-	return { serviceId = { range = serviceIdRange, int = serviceId }, controlGroup = controlGroup }, controlGroup.remaining
+	local cIdRange, remaining, cId = varint( controlGroup.remaining )
+	return {
+		serviceId = { range = serviceIdRange, int = serviceId },
+		controlGroup = controlGroup,
+		conversationId = { range = cIdRange, int = cId }
+	}, remaining
 end
 
 local function parseAuthenticationControlRegistrationRequest( range )
