@@ -19,6 +19,76 @@ local function addTopicDetails( parentNode, details )
 	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 end
 
+-- Add description of a detail type set to the tree
+local function addDetailTypeSet( parentNode, detailTypeSet )
+	local detailTypeSetDesc = string.format( "%d details", detailTypeSet.length )
+	local detailTypeSetNode = parentNode:add( dptProto.fields.detailTypeSet, detailTypeSet.range, detailTypeSetDesc )
+	for i = 0, detailTypeSet.length - 1 do
+		detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
+	end
+end
+
+-- Add a description of a session details listener registrations to the tree
+local function addSessionListenerRegistration( parentNode, info )
+	local conversation = info.conversationId
+	parentNode:add( dptProto.fields.conversation, conversation.range, conversation.int )
+	addDetailTypeSet( parentNode, info.detailTypeSet )
+end
+
+-- Add description of session details to the tree
+local function addSessionDetails( parentNode, details )
+	local detailsNode = parentNode:add( dptProto.fields.sessionDetails, details.range, string.format( "%d details", details.count ) )
+	if details.summary ~= nil then
+			local summaryNode = detailsNode:add( dptProto.fields.summary, details.summary.range, "" )
+			summaryNode:add( dptProto.fields.servicePrincipal, details.summary.principal.fullRange, details.summary.principal.string )
+			summaryNode:add( dptProto.fields.clientType, details.summary.clientType, details.summary.clientType:uint() )
+			summaryNode:add( dptProto.fields.transportType, details.summary.transportType, details.summary.transportType:uint() )
+		end
+		if details.location ~= nil then
+			local locationNode = detailsNode:add( dptProto.fields.location, details.location.range, "" )
+			locationNode:add( dptProto.fields.address, details.location.address.fullRange, details.location.address.string )
+			locationNode:add( dptProto.fields.hostName, details.location.hostName.fullRange, details.location.hostName.string )
+			locationNode:add( dptProto.fields.resolvedName, details.location.resolvedName.fullRange, details.location.resolvedName.string )
+			locationNode:add( dptProto.fields.addressType, details.location.addressType )
+		end
+		if details.connector ~= nil then
+			detailsNode:add( dptProto.fields.connectorName, details.connector.fullRange, details.connector.string )
+		end
+		if details.server ~= nil then
+			detailsNode:add( dptProto.fields.serverName, details.server.fullRange, details.server.string )
+		end
+end
+
+-- Add a description of a session details listener event to the tree
+local function addSessionListenerEvent( parentNode, info )
+	if info.sessionListenerEventTypeRange ~= nil then
+		parentNode:add( dptProto.fields.sessionListenerEventType, info.sessionListenerEventTypeRange )
+	end
+	if info.closeReasonRange ~= nil then
+		parentNode:add( dptProto.fields.closeReason, info.closeReasonRange )
+	end
+	if info.sessionId ~= nil then
+		parentNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+	end
+	if info.sessionDetails ~= nil then
+		addSessionDetails( parentNode, info.sessionDetails )
+		parentNode:add( dptProto.fields.conversation, info.conversationId.range, info.conversationId.int )
+	end
+end
+
+-- Add add topic request information
+local function addAddTopicInformation( parentNode, info )
+	if info.topicName ~= nil then
+		parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+	end
+	if info.reference ~= nil then
+		parentNode:add( dptProto.fields.topicReference, info.reference.range, info.reference.int )
+	end
+	if info.topicDetails ~= nil then
+		addTopicDetails( parentNode, info.topicDetails )
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -41,6 +111,10 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.topicName ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.topicName.fullRange, service.topicName.string )
 		end
+		if service.addTopic ~= nil then
+			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
+			addAddTopicInformation( addTopicNode, service.addTopic )
+		end
 		if service.topicInfo ~= nil then
 			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )
 			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
@@ -55,6 +129,7 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.controlRegInfo ~= nil then
 			serviceNode:add( dptProto.fields.regServiceId, service.controlRegInfo.serviceId.range, service.controlRegInfo.serviceId.int )
 			serviceNode:add( dptProto.fields.controlGroup, service.controlRegInfo.controlGroup.fullRange, service.controlRegInfo.controlGroup.string )
+			serviceNode:add( dptProto.fields.conversation, service.controlRegInfo.conversationId.range, service.controlRegInfo.conversationId.int )
 		end
 		if service.handlerName ~= nil then
 			serviceNode:add( dptProto.fields.handlerName, service.handlerName.fullRange, service.handlerName.string )
@@ -83,23 +158,44 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
 		end
 		if service.sessionListenerRegInfo ~= nil then
-			local conversation = service.sessionListenerRegInfo.conversationId
-			local detailTypeSet = service.sessionListenerRegInfo.detailTypeSet
-			serviceNode:add( dptProto.fields.conversation, conversation.range, conversation.int )
-			local detailTypeSetDesc = string.format( "%d details", detailTypeSet.length )
-			local detailTypeSetNode = serviceNode:add( dptProto.fields.detailTypeSet, detailTypeSet.range, detailTypeSetDesc )
-			for i = 0, detailTypeSet.length - 1 do
-				detailTypeSetNode:add( dptProto.fields.detailType, detailTypeSet[i], detailTypeSet[i]:uint() )
-			end
+			local regNode = serviceNode:add( dptProto.fields.sessionListenerRegistration, service.body, "" )
+			addSessionListenerRegistration( regNode, service.sessionListenerRegInfo )
 		end
-		if service.sessionListenerEventTypeRange ~= nil then
-			serviceNode:add( dptProto.fields.sessionListenerEventType, service.sessionListenerEventTypeRange )
+		if service.sessionListenerEventInfo ~= nil then
+			local eventNode = serviceNode:add( dptProto.fields.sessionListenerEvent, service.body, "" )
+			addSessionListenerEvent( eventNode, service.sessionListenerEventInfo )
 		end
-		if service.closeReasonRange ~= nil then
-			serviceNode:add( dptProto.fields.closeReason, service.closeReasonRange )
+		if service.lookupSessionDetailsRequest ~= nil then
+			local info = service.lookupSessionDetailsRequest
+			local lookupNode = serviceNode:add( dptProto.fields.lookupSessionDetails, service.body, "" )
+			lookupNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+			addDetailTypeSet( lookupNode, info.set )
 		end
-		if service.sessionId ~= nil then
-			serviceNode:add( dptProto.fields.serviceSessionId, service.sessionId.range, service.sessionId.clientId )
+		if service.lookupSessionDetailsResponse ~= nil then
+			local lookupNode = serviceNode:add( dptProto.fields.lookupSessionDetails, service.body, "" )
+			addSessionDetails( lookupNode, service.lookupSessionDetailsResponse )
+		end
+		if service.clientQueueConflationInfo ~= nil then
+			local info = service.clientQueueConflationInfo
+			local conflateNode = serviceNode:add( dptProto.fields.conflateClientQueue, service.body, "" )
+			conflateNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+			conflateNode:add( dptProto.fields.conflateClientQueueEnabled, info.conflateEnabledRange )
+		end
+		if service.clientThrottlerInfo ~= nil then
+			local info = service.clientThrottlerInfo
+			local throttlerNode = serviceNode:add( dptProto.fields.throttleClientQueue, service.body, "" )
+			throttlerNode:add( dptProto.fields.serviceSessionId, info.sessionId.range, info.sessionId.clientId )
+			throttlerNode:add( dptProto.fields.throttleClientQueueType, info.throttlerRange )
+			throttlerNode:add( dptProto.fields.throttleClientQueueLimit, info.limit.range, info.limit.int )
+		end
+		if service.controlDeregInfo ~= nil then
+			serviceNode:add( dptProto.fields.regServiceId, service.controlDeregInfo.serviceId.range, service.controlDeregInfo.serviceId.int )
+			serviceNode:add( dptProto.fields.controlGroup, service.controlDeregInfo.controlGroup.fullRange, service.controlDeregInfo.controlGroup.string )
+		end
+		if service.closeClientInfo ~= nil then
+			local closeNode = serviceNode:add( dptProto.fields.clientClose, service.body, "" )
+			closeNode:add( dptProto.fields.serviceSessionId, service.closeClientInfo.sessionId.range, service.closeClientInfo.sessionId.clientId )
+			closeNode:add( dptProto.fields.clientCloseReason, service.closeClientInfo.reason.range )
 		end
 
 		-- Add generated information

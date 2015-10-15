@@ -33,7 +33,12 @@ local function varint( range )
 
 		shift = shift + 7;
 	end
-	return range:range( 0, idx ), range:range( idx ), sum
+
+	if idx == range:len() then
+		return range:range( 0, idx ), range:range( 0, 0 ), sum
+	else
+		return range:range( 0, idx ), range:range( idx ), sum
+	end
 end
 
 -- Decode the varint used by command serialiser
@@ -68,6 +73,10 @@ local function lengthPrefixedString( range )
 	if range ~= nil then
 		local lengthRange, rRange, length = varint( range )
 		local fullLength = lengthRange:len() + length
+
+		if length == 0 then
+			return { range = range:range( 0, 0 ), fullRange = lengthRange, string = "", remaining = rRange }
+		end
 
 		local stringRange = rRange:range( 0, length )
 		if rRange:len() > length then

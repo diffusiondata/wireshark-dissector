@@ -20,6 +20,7 @@ local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 
+-- Parse a set of detail types
 local function parseDetailTypeSet( range )
 	local numberOfDetailTypes = range:range( 0, 1 ):uint()
 	local set = { length = numberOfDetailTypes }
@@ -27,9 +28,117 @@ local function parseDetailTypeSet( range )
 		set[i] = range:range( 1 + i, 1 )
 	end
 	set.range = range:range( 0, numberOfDetailTypes + 1 )
-	return set, range:range( numberOfDetailTypes + 1 )
+	if range:range( 0, numberOfDetailTypes + 1 ):len() == range:len() then
+		return set, range:range( 0, 0 )
+	else
+		return set, range:range( numberOfDetailTypes + 1 )
+	end
 end
 
+-- Parse a client summary
+local function parseSummary( range )
+	local principal = lengthPrefixedString( range )
+	local clientTypeRange = principal.remaining:range( 0, 1 )
+	local transportTypeRange = principal.remaining:range( 1, 1 )
+	return {
+		principal = principal,
+		clientType = clientTypeRange,
+		transportType = transportTypeRange,
+		range = range:range( 0, principal.fullRange:len() + 2 )
+	}
+end
+
+-- Parse a client location
+local function parseLocation( range )
+	local length = 0
+	local result = {}
+
+	result.address = lengthPrefixedString( range )
+	length = length + result.address.fullRange:len()
+
+	result.hostName = lengthPrefixedString( result.address.remaining )
+	length = length + result.hostName.fullRange:len()
+
+	result.resolvedName = lengthPrefixedString( result.hostName.remaining )
+	length = length + result.resolvedName.fullRange:len()
+
+	result.addressType = result.resolvedName.remaining:range( 0, 1 )
+	length = length + 1
+
+	result.country = lengthPrefixedString( result.resolvedName.remaining:range( 1 ) )
+	length = length + result.country.fullRange:len()
+
+	result.language = lengthPrefixedString( result.country.remaining )
+	length = length + result.language.fullRange:len()
+
+	-- TODO: Turn these into floats
+	local latitudeRange, longitudeR, latitude = varint( result.language.remaining )
+	length = length + latitudeRange:len()
+
+	local longitudeRange, remaining, longitude = varint( longitudeR )
+	length = length + longitudeRange:len()
+
+	result.remaining = remaining
+	result.range = range( 0, length )
+	return result
+end
+
+-- Parse session details
+local function parseSessionDetails( range )
+	local hasDetails = range:range( 0, 1 ):uint();
+	if hasDetails == 0 then
+		-- No details
+		return {
+			count = 0,
+			range = range:range( 0, 1 )
+		}
+	end
+	local result = {
+		count = 0
+	}
+	local offset = 1
+
+	local hasSummary = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasSummary ~= 0 then
+		result.count = result.count + 1
+		result.summary = parseSummary( range:range( offset ) )
+		offset = offset + result.summary.range:len()
+	end
+
+	local hasLocation = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasLocation ~= 0 then
+		result.count = result.count + 1
+		result.location = parseLocation( range:range( offset ) )
+		offset = offset + result.location.range:len()
+	end
+
+	local hasConnectorName = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasConnectorName ~= 0 then
+		result.count = result.count + 1
+		result.connector = lengthPrefixedString( range:range( offset ) )
+		offset = offset + result.connector.fullRange:len()
+	end
+
+	local hasServerName = range:range( offset, 1 ):uint();
+	offset = offset + 1
+	if hasServerName ~= 0 then
+		result.count = result.count + 1
+		result.server = lengthPrefixedString( range:range( offset ) )
+		offset = offset + result.server.fullRange:len()
+	end
+
+	result.range = range:range( 0, offset )
+	if offset == range:len() then
+		return result, range:range( 0, 0 )
+	else
+		return result, range:range( offset )
+	end
+end
+
+-- Parse a session details listener notification event
 local function parseSessionDetailsEvent( range )
 	local result = {}
 	result.sessionListenerEventTypeRange = range:range( 0, 1 )
@@ -37,27 +146,91 @@ local function parseSessionDetailsEvent( range )
 	if eventType < 125 then
 		result.closeReasonRange = result.sessionListenerEventTypeRange
 	end
-	result.sessionId = parseVarSessionId( range:range( 1 ) )
+	local sessionId, sessionDetailsR = parseVarSessionId( range:range( 1 ) )
+	result.sessionId = sessionId
+	local sessionDetails, conversationR = parseSessionDetails( sessionDetailsR )
+	result.sessionDetails = sessionDetails
+	local cIdRange, remaining, cId = varint( conversationR )
+	result.conversationId = { range = cIdRange, int = cId }
 	return result
 end
 
+-- Parse a session listener registration
 local function parseSessionDetailsListenerRegistrationRequest( range )
 	local hasDetailTypes = range:range( 0, 1 ):uint()
 
 	if hasDetailTypes == 0 then
 		local cIdRange, remaining, cId = varint( range:range( 1 ) )
-		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
 	else
 		local detailTypeSet, remaining = parseDetailTypeSet( range:range( 1 ) )
 		local cIdRange, remaining, cId = varint( remaining )
-		return { conversationId = {range = cIdRange, int = cId}, detailTypeSet = detailTypeSet }
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = detailTypeSet }
 	end
+end
+
+-- Parse a session details lookup request
+local function parseGetSessionDetailsRequest( range )
+	local sessionId, detailTypeSetR = parseVarSessionId( range )
+	local detailTypeSet = parseDetailTypeSet( detailTypeSetR )
+	return {
+		sessionId = sessionId,
+		set = detailTypeSet
+	}
+end
+
+-- Parse a set queue conflation request
+local function parseSetClientQueueConflationRequest( range )
+	local sessionId, conflateR = parseVarSessionId( range )
+	local conflateEnabled = conflateR:range( 0 , 1 )
+	return {
+		sessionId = sessionId,
+		conflateEnabledRange = conflateEnabled
+	}
+end
+
+-- Parse a set queue throttler request
+local function parseSetClientQueueThrottlerRequest( range )
+	local sessionId, throttlerR = parseVarSessionId( range )
+	local throttlerRange = throttlerR:range( 0 , 1 )
+	local throttlerLimitRange, remaining, throttlerLimit = varint( throttlerR:range( 1 ) )
+	return {
+		sessionId = sessionId,
+		throttlerRange = throttlerRange,
+		limit = {
+			range = throttlerLimitRange,
+			int = throttlerLimit
+		}
+	}
+end
+
+local function parseCloseClient( range )
+	local sessionId, reasonR = parseVarSessionId( range )
+	local reason = lengthPrefixedString( reasonR )
+	return {
+		sessionId = sessionId,
+		reason = reason
+	}
+end
+
+local function parseControlRegistrationParameters( range )
+	local serviceIdRange, remaining, serviceId = varint( range )
+	local controlGroup = lengthPrefixedString( remaining )
+	return {
+		serviceId = { range = serviceIdRange, int = serviceId },
+		controlGroup = controlGroup
+	}, controlGroup.remaining
 end
 
 local function parseControlRegistrationRequest( range )
 	local serviceIdRange, remaining, serviceId = varint( range )
 	local controlGroup = lengthPrefixedString( remaining )
-	return { serviceId = { range = serviceIdRange, int = serviceId }, controlGroup = controlGroup }, controlGroup.remaining
+	local cIdRange, remaining, cId = varint( controlGroup.remaining )
+	return {
+		serviceId = { range = serviceIdRange, int = serviceId },
+		controlGroup = controlGroup,
+		conversationId = { range = cIdRange, int = cId }
+	}, remaining
 end
 
 local function parseAuthenticationControlRegistrationRequest( range )
@@ -75,7 +248,7 @@ end
 local function parseUpdateSourceRegistrationRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
-	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath }
+	return { conversationId = { range = cIdRange, int = cId }, topicPath = topicPath }
 end
 
 local function parseContent( range )
@@ -111,7 +284,7 @@ local function parseUpdateSourceUpdateRequest( range )
 	local cIdRange, remaining, cId = varint( range )
 	local topicPath = lengthPrefixedString( remaining )
 	local update = parseUpdate( topicPath.remaining )
-	return { converstationId = {range = cIdRange, int = cId}, topicPath = topicPath, update = update }
+	return { conversationId = { range = cIdRange, int = cId }, topicPath = topicPath, update = update }
 end
 
 local function parseNonExclusiveUpdateRequest( range )
@@ -125,7 +298,7 @@ local function parseUpdateSourceStateRequest( range )
 	local oldStateByteRange = remaining:range( 0, 1 )
 	local newStateByteRange = remaining:range( 1, 1 )
 	return {
-		converstationId = {range = cIdRange, int = cId},
+		conversationId = { range = cIdRange, int = cId },
 		oldUpdateSourceState = { range = oldStateByteRange, int = oldStateByteRange:int() },
 		newUpdateSourceState = { range = newStateByteRange, int = newStateByteRange:int() }
 	}
@@ -192,6 +365,21 @@ local function parseUpdateSourceRegistrationResponse( range )
 	return { range = stateByteRange, int = stateByteRange:int() }
 end
 
+-- Parse add topic request
+local function parseAddTopicRequest( range )
+	local topicName = lengthPrefixedString( range )
+	local referenceRange, remaining, reference = varint( topicName.remaining )
+	local topicDetails = parseTopicDetails( remaining )
+	return {
+		topicName = topicName,
+		reference = {
+			range = referenceRange,
+			int = reference
+		},
+		topicDetails = topicDetails
+	}
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -209,7 +397,7 @@ local function parseAsV4ServiceMessage( range )
 
 		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
-			-- Store the request so the response time can be caluclated
+			-- Store the request so the response time can be calculated
 			local session = tcpConnections[tcpStream]
 			local isClient = session.client:matches( f_src_host(), f_src_port() )
 			if isClient then
@@ -231,8 +419,8 @@ local function parseAsV4ServiceMessage( range )
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
 			elseif service == v5.SERVICE_ADD_TOPIC then
-				local topicName = lengthPrefixedString( serviceBodyRange )
-				result.topicName = topicName
+				local info = parseAddTopicRequest( serviceBodyRange )
+				result.addTopic = info
 			elseif service == v5.SERVICE_REMOVE_TOPICS then
 				local selector = lengthPrefixedString( serviceBodyRange )
 				result.selector = { range = selector.fullRange, string = selector.string }
@@ -267,10 +455,17 @@ local function parseAsV4ServiceMessage( range )
 			elseif service == v5.SERVICE_SESSION_LISTENER_REGISTRATION then
 				result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
 			elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
-				local info = parseSessionDetailsEvent( serviceBodyRange )
-				result.sessionListenerEventTypeRange = info.sessionListenerEventTypeRange
-				result.closeReasonRange = info.closeReasonRange
-				result.sessionId = info.sessionId
+				result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
+			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+				result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
+				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_THROTTLE_CLIENT_QUEUE then
+				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange )
+			elseif service == v5.SERVICE_SERVER_CONTROL_DEREGISTRATION then
+				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
+			elseif service == v5.SERVICE_CLOSE_CLIENT then
+				result.closeClientInfo = parseCloseClient( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then
@@ -279,6 +474,8 @@ local function parseAsV4ServiceMessage( range )
 			if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 				local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
 				result.newUpdateSourceState = info
+			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+				result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
 			end
 
 			-- Calculate the response time
