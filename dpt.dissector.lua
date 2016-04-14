@@ -24,6 +24,7 @@ local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
 
 local tcpConnections = diffusion.info.tcpConnections
+local DescriptionsTable = diffusion.info.DescriptionsTable
 
 local nameByID = diffusion.messages.nameByID
 local messageTypeLookup = diffusion.messages.messageTypeLookup
@@ -42,6 +43,7 @@ local addBody = diffusion.display.addBody
 local addConnectionHandshake = diffusion.displayConnection.addConnectionHandshake
 local addServiceInformation = diffusion.displayService.addServiceInformation
 local addDescription = diffusion.display.addDescription
+local summariseDescriptions = diffusion.display.summariseDescriptions
 
 local SERVICE_TOPIC = diffusion.v5.SERVICE_TOPIC
 
@@ -54,7 +56,6 @@ local http_dissector = tcp_dissector_table:get_dissector(80)
 
 local DPT_TYPE = "DPT_TYPE"
 local DPWS_TYPE = "DPWS_TYPE"
-local OTHER_TYPE = "OTHER_TYPE"
 
 -- Dissect the connection negotiation messages
 local function dissectConnection( tvb, pinfo )
@@ -94,7 +95,7 @@ local function tryDissectWSConnectionResponse( tvb, pinfo, tree )
 	return parseWSConnectionResponse( websocketResponseRange, client )
 end
 
-local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
+local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
 	local headerInfo, serviceInfo, records
 	-- The headers & body -- find the 1st RD in the content
 	local headerBreak = contentRange:bytes():index( RD )
@@ -129,11 +130,11 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 	end
 
 	-- Set the Info column of the tabular display -- NB: this must be called last
-	addDescription( pinfo, messageType, headerInfo, serviceInfo )
+	addDescription( pinfo, messageType, headerInfo, serviceInfo, descriptions )
 end
 
 -- Process an individual DPT message
-local function processMessage( tvb, pinfo, tree, offset )
+local function processMessage( tvb, pinfo, tree, offset, descriptions )
 	local msgDetails = {}
 
 	local tcpStream = f_tcp_stream() -- get the artificial 'tcp stream' number
@@ -193,12 +194,12 @@ local function processMessage( tvb, pinfo, tree, offset )
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
-	processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
+	processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
 
 	return offset
 end
 
-local function processWSMessage( tvb, pinfo, tree, start )
+local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 	local msgDetails = {}
 	local offset = start
 	-- Get the type by
@@ -239,7 +240,7 @@ local function processWSMessage( tvb, pinfo, tree, start )
 	local contentRange = tvb( offset, contentSize )
 
 	offset = offset + contentSize
-	processContent( pinfo, contentRange, messageTree, messageType, msgDetails )
+	processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
 
 	return offset
 end
@@ -267,7 +268,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 		return {}
 	end
 
-	http_dissector:call( tvb, pinfo, tree)
+	http_dissector:call( tvb, pinfo, tree )
 
 	local connection = f_http_connection()
 	local upgrade = f_http_upgrade()
@@ -289,27 +290,25 @@ function dptProto.dissector( tvb, pinfo, tree )
 	end
 
 	if tcpConnections[streamNumber].type == DPT_TYPE then
+		local descriptions = DescriptionsTable:new()
 		-- Set the tabular display
 		pinfo.cols.protocol = dptProto.name
 
-		local offset, messageCount = 0, 0
+		local offset = 0
 		repeat
 			-- -1 indicates incomplete read
-			 offset = processMessage( tvb, pinfo, tree, offset )
-			 messageCount = messageCount +1
+			 offset = processMessage( tvb, pinfo, tree, offset, descriptions )
 		until ( offset == -1 or offset >= tvb:len() )
 
-		-- Summarise
-		if messageCount > 1 then
-			pinfo.cols.info = string.format( "%d messages", messageCount )
-		end
-	end
-
-	if tcpConnections[streamNumber].type == DPWS_TYPE then
+		-- Set description
 		pinfo.cols.info:clear_fence()
+		pinfo.cols.info = summariseDescriptions( descriptions )
+		pinfo.cols.info:fence()
 
+	elseif tcpConnections[streamNumber].type == DPWS_TYPE then
+
+		local descriptions = DescriptionsTable:new()
 		pinfo.cols.protocol = "DP-WS"
-
 		local response = f_http_response_code()
 		if response == 101 then
 			local handshake = tryDissectWSConnectionResponse( tvb, pinfo, tree)
@@ -317,7 +316,6 @@ function dptProto.dissector( tvb, pinfo, tree )
 				addConnectionHandshake( tree, tvb(), pinfo, handshake )
 			end
 		else
-			local messageCount = 0
 			local payloads
 			local client = tcpConnections[f_tcp_stream()].client
 			if client.protoVersion > 4 then
@@ -325,27 +323,21 @@ function dptProto.dissector( tvb, pinfo, tree )
 			else
 				payloads = f_ws_t_payload()
 			end
-			for i in pairs(payloads) do
+			for i, p in ipairs( payloads ) do
 				local offset = 0
-				local payload = payloads[i]
+				local payload = p
 				repeat
 					-- -1 indicates incomplete read
-					offset = processWSMessage( payload, pinfo, tree, offset )
-					messageCount = messageCount + 1
+					offset = processWSMessage( payload, pinfo, tree, offset, descriptions )
 				until ( offset == -1 or offset >= payload:len() )
 			end
 
-			-- Summarise
-			if messageCount > 1 then
-				pinfo.cols.info = string.format( "%d messages", messageCount )
-			end
+			-- Set description
+			pinfo.cols.info:clear_fence()
+			pinfo.cols.info = summariseDescriptions( descriptions )
+			pinfo.cols.info:fence()
 		end
 	end
-
-	if tcpConnections[streamNumber].type == nil then
-		--pinfo.cols.protocol = "OTHER"
-	end
-
 end
 
 -- Package footer

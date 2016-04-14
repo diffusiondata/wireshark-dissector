@@ -98,7 +98,7 @@ local function addBody( parentTreeNode, records )
 end
 
 -- Add the description of the packet to the displayed columns
-local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
+local function addDescription( pinfo, messageType, headerInfo, serviceInformation, descriptions )
 	-- Add the description from the service information
 	if serviceInformation ~= nil then
 		-- Lookup service and mode name
@@ -118,24 +118,44 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 			-- Handle services that benefit from a selector in the description
 			if serviceInformation.selector ~= nil then
 				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
+				descriptions:addDescription( string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string ) )
 			else
-				pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+				pinfo.cols.info = string.format( "Service: %s %s", serviceString, modeString )
+				descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
 			end
 		else
-			pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+			pinfo.cols.info = string.format( "Service: %s %s", serviceString, modeString )
+			descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
 		end
 		return
 	end
 
 	-- Add the description from the message type
 	pinfo.cols.info = messageType:getDescription()
+	descriptions:addDescription( messageType:getDescription() )
+end
+
+local function summariseDescriptions( descriptions )
+	if descriptions.count == 1 then
+		return descriptions[0]
+	end
+
+	local desc = string.format( "%d messages", descriptions.count )
+	for i = 0, descriptions.count - 1 do
+		desc = desc .. " [" .. descriptions[i] .. "]"
+		if i < descriptions.count - 1 then
+			desc = desc .. ","
+		end
+	end
+	return desc
 end
 
 -- Package footer
 master.display = {
 	addHeaderInformation = addHeaderInformation,
 	addBody = addBody,
-	addDescription = addDescription
+	addDescription = addDescription,
+	summariseDescriptions = summariseDescriptions
 }
 diffusion = master
 return master.display

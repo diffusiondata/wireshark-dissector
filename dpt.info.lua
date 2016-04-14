@@ -98,6 +98,20 @@ end
 
 local serviceMessageTable = ServiceMessageTable:new()
 
+local DescriptionsTable = {
+	count = 0
+}
+function DescriptionsTable:new()
+	local result = {}
+	setmetatable( result, DescriptionsTable )
+	DescriptionsTable.__index = DescriptionsTable
+	return result
+end
+function DescriptionsTable:addDescription( description )
+	local pos = self.count
+	self[pos] = description
+	self.count = pos + 1
+end
 
 -- Package footer
 master.info = {
@@ -106,7 +120,8 @@ master.info = {
 	topicIdTable = topicIdTable,
 	clientTable = clientTable,
 	serverTable = serverTable,
-	serviceMessageTable = serviceMessageTable
+	serviceMessageTable = serviceMessageTable,
+	DescriptionsTable = DescriptionsTable
 }
 diffusion = master
 return master.info
