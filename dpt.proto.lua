@@ -224,6 +224,7 @@ dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", 
 dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
 dptProto.fields.sessionId = ProtoField.string( "dpt.connection.sessionId", "Session Id")
 dptProto.fields.sessionToken = ProtoField.string( "dpt.connection.sessionToken", "Session Token")
+dptProto.fields.pingPeriod = ProtoField.uint64( "dpt.connection.pingPeriod", "System ping period", base.DEC )
 
 -- Message fields
 dptProto.fields.typeHdr = ProtoField.uint8( "dpt.message.type", "Type", base.HEX ) -- no lookup table possible here, it's a bitfield

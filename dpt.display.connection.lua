@@ -127,6 +127,11 @@ local function addConnectionResponse( tree , fullRange, pinfo, response )
 	if response.sessionTokenRange ~= nil then
 		messageTree:add( dptProto.fields.sessionToken, response.sessionTokenRange )
 	end
+
+	-- Add the connection ping period
+	if response.pingPeriodRange ~= nil then
+		messageTree:add( dptProto.fields.pingPeriod, response.pingPeriodRange )
+	end
 end
 
 -- Attach the connection handshake information to the dissection tree
