@@ -286,6 +286,10 @@ local function parseV5ConnectionResponse( tvb, client )
 		result.sessionTokenRange = tvb( 19, 24 )
 	end
 
+	if client.protoVersion > 6 then
+		result.pingPeriodRange = tvb ( 43, 8 )
+	end
+
 	return result
 end
 
