@@ -380,6 +380,16 @@ local function parseAddTopicRequest( range )
 	}
 end
 
+local function parseUpdateTopicSet( range )
+	local topicPath = lengthPrefixedString( range )
+	return { topicPath = topicPath }
+end
+
+local function parseUpdateTopicDelta( range )
+	local topicPath = lengthPrefixedString( range )
+	return { topicPath = topicPath }
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -466,6 +476,10 @@ local function parseAsV4ServiceMessage( range )
 				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
 			elseif service == v5.SERVICE_CLOSE_CLIENT then
 				result.closeClientInfo = parseCloseClient( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+				result.updateInfo = parseUpdateTopicSet( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+				result.updateInfo = parseUpdateTopicDelta( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

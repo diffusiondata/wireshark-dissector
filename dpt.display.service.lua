@@ -143,12 +143,14 @@ local function addServiceInformation( parentTreeNode, service )
 		if service.updateInfo ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.updateInfo.topicPath.fullRange, service.updateInfo.topicPath.string )
 			local update = service.updateInfo.update;
-			serviceNode:add( dptProto.fields.updateType, update.updateType.range, update.updateType.int )
-			if update.updateAction ~= nil then
-				serviceNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
-				serviceNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
-				serviceNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
-				serviceNode:add( dptProto.fields.content, update.content.bytes.range )
+			if update ~= nil then
+				serviceNode:add( dptProto.fields.updateType, update.updateType.range, update.updateType.int )
+				if update.updateAction ~= nil then
+					serviceNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
+					serviceNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
+					serviceNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
+					serviceNode:add( dptProto.fields.content, update.content.bytes.range )
+				end
 			end
 		end
 		if service.newUpdateSourceState ~= nil then
