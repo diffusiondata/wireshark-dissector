@@ -91,7 +91,9 @@ local topicTypesByByte = {
     [0x0a] = "PAGED_RECORD",
     [0x0b] = "TOPIC_NOTIFY",
     [0x0c] = "ROUTING",
-    [0x0d] = "CHILD_LIST"
+    [0x0d] = "CHILD_LIST",
+    [0x0e] = "BINARY",
+    [0x0f] = "JSON",
 }
 
 local statusResponseBytes = {
