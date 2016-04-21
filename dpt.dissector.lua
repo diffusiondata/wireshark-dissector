@@ -230,7 +230,7 @@ local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 
 	-- Stop if there is no content
 	if tvb:len() == offset then
-		addDescription( pinfo, messageType, nil )
+		addDescription( pinfo, messageType, nil, nil, descriptions )
 		return -1
 	end
 
