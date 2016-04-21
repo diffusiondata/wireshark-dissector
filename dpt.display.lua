@@ -131,27 +131,11 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 	descriptions:addDescription( messageType:getDescription() )
 end
 
-local function summariseDescriptions( descriptions )
-	if descriptions.count == 1 then
-		return descriptions[0]
-	end
-
-	local desc = string.format( "%d messages", descriptions.count )
-	for i = 0, descriptions.count - 1 do
-		desc = desc .. " [" .. descriptions[i] .. "]"
-		if i < descriptions.count - 1 then
-			desc = desc .. ","
-		end
-	end
-	return desc
-end
-
 -- Package footer
 master.display = {
 	addHeaderInformation = addHeaderInformation,
 	addBody = addBody,
-	addDescription = addDescription,
-	summariseDescriptions = summariseDescriptions
+	addDescription = addDescription
 }
 diffusion = master
 return master.display

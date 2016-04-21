@@ -112,6 +112,20 @@ function DescriptionsTable:addDescription( description )
 	self[pos] = description
 	self.count = pos + 1
 end
+function DescriptionsTable:summarise()
+	if self.count == 1 then
+		return self[0]
+	end
+
+	local desc = string.format( "%d messages", self.count )
+	for i = 0, self.count - 1 do
+		desc = desc .. " [" .. self[i] .. "]"
+		if i < self.count - 1 then
+			desc = desc .. ","
+		end
+	end
+	return desc
+end
 
 -- Package footer
 master.info = {

@@ -43,7 +43,6 @@ local addBody = diffusion.display.addBody
 local addConnectionHandshake = diffusion.displayConnection.addConnectionHandshake
 local addServiceInformation = diffusion.displayService.addServiceInformation
 local addDescription = diffusion.display.addDescription
-local summariseDescriptions = diffusion.display.summariseDescriptions
 
 local SERVICE_TOPIC = diffusion.v5.SERVICE_TOPIC
 
@@ -301,7 +300,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 
 		-- Set description
 		pinfo.cols.info:clear_fence()
-		pinfo.cols.info = summariseDescriptions( descriptions )
+		pinfo.cols.info = descriptions:summarise()
 		pinfo.cols.info:fence()
 
 	elseif tcpConnections[streamNumber].type == DPWS_TYPE then
@@ -333,7 +332,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 
 			-- Set description
 			pinfo.cols.info:clear_fence()
-			pinfo.cols.info = summariseDescriptions( descriptions )
+			pinfo.cols.info = descriptions:summarise()
 			pinfo.cols.info:fence()
 		end
 	end
