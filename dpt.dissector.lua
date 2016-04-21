@@ -281,7 +281,6 @@ function dptProto.dissector( tvb, pinfo, tree )
 
 		local handshake = tryDissectWSConnection( tvb, pinfo )
 		if handshake ~= nil then
-			pinfo.cols.info:clear_fence()
 			pinfo.cols.protocol = "DP-WS"
 			tcpConnections[streamNumber].type = DPWS_TYPE
 			addConnectionHandshake( tree, tvb(), pinfo, handshake )
