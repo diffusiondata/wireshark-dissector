@@ -89,6 +89,34 @@ local function addAddTopicInformation( parentNode, info )
 	end
 end
 
+-- Add update topic request information
+local function addUpdateTopicInformation( parentNode, info )
+	parentNode:add( dptProto.fields.topicName, info.topicPath.fullRange, info.topicPath.string )
+	local update = info.update;
+	if update ~= nil then
+		if update.deltaType ~= nil then
+			parentNode:add( dptProto.fields.deltaType, update.deltaType.range, update.deltaType.int )
+		end
+		if update.updateType ~= nil then
+			parentNode:add( dptProto.fields.updateType, update.updateType.range, update.updateType.int )
+		end
+		if update.updateAction ~= nil then
+			parentNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
+		end
+		if update.content ~= nil then
+			if update.content.encoding ~= nil then
+				parentNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
+			end
+			if update.content.length ~= nil then
+				parentNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
+			end
+			if update.content.bytes ~= nil then
+				parentNode:add( dptProto.fields.content, update.content.bytes.range )
+			end
+		end
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -141,17 +169,7 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
 		end
 		if service.updateInfo ~= nil then
-			serviceNode:add( dptProto.fields.topicName, service.updateInfo.topicPath.fullRange, service.updateInfo.topicPath.string )
-			local update = service.updateInfo.update;
-			if update ~= nil then
-				serviceNode:add( dptProto.fields.updateType, update.updateType.range, update.updateType.int )
-				if update.updateAction ~= nil then
-					serviceNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
-					serviceNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
-					serviceNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
-					serviceNode:add( dptProto.fields.content, update.content.bytes.range )
-				end
-			end
+			addUpdateTopicInformation( serviceNode, service.updateInfo )
 		end
 		if service.newUpdateSourceState ~= nil then
 			serviceNode:add( dptProto.fields.newUpdateSourceState, service.newUpdateSourceState.range, service.newUpdateSourceState.int )

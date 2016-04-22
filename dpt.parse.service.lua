@@ -387,7 +387,23 @@ end
 
 local function parseUpdateTopicDelta( range )
 	local topicPath = lengthPrefixedString( range )
-	return { topicPath = topicPath }
+	local deltaTypeRange, remaining, deltaType = varint( topicPath.remaining )
+	local lengthRange, remaining, length = varint( remaining )
+	return {
+		topicPath = topicPath,
+		update = {
+			deltaType = {
+				range = deltaTypeRange,
+				int = deltaType
+			},
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
 end
 
 -- Parse the message as a service request or response
