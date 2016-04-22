@@ -12,7 +12,7 @@ local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time_epoch = diffusion.utilities.f_time_epoch
 local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
-local topicIdTable = diffusion.info.topicIdTable
+local topicInfoTable = diffusion.info.topicInfoTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
@@ -335,7 +335,7 @@ local function parseSubscriptionNotification( range )
 	local path = lengthPrefixedString( remaining )
 	local topicDetails = parseTopicDetails( path.remaining )
 	local tcpStream = f_tcp_stream()
-	topicIdTable:setAlias( tcpStream, id, path.range:string() )
+	topicInfoTable:setInfo( tcpStream, id, path.range:string(), topicDetails )
 	local topicInfo = {
 		range = range,
 		id = { range = idRange, int = id },
@@ -349,7 +349,7 @@ local function parseUnsubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local reasonRange, remaining, reason = varint( remaining )
 	local tcpStream = f_tcp_stream()
-	local topicName = topicIdTable:getAlias( tcpStream, id )
+	local topicName = topicInfoTable:getTopicPath( tcpStream, id )
 	return {
 		topic = { name = topicName, range = idRange },
 		reason = { reason = reason, range = reasonRange }

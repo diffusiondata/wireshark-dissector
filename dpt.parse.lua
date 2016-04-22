@@ -15,7 +15,6 @@ local f_src_host = diffusion.utilities.f_src_host
 local f_http_uri = diffusion.utilities.f_http_uri
 local dump = diffusion.utilities.dump
 local aliasTable = diffusion.info.aliasTable
-local topicIdTable = diffusion.info.topicIdTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local lookupClientTypeByChar = diffusion.parseCommon.lookupClientTypeByChar

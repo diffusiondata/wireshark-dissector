@@ -37,7 +37,6 @@ function AliasTable:getAlias( tcpStream, alias )
 end
 
 local aliasTable = AliasTable:new()
-local topicIdTable = AliasTable:new()
 
 -- ------------------------------------
 -- The EndpointTable Table
@@ -99,11 +98,55 @@ end
 local serviceMessageTable = ServiceMessageTable:new()
 
 
+-- -----------------------------------
+-- The Topic Info Table
+
+local TopicInfoTable = {}
+
+function TopicInfoTable:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+
+function TopicInfoTable:setInfo( tcpStream, id, topicPath, topicDetails )
+	-- Get the table for the tcpStream, or create a new one
+	local stream = self[tcpStream] or {}
+	local info = stream[id] or {}
+	info.topicPath = topicPath
+	info.topicDetails = topicDetails
+	stream[id] = info
+	self[tcpStream] = stream
+end
+
+function TopicInfoTable:getTopicPath( tcpStream, id )
+	if self[tcpStream] == nil then
+		return nil
+	end
+	if self[tcpStream][id] == nil then
+		return nil
+	end
+	return self[tcpStream][id].topicPath
+end
+
+function TopicInfoTable:getTopicDetails( tcpStream, id )
+	if self[tcpStream] == nil then
+		return nil
+	end
+	if self[tcpStream][id] == nil then
+		return nil
+	end
+	return self[tcpStream][id].topicDetails
+end
+
+local topicInfoTable = TopicInfoTable:new()
+
 -- Package footer
 master.info = {
 	aliasTable = aliasTable,
 	tcpConnections = tcpConnections,
-	topicIdTable = topicIdTable,
+	topicInfoTable = topicInfoTable,
 	clientTable = clientTable,
 	serverTable = serverTable,
 	serviceMessageTable = serviceMessageTable
