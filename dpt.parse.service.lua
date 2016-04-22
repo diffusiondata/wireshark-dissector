@@ -382,7 +382,18 @@ end
 
 local function parseUpdateTopicSet( range )
 	local topicPath = lengthPrefixedString( range )
-	return { topicPath = topicPath }
+	local lengthRange, remaining, length = varint( topicPath.remaining )
+	return {
+		topicPath = topicPath,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
 end
 
 local function parseUpdateTopicDelta( range )
