@@ -12,6 +12,8 @@ local lookupServiceName = diffusion.displayService.lookupServiceName
 local lookupModeName = diffusion.displayService.lookupModeName
 local lookupStatusName = diffusion.displayService.lookupStatusName
 local hasSelector = diffusion.displayService.hasSelector
+local topicInfoTable = diffusion.info.topicInfoTable
+local f_tcp_stream = diffusion.utilities.f_tcp_stream
 
 -- Add topic and alias information to dissection tree
 local function addTopicHeaderInformation( treeNode, info )
@@ -24,6 +26,10 @@ local function addTopicHeaderInformation( treeNode, info )
 		node:set_generated()
 	else
 		treeNode:add( dptProto.fields.topic, info.topic.range, info.topic.string )
+	end
+	local topicDetails = topicInfoTable:getTopicDetails( f_tcp_stream(), info.alias.string )
+	if topicDetails ~= nil then
+		treeNode:add( dptProto.fields.topicType, topicDetails.type.range, topicDetails.type.type ):set_generated()
 	end
 end
 
@@ -66,12 +72,21 @@ local function addHeaderInformation( headerNode, info )
 	end
 end
 
-local function addBody( parentTreeNode, records )
+local function addBody( parentTreeNode, records, headerInfo )
 	if records.range == nil then
 		-- If the body is not parsed (eg. unsupported encoding) then do not try to add anything to the body
 		return
 	end
 	local bodyNode = parentTreeNode:add( dptProto.fields.content, records.range, string.format( "%d bytes", records.range:len() ) )
+
+	local topicDetails = topicInfoTable:getTopicDetails( f_tcp_stream(), headerInfo.topic.alias.string )
+	if topicDetails ~= nil then
+		if topicDetails.type.type == 0x0e or topicDetails.type.type == 0x0f then
+			-- Do not attempt to display binary or JSON topics
+			return
+		end
+	end
+
 	if records.num == 1 then
 		bodyNode:append_text( ", 1 record" )
 	else

@@ -8,6 +8,8 @@ if master.info ~= nil then
 	return master.info
 end
 
+local int_to_string = master.utilities.int_to_string
+
 
 -- -----------------------------------
 -- The Alias Table
@@ -115,8 +117,10 @@ function TopicInfoTable:setInfo( tcpStream, id, topicPath, topicDetails )
 	local stream = self[tcpStream] or {}
 	local info = stream[id] or {}
 	info.topicPath = topicPath
+	info.alias = string.format ( "!%s", int_to_string( id, 36 ) )
 	info.topicDetails = topicDetails
 	stream[id] = info
+	stream[info.alias] = info
 	self[tcpStream] = stream
 end
 

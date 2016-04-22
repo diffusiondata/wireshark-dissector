@@ -260,7 +260,7 @@ function commandTopicLoadType:markupHeaders( headerRange )
 end
 
 function commandTopicLoadType:getDescription( messageDetails )
-	return self.commandTopicLoadDescription 
+	return self.commandTopicLoadDescription
 end
 
 -- Functionality specific to Command Topic Notification
