@@ -464,6 +464,11 @@ local function parseUpdateSourceDelta( range )
 	}
 end
 
+local function parseUpdateResult( range )
+	local resultByteRange = range:range( 0, 1 )
+	return { range = resultByteRange, int = resultByteRange:int() }
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -568,6 +573,14 @@ local function parseAsV4ServiceMessage( range )
 				result.newUpdateSourceState = info
 			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 				result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
 			end
 
 			-- Calculate the response time

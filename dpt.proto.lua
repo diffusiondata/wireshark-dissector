@@ -216,6 +216,18 @@ local deltaType = {
 	[0x0] = "BINARY"
 }
 
+local updateResponseByBytes = {
+	[0x0] = "SUCCESS",
+	[0x1] = "INCOMPATIBLE_UPDATE",
+	[0x2] = "UPDATE_FAILED",
+	[0x3] = "INVALID_UPDATER",
+	[0x4] = "MISSING_TOPIC",
+	[0x5] = "INVALID_UPDATER",
+	[0x6] = "EXCLUSIVE_UPDATER_CONFLICT",
+	[0x7] = "INCOMPATIBLE_UPDATE",
+	[0x8] = "DELTA_WITHOUT_VALUE"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -292,6 +304,7 @@ dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update
 dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
 dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta type", base.HEX, deltaType )
+dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, updateResponseByBytes )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

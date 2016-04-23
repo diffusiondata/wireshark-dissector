@@ -217,6 +217,9 @@ local function addServiceInformation( parentTreeNode, service )
 			closeNode:add( dptProto.fields.serviceSessionId, service.closeClientInfo.sessionId.range, service.closeClientInfo.sessionId.clientId )
 			closeNode:add( dptProto.fields.clientCloseReason, service.closeClientInfo.reason.range )
 		end
+		if service.updateResult ~= nil then
+			serviceNode:add( dptProto.fields.updateResponse, service.updateResult.range )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
