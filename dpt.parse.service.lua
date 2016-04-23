@@ -417,6 +417,27 @@ local function parseUpdateTopicDelta( range )
 	}
 end
 
+local function parseUpdateSourceSet( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	local lengthRange, remaining, length = varint( topicPath.remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		topicPath = topicPath,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -507,6 +528,8 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = parseUpdateTopicSet( serviceBodyRange )
 			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
 				result.updateInfo = parseUpdateTopicDelta( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+				result.updateInfo = parseUpdateSourceSet( serviceBodyRange )
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then
