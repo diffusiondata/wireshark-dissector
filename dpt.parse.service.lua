@@ -536,11 +536,7 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
 				local info = parseUpdateSourceStateRequest( serviceBodyRange )
-				result.updateSourceInfo = {
-					conversationId = info.conversationId
-				}
-				result.oldUpdateSourceState = info.oldUpdateSourceState
-				result.newUpdateSourceState = info.newUpdateSourceState
+				result.updateSourceInfo = info
 			elseif service == v5.SERVICE_UPDATE_TOPIC then
 				local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
 				result.updateInfo = info

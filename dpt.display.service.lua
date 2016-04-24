@@ -120,6 +120,22 @@ local function addUpdateTopicInformation( parentNode, info )
 	end
 end
 
+-- Add update source information
+local function addUpdateSourceInformation( parentNode, info )
+	if info.conversationId ~= nil then
+		parentNode:add( dptProto.fields.updateSourceId, info.conversationId.range, info.conversationId.int )
+	end
+	if info.topicPath ~= nil then
+		parentNode:add( dptProto.fields.updateSourceTopicPath, info.topicPath.fullRange, info.topicPath.string )
+	end
+	if info.newUpdateSourceState ~= nil then
+		parentNode:add( dptProto.fields.newUpdateSourceState, info.newUpdateSourceState.range, info.newUpdateSourceState.int )
+	end
+	if info.oldUpdateSourceState ~= nil then
+		parentNode:add( dptProto.fields.oldUpdateSourceState, info.oldUpdateSourceState.range, info.oldUpdateSourceState.int )
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service )
 	if service ~= nil and service.range ~= nil then
@@ -169,21 +185,10 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.handlerTopicPath, service.handlerTopicPath.fullRange, service.handlerTopicPath.string )
 		end
 		if service.updateSourceInfo ~= nil then
-			if service.updateSourceInfo.conversationId ~= nil then
-				serviceNode:add( dptProto.fields.updateSourceId, service.updateSourceInfo.conversationId.range, service.updateSourceInfo.conversationId.int )
-			end
-			if service.updateSourceInfo.topicPath ~= nil then
-				serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
-			end
+			addUpdateSourceInformation( serviceNode, service.updateSourceInfo )
 		end
 		if service.updateInfo ~= nil then
 			addUpdateTopicInformation( serviceNode, service.updateInfo )
-		end
-		if service.newUpdateSourceState ~= nil then
-			serviceNode:add( dptProto.fields.newUpdateSourceState, service.newUpdateSourceState.range, service.newUpdateSourceState.int )
-		end
-		if service.oldUpdateSourceState ~= nil then
-			serviceNode:add( dptProto.fields.oldUpdateSourceState, service.oldUpdateSourceState.range, service.oldUpdateSourceState.int )
 		end
 		if service.sessionListenerRegInfo ~= nil then
 			local regNode = serviceNode:add( dptProto.fields.sessionListenerRegistration, service.body, "" )
