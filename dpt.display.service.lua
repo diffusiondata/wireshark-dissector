@@ -91,6 +91,9 @@ end
 
 -- Add update topic request information
 local function addUpdateTopicInformation( parentNode, info )
+	if info.conversationId ~= nil then
+		parentNode:add( dptProto.fields.updateSourceId, info.conversationId.range, info.conversationId.int )
+	end
 	parentNode:add( dptProto.fields.topicName, info.topicPath.fullRange, info.topicPath.string )
 	local update = info.update;
 	if update ~= nil then
@@ -166,6 +169,7 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.handlerTopicPath, service.handlerTopicPath.fullRange, service.handlerTopicPath.string )
 		end
 		if service.updateSourceInfo ~= nil then
+			serviceNode:add( dptProto.fields.updateSourceId, service.updateSourceInfo.conversationId.range, service.updateSourceInfo.conversationId.int )
 			serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
 		end
 		if service.updateInfo ~= nil then

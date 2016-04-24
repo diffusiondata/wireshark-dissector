@@ -305,6 +305,7 @@ dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Up
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
 dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta type", base.HEX, deltaType )
 dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, updateResponseByBytes )
+dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
