@@ -536,6 +536,9 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
 				local info = parseUpdateSourceStateRequest( serviceBodyRange )
+				result.updateSourceInfo = {
+					conversationId = info.conversationId
+				}
 				result.oldUpdateSourceState = info.oldUpdateSourceState
 				result.newUpdateSourceState = info.newUpdateSourceState
 			elseif service == v5.SERVICE_UPDATE_TOPIC then
@@ -563,6 +566,14 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = parseUpdateSourceSet( serviceBodyRange )
 			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
 				result.updateInfo = parseUpdateSourceDelta( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_DEREGISTRATION then
+				local conversationRange, remaining, conversationId = varint( serviceBodyRange )
+				result.updateSourceInfo = {
+					conversationId = {
+						range = conversationRange,
+						int = conversationId
+					}
+				}
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then

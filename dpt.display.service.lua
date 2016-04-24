@@ -169,8 +169,12 @@ local function addServiceInformation( parentTreeNode, service )
 			serviceNode:add( dptProto.fields.handlerTopicPath, service.handlerTopicPath.fullRange, service.handlerTopicPath.string )
 		end
 		if service.updateSourceInfo ~= nil then
-			serviceNode:add( dptProto.fields.updateSourceId, service.updateSourceInfo.conversationId.range, service.updateSourceInfo.conversationId.int )
-			serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
+			if service.updateSourceInfo.conversationId ~= nil then
+				serviceNode:add( dptProto.fields.updateSourceId, service.updateSourceInfo.conversationId.range, service.updateSourceInfo.conversationId.int )
+			end
+			if service.updateSourceInfo.topicPath ~= nil then
+				serviceNode:add( dptProto.fields.updateSourceTopicPath, service.updateSourceInfo.topicPath.fullRange, service.updateSourceInfo.topicPath.string )
+			end
 		end
 		if service.updateInfo ~= nil then
 			addUpdateTopicInformation( serviceNode, service.updateInfo )
