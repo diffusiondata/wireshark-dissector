@@ -75,7 +75,7 @@ end
 local function tryDissectWSConnection( tvb, pinfo )
 	local uri = f_http_uri()
 	if uri ~= nil then
-		if uri:startsWith("/diffusion") then
+		if uri:string():startsWith("/diffusion") then
 			local tcpStream = f_tcp_stream()
 			return parseWSConnectionRequest( tvb, tcpConnections[tcpStream].client )
 		end

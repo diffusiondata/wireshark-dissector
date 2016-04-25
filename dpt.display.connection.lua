@@ -21,19 +21,19 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 		messageTree:add( dptProto.fields.connectionProtoNumber, request.protoVerRange )
 	end
 	if request.wsProtoVersion ~= nil then
-		messageTree:add( dptProto.fields.wsConnectionProtoNumber, request.wsProtoVersion )
+		messageTree:add( dptProto.fields.connectionProtoNumber, request.wsProtoVersion, tonumber( request.wsProtoVersion:string() ) )
 	end
 	if request.connectionTypeRange ~= nil then
 		messageTree:add( dptProto.fields.connectionType, request.connectionTypeRange )
 	end
 	if request.wsConnectionType ~= nil then
-		messageTree:add( dptProto.fields.wsConnectionType, request.wsConnectionType )
+		messageTree:add( dptProto.fields.wsConnectionType, request.wsConnectionType.range, request.wsConnectionType.string )
 	end
 	if request.capabilitiesRange ~= nil then
 		messageTree:add( dptProto.fields.capabilities, request.capabilitiesRange )
 	end
 	if request.capabilities ~= nil then
-		messageTree:add( dptProto.fields.capabilities, fullRange( 0, 0 ), request.capabilities )
+		messageTree:add( dptProto.fields.capabilities, request.capabilities, tonumber( request.capabilities:string() ) )
 	end
 	if request.creds ~= nil then
 		messageTree:add( dptProto.fields.loginCreds, request.creds.range, request.creds.string )
