@@ -224,6 +224,7 @@ dptProto.fields.wsPrincipal = ProtoField.string( "dpt.ws.connection.principal", 
 dptProto.fields.wsCredentials = ProtoField.string( "dpt.ws.connection.credentials", "Credentials")
 dptProto.fields.sessionId = ProtoField.string( "dpt.connection.sessionId", "Session Id")
 dptProto.fields.sessionToken = ProtoField.string( "dpt.connection.sessionToken", "Session Token")
+dptProto.fields.reconnectionTimeout = ProtoField.uint32( "dpt.connection.reconnectionTimeout", "Reconnection timeout", base.DEC )
 dptProto.fields.pingPeriod = ProtoField.uint64( "dpt.connection.pingPeriod", "System ping period", base.DEC )
 
 -- Message fields

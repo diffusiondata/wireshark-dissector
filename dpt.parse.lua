@@ -374,7 +374,8 @@ local function parseWSConnectionRequest( tvb, client )
 		},
 		capabilities = parameters["ca"],
 		wsPrincipal = parameters["username"],
-		wsCredentials = parameters["password"]
+		wsCredentials = parameters["password"],
+		reconnectionTimeout = parameters["r"],
 	}
 end
 

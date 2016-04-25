@@ -47,6 +47,9 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	if request.topicsetRange ~= nil then
 		messageTree:add( dptProto.fields.loginTopics, request.topicsetRange )
 	end
+	if request.reconnectionTimeout ~= nil then
+		messageTree:add( dptProto.fields.reconnectionTimeout, request.reconnectionTimeout, tonumber( request.reconnectionTimeout:string() ) )
+	end
 
 	if request.sessionTokenRange ~= nil then
 		messageTree:add( dptProto.fields.sessionToken, request.sessionTokenRange )
