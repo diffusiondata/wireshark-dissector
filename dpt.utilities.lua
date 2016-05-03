@@ -149,6 +149,19 @@ local function f_ws_t_payload()
 	end
 end
 
+--- Returns representation of num in radix
+local function int_to_string(num, radix)
+    local charrange = '0123456789abcdefghijklmnopqrstuvwxyz'
+    local s = ''
+    while num > 0 do
+        local mod = math.fmod(num, radix)
+        s = string.sub(charrange, mod+1, mod+1) .. s
+        num = math.floor(num / radix)
+    end
+    if s == '' then s = '0' end
+    return s
+end
+
 -- Package footer
 master.utilities = {
 	f_src_host = f_src_host,
@@ -163,6 +176,7 @@ master.utilities = {
 	f_http_uri = f_http_uri,
 	f_ws_b_payload = f_ws_b_payload,
 	f_ws_t_payload = f_ws_t_payload,
+	int_to_string = int_to_string,
 	RD = 0x01,
 	FD = 0x02,
 	WSMD = 0x08

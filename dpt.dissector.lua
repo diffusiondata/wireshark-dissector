@@ -106,7 +106,7 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 
 		if headerBreak + 1 <= (contentRange:len() -1) then
 			-- Only markup up the body if there is one (there needn't be)
-			local bodyRange = contentRange:range( headerBreak +1 )
+			local bodyRange = contentRange:range( headerBreak + 1 )
 
 			if headerInfo.topic ~= nil and headerInfo.topic.topic ~= nil and headerInfo.topic.topic.string == SERVICE_TOPIC then
 				serviceInfo = parseAsV4ServiceMessage( bodyRange )
@@ -123,7 +123,7 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 			local headerNode = contentNode:add( dptProto.fields.headers, headerRange, string.format( "%d bytes", headerBreak ) )
 			addHeaderInformation( headerNode, headerInfo )
 			if records ~= nil then
-				addBody( contentNode , records )
+				addBody( contentNode , records, headerInfo )
 			end
 		end
 	end

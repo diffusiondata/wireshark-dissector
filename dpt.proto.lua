@@ -91,7 +91,9 @@ local topicTypesByByte = {
     [0x0a] = "PAGED_RECORD",
     [0x0b] = "TOPIC_NOTIFY",
     [0x0c] = "ROUTING",
-    [0x0d] = "CHILD_LIST"
+    [0x0d] = "CHILD_LIST",
+    [0x0e] = "BINARY",
+    [0x0f] = "JSON",
 }
 
 local statusResponseBytes = {
@@ -210,6 +212,22 @@ local throttlerTypeByBytes = {
 	[0x04] = "BUFFER_INTERVAL"
 }
 
+local deltaType = {
+	[0x0] = "BINARY"
+}
+
+local updateResponseByBytes = {
+	[0x0] = "SUCCESS",
+	[0x1] = "INCOMPATIBLE_UPDATE",
+	[0x2] = "UPDATE_FAILED",
+	[0x3] = "INVALID_UPDATER",
+	[0x4] = "MISSING_TOPIC",
+	[0x5] = "INVALID_UPDATER",
+	[0x6] = "EXCLUSIVE_UPDATER_CONFLICT",
+	[0x7] = "INCOMPATIBLE_UPDATE",
+	[0x8] = "DELTA_WITHOUT_VALUE"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -278,12 +296,17 @@ dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Han
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
+
+-- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
 dptProto.fields.oldUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState.old", "Old update source state", base.HEX, updateSourceStateByBytes )
 dptProto.fields.newUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState", "New update source state", base.HEX, updateSourceStateByBytes )
 dptProto.fields.updateType = ProtoField.uint8( "dpt.service.updateType", "Update type", base.HEX, updateTypeByBytes )
 dptProto.fields.updateAction = ProtoField.uint8( "dpt.service.updateAction", "Update action", base.HEX, updateActionByBytes )
 dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "Content length", base.DEC )
+dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta type", base.HEX, deltaType )
+dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, updateResponseByBytes )
+dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

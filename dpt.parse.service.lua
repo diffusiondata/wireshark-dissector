@@ -12,7 +12,7 @@ local f_tcp_stream = diffusion.utilities.f_tcp_stream
 local f_time_epoch = diffusion.utilities.f_time_epoch
 local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
-local topicIdTable = diffusion.info.topicIdTable
+local topicInfoTable = diffusion.info.topicInfoTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
@@ -335,7 +335,7 @@ local function parseSubscriptionNotification( range )
 	local path = lengthPrefixedString( remaining )
 	local topicDetails = parseTopicDetails( path.remaining )
 	local tcpStream = f_tcp_stream()
-	topicIdTable:setAlias( tcpStream, id, path.range:string() )
+	topicInfoTable:setInfo( tcpStream, id, path.range:string(), topicDetails )
 	local topicInfo = {
 		range = range,
 		id = { range = idRange, int = id },
@@ -349,7 +349,7 @@ local function parseUnsubscriptionNotification( range )
 	local idRange, remaining, id = varint( range )
 	local reasonRange, remaining, reason = varint( remaining )
 	local tcpStream = f_tcp_stream()
-	local topicName = topicIdTable:getAlias( tcpStream, id )
+	local topicName = topicInfoTable:getTopicPath( tcpStream, id )
 	return {
 		topic = { name = topicName, range = idRange },
 		reason = { reason = reason, range = reasonRange }
@@ -378,6 +378,95 @@ local function parseAddTopicRequest( range )
 		},
 		topicDetails = topicDetails
 	}
+end
+
+local function parseUpdateTopicSet( range )
+	local topicPath = lengthPrefixedString( range )
+	local lengthRange, remaining, length = varint( topicPath.remaining )
+	return {
+		topicPath = topicPath,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
+end
+
+local function parseUpdateTopicDelta( range )
+	local topicPath = lengthPrefixedString( range )
+	local deltaTypeRange, remaining, deltaType = varint( topicPath.remaining )
+	local lengthRange, remaining, length = varint( remaining )
+	return {
+		topicPath = topicPath,
+		update = {
+			deltaType = {
+				range = deltaTypeRange,
+				int = deltaType
+			},
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
+end
+
+local function parseUpdateSourceSet( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	local lengthRange, remaining, length = varint( topicPath.remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		topicPath = topicPath,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
+end
+
+local function parseUpdateSourceDelta( range )
+	local cIdRange, remaining, cId = varint( range )
+	local topicPath = lengthPrefixedString( remaining )
+	local deltaTypeRange, remainingUpdate, deltaType = varint( topicPath.remaining )
+	local lengthRange, remaining, length = varint( remainingUpdate )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		topicPath = topicPath,
+		update = {
+			deltaType = {
+				range = deltaTypeRange,
+				int = deltaType
+			},
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				}
+			}
+		}
+	}
+end
+
+local function parseUpdateResult( range )
+	local resultByteRange = range:range( 0, 1 )
+	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
 -- Parse the message as a service request or response
@@ -447,8 +536,7 @@ local function parseAsV4ServiceMessage( range )
 				result.updateInfo = info
 			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
 				local info = parseUpdateSourceStateRequest( serviceBodyRange )
-				result.oldUpdateSourceState = info.oldUpdateSourceState
-				result.newUpdateSourceState = info.newUpdateSourceState
+				result.updateSourceInfo = info
 			elseif service == v5.SERVICE_UPDATE_TOPIC then
 				local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
 				result.updateInfo = info
@@ -466,6 +554,22 @@ local function parseAsV4ServiceMessage( range )
 				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
 			elseif service == v5.SERVICE_CLOSE_CLIENT then
 				result.closeClientInfo = parseCloseClient( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+				result.updateInfo = parseUpdateTopicSet( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+				result.updateInfo = parseUpdateTopicDelta( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+				result.updateInfo = parseUpdateSourceSet( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
+				result.updateInfo = parseUpdateSourceDelta( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_DEREGISTRATION then
+				local conversationRange, remaining, conversationId = varint( serviceBodyRange )
+				result.updateSourceInfo = {
+					conversationId = {
+						range = conversationRange,
+						int = conversationId
+					}
+				}
 			end
 
 		elseif  mode == v5.MODE_RESPONSE then
@@ -476,6 +580,14 @@ local function parseAsV4ServiceMessage( range )
 				result.newUpdateSourceState = info
 			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 				result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
+			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
+				result.updateResult = parseUpdateResult( serviceBodyRange )
 			end
 
 			-- Calculate the response time
