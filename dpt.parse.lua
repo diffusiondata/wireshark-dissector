@@ -311,36 +311,71 @@ local function parseConnectionResponse( tvb, client )
 	end
 end
 
-local function uriToQueryParameters( uri )
+local function uriToQueryParameters( uriRange )
 	local parameterTable = {}
-	local queryString = string.gsub(uri, "/diffusion%?", "")
-	info( queryString )
-	-- Foreach '&' separated string split around '=' and store as key value pairs
-	info( "Parameters" )
-	string.gsub( queryString, "([^&]+)", function( parameterPair )
-		local parameterComponents = parameterPair:split("=")
-		parameterTable[parameterComponents[1]] = parameterComponents[2]
-	end )
-	info ( dump(parameterTable) )
+
+	info( uriRange:len() )
+	-- Check length
+	if (uriRange:len() < 12) then
+		return {}
+	end
+
+	-- Check start
+	local uriPrefix = uriRange( 0, 11 ):string()
+	info( uriPrefix )
+	if uriPrefix ~= "/diffusion?" then
+		return {}
+	end
+
+	local remainingParameters = uriRange( 11 )
+
+	while remainingParameters:len() > 0 do
+		-- Get the parameter name
+		local nameEnd = 0
+		while nameEnd < remainingParameters:len() and remainingParameters( nameEnd, 1 ):string() ~= "=" do
+			nameEnd = nameEnd + 1
+		end
+
+		-- Get the parameter value
+		local valueEnd = nameEnd
+		while valueEnd < remainingParameters:len() and remainingParameters( valueEnd, 1 ):string() ~= "&" do
+			valueEnd = valueEnd + 1
+		end
+
+		local name = remainingParameters( 0, nameEnd )
+		local value = remainingParameters( nameEnd + 1 , valueEnd - nameEnd - 1 )
+
+		parameterTable[name:string()] = value
+
+		if valueEnd == remainingParameters:len() then
+			remainingParameters = remainingParameters( 0, 0 )
+		else
+			remainingParameters = remainingParameters( valueEnd + 1 )
+		end
+	end
 
 	return parameterTable
 end
 
 local function parseWSConnectionRequest( tvb, client )
-	local uri = f_http_uri()
-	local parameters = uriToQueryParameters( uri )
+	local uriRange = f_http_uri()
+	local parameters = uriToQueryParameters( uriRange )
 
-	local clientType = lookupClientTypeByChar( parameters["ty"] )
+	local clientType = lookupClientTypeByChar( parameters["ty"]:string() )
 	client.wsConnectionType = clientType
-	client.capabilities = tonumber( parameters["ca"] )
+	client.capabilities = tonumber( parameters["ca"]:string() )
 
 	return {
 		request = true,
 		wsProtoVersion = parameters["v"],
-		wsConnectionType = clientType,
-		capabilities = tonumber( parameters["ca"] ),
+		wsConnectionType = {
+			range = parameters["ty"],
+			string = clientType
+		},
+		capabilities = parameters["ca"],
 		wsPrincipal = parameters["username"],
-		wsCredentials = parameters["password"]
+		wsCredentials = parameters["password"],
+		reconnectionTimeout = parameters["r"],
 	}
 end
 

@@ -117,7 +117,7 @@ end
 local function f_http_uri()
 	local f = field_http_uri()
 	if f ~= nil then
-		return f.value
+		return f.range
 	else
 		return nil
 	end
