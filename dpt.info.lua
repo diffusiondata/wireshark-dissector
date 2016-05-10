@@ -99,6 +99,34 @@ end
 
 local serviceMessageTable = ServiceMessageTable:new()
 
+local DescriptionsTable = {
+	count = 0
+}
+function DescriptionsTable:new()
+	local result = {}
+	setmetatable( result, DescriptionsTable )
+	DescriptionsTable.__index = DescriptionsTable
+	return result
+end
+function DescriptionsTable:addDescription( description )
+	local pos = self.count
+	self[pos] = description
+	self.count = pos + 1
+end
+function DescriptionsTable:summarise()
+	if self.count == 1 then
+		return self[0]
+	end
+
+	local desc = string.format( "%d messages", self.count )
+	for i = 0, self.count - 1 do
+		desc = desc .. " [" .. self[i] .. "]"
+		if i < self.count - 1 then
+			desc = desc .. ","
+		end
+	end
+	return desc
+end
 
 -- -----------------------------------
 -- The Topic Info Table
@@ -153,7 +181,8 @@ master.info = {
 	topicInfoTable = topicInfoTable,
 	clientTable = clientTable,
 	serverTable = serverTable,
-	serviceMessageTable = serviceMessageTable
+	serviceMessageTable = serviceMessageTable,
+	DescriptionsTable = DescriptionsTable
 }
 diffusion = master
 return master.info

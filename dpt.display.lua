@@ -113,7 +113,7 @@ local function addBody( parentTreeNode, records, headerInfo )
 end
 
 -- Add the description of the packet to the displayed columns
-local function addDescription( pinfo, messageType, headerInfo, serviceInformation )
+local function addDescription( pinfo, messageType, headerInfo, serviceInformation, descriptions )
 	-- Add the description from the service information
 	if serviceInformation ~= nil then
 		-- Lookup service and mode name
@@ -132,18 +132,18 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 		if hasSelector( serviceId ) then
 			-- Handle services that benefit from a selector in the description
 			if serviceInformation.selector ~= nil then
-				pinfo.cols.info = string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string )
+				descriptions:addDescription( string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string ) )
 			else
-				pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+				descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
 			end
 		else
-			pinfo.cols.info = string.format( "Service: %s %s ", serviceString, modeString )
+			descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
 		end
 		return
 	end
 
 	-- Add the description from the message type
-	pinfo.cols.info = messageType:getDescription()
+	descriptions:addDescription( messageType:getDescription() )
 end
 
 -- Package footer

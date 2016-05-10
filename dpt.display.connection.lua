@@ -51,6 +51,7 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 		messageTree:add( dptProto.fields.reconnectionTimeout, request.reconnectionTimeout, tonumber( request.reconnectionTimeout:string() ) )
 	end
 
+	pinfo.cols.info:clear_fence()
 	if request.sessionTokenRange ~= nil then
 		messageTree:add( dptProto.fields.sessionToken, request.sessionTokenRange )
 		pinfo.cols.info = "DPT Reconnection request"
@@ -60,12 +61,15 @@ local function addConnectionRequest( tree , fullRange, pinfo, request )
 	else
 		pinfo.cols.info = "DPT Connection request"
 	end
+	pinfo.cols.info:fence()
 end
 
 -- Attach the connection response information to the dissection tree
 -- Any information present is added to the dissection tree and no information is required
 local function addConnectionResponse( tree , fullRange, pinfo, response )
+	pinfo.cols.info:clear_fence()
 	pinfo.cols.info = "DPT Connection response"
+	pinfo.cols.info:fence()
 
 	-- Add the Diffusion protocol element to the tree for the packet
 	local messageTree = tree:add( dptProto, fullRange )
