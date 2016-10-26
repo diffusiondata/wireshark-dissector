@@ -282,6 +282,7 @@ dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement 
 dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
 dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, v5.modeValues )
+dptProto.fields.serviceModeP9 = ProtoField.uint8( "dpt.service.mode.p9", "Mode", base.HEX, v5.p9ModeValues )
 dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
 dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
