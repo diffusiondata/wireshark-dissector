@@ -417,6 +417,12 @@ function ackType:getDescription()
 	return string.format( "%s, %s", self.name, self.ackDescription )
 end
 
+local serviceRequestType = MessageType:new( 0x00, "Service request", 0 )
+local serviceResponseType = MessageType:new( 0x01, "Service response", 0 )
+local serviceErrorType = MessageType:new( 0x02, "Service error", 0 )
+local topicValueType = MessageType:new( 0x04, "Topic value", 0 )
+local topicDeltaType = MessageType:new( 0x05, "Topic delta", 0 )
+
 -- The messageType table
 local messageTypesByValue = MessageType.index( {
 	topicLoadType,
@@ -438,7 +444,12 @@ local messageTypesByValue = MessageType.index( {
 	commandMessageType,
 	commandTopicLoadType,
 	commandTopicNotificationType,
-	MessageType:new( 0x30, "Cancel Fragmented Message Set", 1 )
+	MessageType:new( 0x30, "Cancel Fragmented Message Set", 1 ),
+	serviceRequestType,
+	serviceResponseType,
+	serviceErrorType,
+	topicValueType,
+	topicDeltaType
 })
 
 local function messageTypeLookup(byte)
