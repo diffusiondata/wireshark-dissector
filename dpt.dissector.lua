@@ -32,6 +32,7 @@ local messageTypeLookup = diffusion.messages.messageTypeLookup
 local dptProto = diffusion.proto.dptProto
 
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
+local parseAsV59ServiceMessage = diffusion.parseService.parseAsV59ServiceMessage
 local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
@@ -44,7 +45,8 @@ local addConnectionHandshake = diffusion.displayConnection.addConnectionHandshak
 local addServiceInformation = diffusion.displayService.addServiceInformation
 local addDescription = diffusion.display.addDescription
 
-local SERVICE_TOPIC = diffusion.v5.SERVICE_TOPIC
+local v5 = diffusion.v5
+local SERVICE_TOPIC = v5.SERVICE_TOPIC
 
 local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
@@ -192,8 +194,16 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
-
-	processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
+	
+	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
+		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )
+		addServiceInformation( messageTree, serviceInfo, client )
+		local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentRange:len() ) )
+		-- Set the Info column of the tabular display -- NB: this must be called last
+		addDescription( pinfo, messageType, {}, serviceInfo, descriptions )
+	else
+		processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
+	end
 
 	return offset
 end
@@ -239,7 +249,15 @@ local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 	local contentRange = tvb( offset, contentSize )
 
 	offset = offset + contentSize
-	processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
+	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
+		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )
+		addServiceInformation( messageTree, serviceInfo, client )
+		local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentRange:len() ) )
+		-- Set the Info column of the tabular display -- NB: this must be called last
+		addDescription( pinfo, messageType, {}, serviceInfo, descriptions )
+	else
+		processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
+	end
 
 	return offset
 end
