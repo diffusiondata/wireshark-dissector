@@ -25,11 +25,14 @@ local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
 
 local tcpConnections = diffusion.info.tcpConnections
 local DescriptionsTable = diffusion.info.DescriptionsTable
+local topicInfoTable = diffusion.info.topicInfoTable
 
 local nameByID = diffusion.messages.nameByID
 local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
+local TOPIC_VALUE_MESSAGE_TYPE = diffusion.proto.TOPIC_VALUE_MESSAGE_TYPE
+local TOPIC_DELTA_MESSAGE_TYPE = diffusion.proto.TOPIC_DELTA_MESSAGE_TYPE
 
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseAsV59ServiceMessage = diffusion.parseService.parseAsV59ServiceMessage
@@ -37,6 +40,7 @@ local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
 local parseWSConnectionResponse = diffusion.parse.parseWSConnectionResponse
+local varint = diffusion.parseCommon.varint
 
 local addClientConnectionInformation = diffusion.displayConnection.addClientConnectionInformation
 local addHeaderInformation = diffusion.display.addHeaderInformation
@@ -127,6 +131,25 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 			if records ~= nil then
 				addBody( contentNode , records, headerInfo )
 			end
+		end
+	end
+
+	if messageType.id == TOPIC_VALUE_MESSAGE_TYPE or messageType.id == TOPIC_DELTA_MESSAGE_TYPE then
+		local idRange = contentRange( 0, 4 )
+		messageTree:add( dptProto.fields.topicId, idRange )
+		local tcpStream = f_tcp_stream()
+		local topicPath = topicInfoTable:getTopicPath( tcpStream, idRange:int() )
+		if topicPath ~= nil then
+			local pathNode = messageTree:add( dptProto.fields.topicPath, idRange, topicPath )
+			pathNode:set_generated()
+			messageType.topicDescription = topicPath
+		end
+
+		if contentRange:len() > 4 then
+			local payload = contentRange( 4 )
+			messageTree:add( dptProto.fields.content, payload, string.format( "%d bytes", payload:len() ) )
+		else
+			messageTree:add( dptProto.fields.content, contentRange( 0, 0 ), string.format( "0 bytes" ) )
 		end
 	end
 

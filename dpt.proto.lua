@@ -357,7 +357,9 @@ dptProto.fields.clientCloseReason = ProtoField.string( "dpt.service.clientContro
 -- Package footer
 master.proto = {
 	dptProto = dptProto,
-	statusResponseBytes = statusResponseBytes
+	statusResponseBytes = statusResponseBytes,
+	TOPIC_VALUE_MESSAGE_TYPE = 0x04,
+	TOPIC_DELTA_MESSAGE_TYPE = 0x05
 }
 diffusion = master
 return master.proto
