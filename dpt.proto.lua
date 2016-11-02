@@ -38,6 +38,12 @@ local capabilities = {
     [0x06] = "Supports compressed and base 64 encoded data messages",
     [0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
     [0x08] = "Is a Unified API client",
+    [0x09] = "Supports encrypted data messages and is a Unified API client",
+    [0x0a] = "Supports compressed data messages and is a Unified API client",
+    [0x0b] = "Supports encrypted, compressed data messages and is a Unified API client",
+    [0x0c] = "Supports base 64 encoded message and is a Unified API client",
+    [0x0d] = "Supports encrypted, base 64 encoded data messages and is a Unified API client",
+    [0x0e] = "Supports compressed, base 64 encoded data messages and is a Unified API client",
     [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a Unified API client"
 }
 
