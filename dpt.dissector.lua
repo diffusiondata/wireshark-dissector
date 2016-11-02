@@ -101,6 +101,28 @@ local function tryDissectWSConnectionResponse( tvb, pinfo, tree )
 end
 
 local function processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
+	if messageType.id == TOPIC_VALUE_MESSAGE_TYPE or messageType.id == TOPIC_DELTA_MESSAGE_TYPE then
+		local idRange = contentRange( 0, 4 )
+		messageTree:add( dptProto.fields.topicId, idRange )
+		local tcpStream = f_tcp_stream()
+		local topicPath = topicInfoTable:getTopicPath( tcpStream, idRange:int() )
+		if topicPath ~= nil then
+			local pathNode = messageTree:add( dptProto.fields.topicPath, idRange, topicPath )
+			pathNode:set_generated()
+			messageType.topicDescription = topicPath
+		end
+
+		if contentRange:len() > 4 then
+			local payload = contentRange( 4 )
+			messageTree:add( dptProto.fields.content, payload, string.format( "%d bytes", payload:len() ) )
+		else
+			messageTree:add( dptProto.fields.content, contentRange( 0, 0 ), string.format( "0 bytes" ) )
+		end
+
+		addDescription( pinfo, messageType, nil, nil, descriptions )
+		return
+	end
+
 	local headerInfo, serviceInfo, records
 	-- The headers & body -- find the 1st RD in the content
 	local headerBreak = contentRange:bytes():index( RD )
@@ -131,25 +153,6 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 			if records ~= nil then
 				addBody( contentNode , records, headerInfo )
 			end
-		end
-	end
-
-	if messageType.id == TOPIC_VALUE_MESSAGE_TYPE or messageType.id == TOPIC_DELTA_MESSAGE_TYPE then
-		local idRange = contentRange( 0, 4 )
-		messageTree:add( dptProto.fields.topicId, idRange )
-		local tcpStream = f_tcp_stream()
-		local topicPath = topicInfoTable:getTopicPath( tcpStream, idRange:int() )
-		if topicPath ~= nil then
-			local pathNode = messageTree:add( dptProto.fields.topicPath, idRange, topicPath )
-			pathNode:set_generated()
-			messageType.topicDescription = topicPath
-		end
-
-		if contentRange:len() > 4 then
-			local payload = contentRange( 4 )
-			messageTree:add( dptProto.fields.content, payload, string.format( "%d bytes", payload:len() ) )
-		else
-			messageTree:add( dptProto.fields.content, contentRange( 0, 0 ), string.format( "0 bytes" ) )
 		end
 	end
 

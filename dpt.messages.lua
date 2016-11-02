@@ -421,6 +421,9 @@ local serviceRequestType = MessageType:new( 0x00, "Service request", 0 )
 local serviceResponseType = MessageType:new( 0x01, "Service response", 0 )
 local serviceErrorType = MessageType:new( 0x02, "Service error", 0 )
 local topicValueType = MessageType:new( 0x04, "Topic value", 0 )
+function topicValueType:markupHeaders()
+	return {}
+end
 function topicValueType:getDescription()
 	if self.topicDescription ~= nil then
 		return string.format( "%s, %s", self.name, self.topicDescription )
@@ -429,6 +432,9 @@ function topicValueType:getDescription()
 	end
 end
 local topicDeltaType = MessageType:new( 0x05, "Topic delta", 0 )
+function topicDeltaType:markupHeaders()
+	return {}
+end
 function topicDeltaType:getDescription()
 	if self.topicDescription ~= nil then
 		return string.format( "%s, %s", self.name, self.topicDescription )
