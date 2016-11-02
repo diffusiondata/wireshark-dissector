@@ -63,7 +63,7 @@ end
 
 local f_tcp_stream = diffusion.utilities.f_tcp_stream
 
-local tcpTap = Listener.new( "tcp", "tcp.flags eq 0x12" ) -- listen to SYN,ACK packets (which are sent by the *server*)
+local tcpTap = Listener.new( "tcp", "tcp.flags.syn eq 1 && tcp.flags.ack eq 1" ) -- listen to SYN,ACK packets (which are sent by the *server*)
 
 function tcpTap.packet( pinfo )
 	local streamNumber = f_tcp_stream()
