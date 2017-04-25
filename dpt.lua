@@ -9,6 +9,7 @@ dofile( USER_DIR.."dpt.utilities.lua" )
 dofile( USER_DIR.."dpt.info.lua" )
 dofile( USER_DIR.."dpt.v5.lua" )
 dofile( USER_DIR.."dpt.parse.common.lua" )
+dofile( USER_DIR.."dpt.parse.topic.details.lua" )
 dofile( USER_DIR.."dpt.parse.service.lua" )
 dofile( USER_DIR.."dpt.parse.lua" )
 dofile( USER_DIR.."dpt.messages.lua" )
@@ -73,7 +74,7 @@ function tcpTap.packet( pinfo )
 	local server = Server:new( u.f_src_host(), pinfo.src_port )
 	serverTable:add( u.f_dst_host(), pinfo.dst_port, server )
 
-	tcpConnections[streamNumber] = { 
+	tcpConnections[streamNumber] = {
 		client = client,
 		server = server
 	}
@@ -88,7 +89,7 @@ end
 -- Find the delimeterCount-th occurance of ch in this, or -1. delimeterCount indexes from zero.
 function ByteArray:indexn(ch, delimiterCount)
 	for i = 0, self:len()-1 do
-		if self:get_index( i ) == ch then 
+		if self:get_index( i ) == ch then
 			-- Found a match, but is it the right one?
 			if delimiterCount == 0 then
 				return i
@@ -113,7 +114,7 @@ function string:escapeDiff()
 	return (result:gsub( string.char(FD), "<FD>" ))
 end
 
-function string:toRecordString() 
+function string:toRecordString()
 	return string.format( "[%s]", self:gsub( string.char(FD), ", " ) )
 end
 
