@@ -153,7 +153,7 @@ local function parseV5ReconnectionRequest( tvb, client, result )
 end
 
 local function parseConnectionRequest( tvb, client )
-	-- Get the magic number 
+	-- Get the magic number
 	local magicNumberRange = tvb( 0, 1 )
 	local magicNumber = magicNumberRange:uint()
 
@@ -240,7 +240,7 @@ local function parseV4ConnectionResponse( tvb, client )
 		request = false
 	}
 
-	-- Get the magic number 
+	-- Get the magic number
 	result.magicNumberRange = tvb( 0, 1 )
 
 	-- get the protocol version number
@@ -250,7 +250,7 @@ local function parseV4ConnectionResponse( tvb, client )
 	result.connectionResponseRange = tvb( 2, 1 )
 
 	-- The size field
-	result.messageLengthSizeRange = tvb( 3, 1 ) 
+	result.messageLengthSizeRange = tvb( 3, 1 )
 
 	-- the client ID (the rest of this)
 	result.clientIDRange = tvb( 4, tvb:len() - 5 )  -- fiddly handling of trailing null character
@@ -265,7 +265,7 @@ local function parseV5ConnectionResponse( tvb, client )
 		request = false
 	}
 
-	-- Get the magic number 
+	-- Get the magic number
 	result.magicNumberRange = tvb( 0, 1 )
 
 	-- get the protocol version number
@@ -310,23 +310,32 @@ local function parseConnectionResponse( tvb, client )
 	end
 end
 
+local function findUriParameters( uriRange )
+	if uriRange( 0, 11 ):string() == "/diffusion?" then
+		return uriRange( 11 )
+	end
+
+	if uriRange( 0, 12 ):string() == "/diffusion/?" then
+		return uriRange( 12 )
+	end
+
+	return nil
+end
+
 local function uriToQueryParameters( uriRange )
 	local parameterTable = {}
 
 	info( uriRange:len() )
 	-- Check length
 	if (uriRange:len() < 12) then
-		return {}
+		return nil
 	end
 
 	-- Check start
-	local uriPrefix = uriRange( 0, 11 ):string()
-	info( uriPrefix )
-	if uriPrefix ~= "/diffusion?" then
-		return {}
+	local remainingParameters = findUriParameters( uriRange )
+	if remainingParameters == nil then
+		return nil
 	end
-
-	local remainingParameters = uriRange( 11 )
 
 	while remainingParameters:len() > 0 do
 		-- Get the parameter name
@@ -359,6 +368,9 @@ end
 local function parseWSConnectionRequest( tvb, client )
 	local uriRange = f_http_uri()
 	local parameters = uriToQueryParameters( uriRange )
+	if parameters == nil then
+		return nil
+	end
 
 	local clientType = lookupClientTypeByChar( parameters["ty"]:string() )
 	client.wsConnectionType = clientType
