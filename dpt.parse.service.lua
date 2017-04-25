@@ -469,6 +469,129 @@ local function parseUpdateResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
+local function parseServiceRequest( serviceBodyRange, service, conversation, result )
+	local tcpStream = f_tcp_stream()
+	local session = tcpConnections[tcpStream]
+	-- Store the request so the response time can be calculated
+	local isClient = session.client:matches( f_src_host(), f_src_port() )
+	if isClient then
+		-- Request is from the client so the client created the conversation Id
+		serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time_epoch() )
+	else
+		-- Request is from the server so the server created the conversation Id
+		serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time_epoch() )
+	end
+
+	-- Parse the request for service specific information
+	if service == v5.SERVICE_FETCH then
+		local selector = lengthPrefixedString( serviceBodyRange )
+		result.selector = { range = selector.fullRange, string = selector.string }
+	elseif service == v5.SERVICE_SUBSCRIBE then
+		local selector = lengthPrefixedString( serviceBodyRange )
+		result.selector = { range = selector.fullRange, string = selector.string }
+	elseif service == v5.SERVICE_UNSUBSCRIBE then
+		local selector = lengthPrefixedString( serviceBodyRange )
+		result.selector = { range = selector.fullRange, string = selector.string }
+	elseif service == v5.SERVICE_ADD_TOPIC then
+		local info = parseAddTopicRequest( serviceBodyRange )
+		result.addTopic = info
+	elseif service == v5.SERVICE_REMOVE_TOPICS then
+		local selector = lengthPrefixedString( serviceBodyRange )
+		result.selector = { range = selector.fullRange, string = selector.string }
+	elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
+		result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
+	elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
+		result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
+	elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
+		local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
+		result.controlRegInfo = info.controlRegInfo
+		result.handlerName = info.handlerName
+	elseif service == v5.SERVICE_TOPIC_CONTROL_REGISTRATION then
+		local info = parseTopicControlRegistrationRequest( serviceBodyRange )
+		result.controlRegInfo = info.controlRegInfo
+		result.handlerTopicPath = info.handlerTopicPath
+	elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
+		local info = parseControlRegistrationRequest( serviceBodyRange )
+		result.controlRegInfo = info
+	elseif service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
+		local info = parseUpdateSourceRegistrationRequest( serviceBodyRange )
+		result.updateSourceInfo = info
+	elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
+		local info = parseUpdateSourceUpdateRequest( serviceBodyRange )
+		result.updateInfo = info
+	elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
+		local info = parseUpdateSourceStateRequest( serviceBodyRange )
+		result.updateSourceInfo = info
+	elseif service == v5.SERVICE_UPDATE_TOPIC then
+		local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
+		result.updateInfo = info
+	elseif service == v5.SERVICE_SESSION_LISTENER_REGISTRATION then
+		result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
+	elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
+		result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
+	elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+		result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
+		result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_THROTTLE_CLIENT_QUEUE then
+		result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_SERVER_CONTROL_DEREGISTRATION then
+		result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
+	elseif service == v5.SERVICE_CLOSE_CLIENT then
+		result.closeClientInfo = parseCloseClient( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+		result.updateInfo = parseUpdateTopicSet( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+		result.updateInfo = parseUpdateTopicDelta( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+		result.updateInfo = parseUpdateSourceSet( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
+		result.updateInfo = parseUpdateSourceDelta( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_SOURCE_DEREGISTRATION then
+		local conversationRange, remaining, conversationId = varint( serviceBodyRange )
+		result.updateSourceInfo = {
+			conversationId = {
+				range = conversationRange,
+				int = conversationId
+			}
+		}
+	end
+	return result
+end
+
+local function parseServiceResponse( serviceBodyRange, service, conversation, result )
+	-- Parse the response for service specific information
+	if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
+		local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
+		result.newUpdateSourceState = info
+	elseif service == v5.SERVICE_GET_SESSION_DETAILS then
+		result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
+		result.updateResult = parseUpdateResult( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
+		result.updateResult = parseUpdateResult( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
+		result.updateResult = parseUpdateResult( serviceBodyRange )
+	elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
+		result.updateResult = parseUpdateResult( serviceBodyRange )
+	end
+
+	-- Calculate the response time
+	local reqTime
+	local session = tcpConnections[tcpStream]
+	local isClient = session.client:matches( f_src_host(), f_src_port() )
+	if isClient then
+		-- Response is from the client so the server created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
+	else
+		-- Response is from the server so the client created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
+	end
+	result.responseTime = tostring( f_time_epoch() - reqTime )
+
+	return result
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -484,127 +607,48 @@ local function parseAsV4ServiceMessage( range )
 			conversation = { range = conversationRange, int = conversation },
 			body = serviceBodyRange }
 
-		local tcpStream = f_tcp_stream()
 		if mode == v5.MODE_REQUEST then
-			-- Store the request so the response time can be calculated
-			local session = tcpConnections[tcpStream]
-			local isClient = session.client:matches( f_src_host(), f_src_port() )
-			if isClient then
-				-- Request is from the client so the client created the conversation Id
-				serviceMessageTable:addRequest( tcpStream, session.client, conversation, f_time_epoch() )
-			else
-				-- Request is from the server so the server created the conversation Id
-				serviceMessageTable:addRequest( tcpStream, session.server, conversation, f_time_epoch() )
-			end
-
-			-- Parse the request for service specific information
-			if service == v5.SERVICE_FETCH then
-				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.fullRange, string = selector.string }
-			elseif service == v5.SERVICE_SUBSCRIBE then
-				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.fullRange, string = selector.string }
-			elseif service == v5.SERVICE_UNSUBSCRIBE then
-				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.fullRange, string = selector.string }
-			elseif service == v5.SERVICE_ADD_TOPIC then
-				local info = parseAddTopicRequest( serviceBodyRange )
-				result.addTopic = info
-			elseif service == v5.SERVICE_REMOVE_TOPICS then
-				local selector = lengthPrefixedString( serviceBodyRange )
-				result.selector = { range = selector.fullRange, string = selector.string }
-			elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
-				result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
-			elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
-				result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
-			elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
-				local info = parseAuthenticationControlRegistrationRequest( serviceBodyRange )
-				result.controlRegInfo = info.controlRegInfo
-				result.handlerName = info.handlerName
-			elseif service == v5.SERVICE_TOPIC_CONTROL_REGISTRATION then
-				local info = parseTopicControlRegistrationRequest( serviceBodyRange )
-				result.controlRegInfo = info.controlRegInfo
-				result.handlerTopicPath = info.handlerTopicPath
-			elseif service == v5.SERVICE_SERVER_CONTROL_REGISTRATION then
-				local info = parseControlRegistrationRequest( serviceBodyRange )
-				result.controlRegInfo = info
-			elseif service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
-				local info = parseUpdateSourceRegistrationRequest( serviceBodyRange )
-				result.updateSourceInfo = info
-			elseif service == v5.SERVICE_UPDATE_SOURCE_UPDATE then
-				local info = parseUpdateSourceUpdateRequest( serviceBodyRange )
-				result.updateInfo = info
-			elseif service == v5.SERVICE_UPDATE_SOURCE_STATE then
-				local info = parseUpdateSourceStateRequest( serviceBodyRange )
-				result.updateSourceInfo = info
-			elseif service == v5.SERVICE_UPDATE_TOPIC then
-				local info = parseNonExclusiveUpdateRequest( serviceBodyRange );
-				result.updateInfo = info
-			elseif service == v5.SERVICE_SESSION_LISTENER_REGISTRATION then
-				result.sessionListenerRegInfo = parseSessionDetailsListenerRegistrationRequest( serviceBodyRange );
-			elseif service == v5.SERVICE_SESSION_DETAILS_EVENT then
-				result.sessionListenerEventInfo = parseSessionDetailsEvent( serviceBodyRange )
-			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
-				result.lookupSessionDetailsRequest = parseGetSessionDetailsRequest( serviceBodyRange )
-			elseif service == v5.SERVICE_SET_CLIENT_QUEUE_CONFLATION then
-				result.clientQueueConflationInfo = parseSetClientQueueConflationRequest( serviceBodyRange )
-			elseif service == v5.SERVICE_THROTTLE_CLIENT_QUEUE then
-				result.clientThrottlerInfo = parseSetClientQueueThrottlerRequest( serviceBodyRange )
-			elseif service == v5.SERVICE_SERVER_CONTROL_DEREGISTRATION then
-				result.controlDeregInfo = parseControlRegistrationParameters( serviceBodyRange )
-			elseif service == v5.SERVICE_CLOSE_CLIENT then
-				result.closeClientInfo = parseCloseClient( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
-				result.updateInfo = parseUpdateTopicSet( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
-				result.updateInfo = parseUpdateTopicDelta( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
-				result.updateInfo = parseUpdateSourceSet( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
-				result.updateInfo = parseUpdateSourceDelta( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_SOURCE_DEREGISTRATION then
-				local conversationRange, remaining, conversationId = varint( serviceBodyRange )
-				result.updateSourceInfo = {
-					conversationId = {
-						range = conversationRange,
-						int = conversationId
-					}
-				}
-			end
-
-		elseif  mode == v5.MODE_RESPONSE then
-
-			-- Parse the response for service specific information
-			if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
-				local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
-				result.newUpdateSourceState = info
-			elseif service == v5.SERVICE_GET_SESSION_DETAILS then
-				result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
-				result.updateResult = parseUpdateResult( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_TOPIC_DELTA then
-				result.updateResult = parseUpdateResult( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_SOURCE_SET then
-				result.updateResult = parseUpdateResult( serviceBodyRange )
-			elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
-				result.updateResult = parseUpdateResult( serviceBodyRange )
-			end
-
-			-- Calculate the response time
-			local reqTime
-			local session = tcpConnections[tcpStream]
-			local isClient = session.client:matches( f_src_host(), f_src_port() )
-			if isClient then
-				-- Response is from the client so the server created the conversation Id
-				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
-			else
-				-- Response is from the server so the client created the conversation Id
-				reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
-			end
-			result.responseTime = tostring( f_time_epoch() - reqTime )
+			return parseServiceRequest( serviceBodyRange, service, conversation, result )
+		elseif mode == v5.MODE_REQUEST then
+			return parseServiceResponse( serviceBodyRange, service, conversation, result )
+		else
+			return result
 		end
+	else
+		return {}
+	end
+end
 
-		return result
+local function parseAsV59ServiceMessage( modeRange, range )
+
+	if range ~= nil and range:len() >= 2 then
+		-- Parse service header
+		local serviceRange = range:range( 0, 1 )
+		local service = serviceRange:uint()
+		local conversationRange = range:range( 1, 1 )
+		local conversation = conversationRange:uint()
+		local mode = modeRange:uint()
+		local serviceBodyRange
+		if range:len() > 2 then
+			serviceBodyRange = range:range( 2 )
+		else
+			serviceBodyRange = range:range( 1, 0 )
+		end
+		-- Get values for service node
+		local serviceNodeRange = range
+
+		local result = { range = serviceNodeRange, id = { range = serviceRange, int = service },
+			mode = { range = modeRange, int = mode },
+			conversation = { range = conversationRange, int = conversation },
+			body = serviceBodyRange }
+
+		if mode == v5.P9_MODE_REQUEST then
+			return parseServiceRequest( serviceBodyRange, service, conversation, result )
+		elseif mode == v5.P9_MODE_REQUEST then
+			return parseServiceResponse( serviceBodyRange, service, conversation, result )
+		else
+			return result
+		end
 	else
 		return {}
 	end
@@ -612,7 +656,8 @@ end
 
 -- Package footer
 master.parseService = {
-	parseAsV4ServiceMessage = parseAsV4ServiceMessage
+	parseAsV4ServiceMessage = parseAsV4ServiceMessage,
+	parseAsV59ServiceMessage = parseAsV59ServiceMessage
 }
 diffusion = master
 return master.parseService

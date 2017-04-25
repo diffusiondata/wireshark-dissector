@@ -12,6 +12,7 @@ end
 local dptProto = diffusion.proto.dptProto
 local serviceIdentity = diffusion.v5.serviceIdentity
 local modeValues = diffusion.v5.modeValues
+local p9ModeValues = diffusion.v5.p9ModeValues
 local statusResponseBytes = diffusion.proto.statusResponseBytes
 local v5 = diffusion.v5
 
@@ -137,7 +138,7 @@ local function addUpdateSourceInformation( parentNode, info )
 end
 
 -- Add service information to command service messages
-local function addServiceInformation( parentTreeNode, service )
+local function addServiceInformation( parentTreeNode, service, client )
 	if service ~= nil and service.range ~= nil then
 		local serviceNodeDesc = string.format( "%d bytes", service.range:len() )
 		-- Create service node
@@ -145,7 +146,11 @@ local function addServiceInformation( parentTreeNode, service )
 
 		-- Add command header
 		serviceNode:add( dptProto.fields.serviceIdentity, service.id.range, service.id.int )
-		serviceNode:add( dptProto.fields.serviceMode, service.mode.range, service.mode.int )
+		if client.protoVersion ~= nil and client.protoVersion >= 9 then
+			serviceNode:add( dptProto.fields.serviceModeP9, service.mode.range, service.mode.int )
+		else
+			serviceNode:add( dptProto.fields.serviceMode, service.mode.range, service.mode.int )
+		end
 		serviceNode:add( dptProto.fields.conversation, service.conversation.range, service.conversation.int )
 
 		-- Add service specific information
@@ -254,8 +259,13 @@ local function lookupServiceName( serviceId )
 end
 
 -- Lookup mode name
-local function lookupModeName( modeId )
-	local modeString = modeValues[modeId]
+local function lookupModeName( messageType, modeId )
+	local modeString = p9ModeValues[messageType]
+	if modeString ~= nil then
+		return modeString
+	end
+
+	modeString = modeValues[modeId]
 	if modeString == nil then
 		return string.format( "Unknown mode (%d)", modeId )
 	end

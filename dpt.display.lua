@@ -1,6 +1,6 @@
 
 -- Display package
--- This package adds information to the dissection tree that is displayed in Wireshark. 
+-- This package adds information to the dissection tree that is displayed in Wireshark.
 
 -- Package header
 local master = diffusion or {}
@@ -120,7 +120,7 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 		local serviceId = serviceInformation.id.int
 		local mode = serviceInformation.mode.int
 		local serviceString = lookupServiceName( serviceId )
-		local modeString = lookupModeName( mode )
+		local modeString = lookupModeName( messageType.id, mode )
 
 		-- Lookup service status
 		if serviceInformation.status ~= nil then
@@ -129,13 +129,9 @@ local function addDescription( pinfo, messageType, headerInfo, serviceInformatio
 			modeString = string.format( "%s %s", modeString, statusString)
 		end
 
-		if hasSelector( serviceId ) then
+		if hasSelector( serviceId ) and serviceInformation.selector ~= nil then
 			-- Handle services that benefit from a selector in the description
-			if serviceInformation.selector ~= nil then
-				descriptions:addDescription( string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string ) )
-			else
-				descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
-			end
+			descriptions:addDescription( string.format( "Service: %s %s '%s'", serviceString, modeString, serviceInformation.selector.string ) )
 		else
 			descriptions:addDescription( string.format( "Service: %s %s", serviceString, modeString ) )
 		end

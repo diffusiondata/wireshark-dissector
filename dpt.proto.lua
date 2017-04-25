@@ -38,6 +38,12 @@ local capabilities = {
     [0x06] = "Supports compressed and base 64 encoded data messages",
     [0x07] = "Supports encrypted, compressed and base 64 encoded data messages",
     [0x08] = "Is a Unified API client",
+    [0x09] = "Supports encrypted data messages and is a Unified API client",
+    [0x0a] = "Supports compressed data messages and is a Unified API client",
+    [0x0b] = "Supports encrypted, compressed data messages and is a Unified API client",
+    [0x0c] = "Supports base 64 encoded message and is a Unified API client",
+    [0x0d] = "Supports encrypted, base 64 encoded data messages and is a Unified API client",
+    [0x0e] = "Supports compressed, base 64 encoded data messages and is a Unified API client",
     [0x0f] = "Supports encrypted, compressed, base 64 encoded data messages and is a Unified API client"
 }
 
@@ -282,6 +288,7 @@ dptProto.fields.ackId = ProtoField.string( "dpt.header.ackId", "Acknowledgement 
 dptProto.fields.service = ProtoField.string( "dpt.service", "Service" )
 dptProto.fields.serviceIdentity = ProtoField.uint8( "dpt.service.identity", "Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.serviceMode = ProtoField.uint8( "dpt.service.mode", "Mode", base.HEX, v5.modeValues )
+dptProto.fields.serviceModeP9 = ProtoField.uint8( "dpt.service.mode.p9", "Mode", base.HEX, v5.p9ModeValues )
 dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conversation ID" )
 dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
@@ -356,7 +363,9 @@ dptProto.fields.clientCloseReason = ProtoField.string( "dpt.service.clientContro
 -- Package footer
 master.proto = {
 	dptProto = dptProto,
-	statusResponseBytes = statusResponseBytes
+	statusResponseBytes = statusResponseBytes,
+	TOPIC_VALUE_MESSAGE_TYPE = 0x04,
+	TOPIC_DELTA_MESSAGE_TYPE = 0x05
 }
 diffusion = master
 return master.proto
