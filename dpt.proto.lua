@@ -13,7 +13,7 @@ local v5 = diffusion.v5
 local dptProto = Proto( "DPT", "Diffusion Protocol")
 
 local responseCodes = {
-    [100] = "OK - Connection Successful", 
+    [100] = "OK - Connection Successful",
     [101] = "Invalid Connection Protocol",
     [103] = "One or more of the specified topics are invalid",
     [105] = "Reconnection Successful",
@@ -81,25 +81,6 @@ local clientTypesByValue = {
     [0x29] = "UDP .Net Client",
     [0x2a] = "UDP Silverlight Client",
     [0x2b] = "UDP Publisher Client"
-}
-
-local topicTypesByByte = {
-    [0x00] = "NONE",
-    [0x01] = "STATELESS",
-    [0x02] = "DELEGATED",
-    [0x03] = "SINGLE_VALUE",
-    [0x04] = "RECORD",
-    [0x05] = "PROTOCOL_BUFFER",
-    [0x06] = "CUSTOM",
-    [0x07] = "SLAVE",
-    [0x08] = "SERVICE",
-    [0x09] = "PAGED_STRING",
-    [0x0a] = "PAGED_RECORD",
-    [0x0b] = "TOPIC_NOTIFY",
-    [0x0c] = "ROUTING",
-    [0x0d] = "CHILD_LIST",
-    [0x0e] = "BINARY",
-    [0x0f] = "JSON",
 }
 
 local statusResponseBytes = {
@@ -293,7 +274,7 @@ dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conver
 dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
 dptProto.fields.topicPath = ProtoField.string( "dpt.service.topicInfo.topicPath", "Topic Path" )
-dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, topicTypesByByte )
+dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, diffusion.const.topicTypes.byByte )
 dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic selector" )
 dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
@@ -369,4 +350,3 @@ master.proto = {
 }
 diffusion = master
 return master.proto
-
