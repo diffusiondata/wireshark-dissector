@@ -299,6 +299,11 @@ dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId"
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
 dptProto.fields.topicReference = ProtoField.uint32( "dpt.service.topicReference", "Topic reference" )
+dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )
+dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details.auto.subscribe", "Auto-subscribe", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsTopicReference = ProtoField.string( "dpt.topic.details.topic.reference", "Topic reference" )
+dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.prperties.number", "Topic properties" )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )

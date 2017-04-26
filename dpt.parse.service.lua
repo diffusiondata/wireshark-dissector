@@ -344,14 +344,19 @@ end
 local function parseAddTopicRequest( range )
 	local topicName = lengthPrefixedString( range )
 	local referenceRange, remaining, reference = varint( topicName.remaining )
-	local topicDetails = parseTopicDetails( remaining )
+	local topicDetails, remaining = parseTopicDetails( remaining )
+	local content
+	if remaining ~= nil and remaining:range( 0, 1 ):int() == 1 then
+		content = parseContent( remaining:range( 1 ) )
+	end
 	return {
 		topicName = topicName,
 		reference = {
 			range = referenceRange,
 			int = reference
 		},
-		topicDetails = topicDetails
+		topicDetails = topicDetails,
+		content = content
 	}
 end
 

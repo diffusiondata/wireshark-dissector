@@ -1,6 +1,6 @@
 
 -- Display service package
--- This package adds information about services to the dissection tree that is displayed in Wireshark. 
+-- This package adds information about services to the dissection tree that is displayed in Wireshark.
 
 -- Package header
 local master = diffusion or {}
@@ -16,8 +16,26 @@ local p9ModeValues = diffusion.v5.p9ModeValues
 local statusResponseBytes = diffusion.proto.statusResponseBytes
 local v5 = diffusion.v5
 
+local function addContent( parentNode, content )
+	if content.encoding ~= nil then
+		parentNode:add( dptProto.fields.encodingHdr, content.encoding.range, content.encoding.int )
+	end
+	if content.length ~= nil then
+		parentNode:add( dptProto.fields.contentLength, content.length.range, content.length.int )
+	end
+	if content.bytes ~= nil then
+		parentNode:add( dptProto.fields.content, content.bytes.range )
+	end
+end
+
 local function addTopicDetails( parentNode, details )
 	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+	if details.attributes then
+		parentNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
+		parentNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
+		parentNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
+		parentNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
+	end
 end
 
 -- Add description of a detail type set to the tree
@@ -88,6 +106,9 @@ local function addAddTopicInformation( parentNode, info )
 	if info.topicDetails ~= nil then
 		addTopicDetails( parentNode, info.topicDetails )
 	end
+	if info.content ~= nil then
+		addContent( parentNode, info.content )
+	end
 end
 
 -- Add update topic request information
@@ -108,15 +129,7 @@ local function addUpdateTopicInformation( parentNode, info )
 			parentNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
 		end
 		if update.content ~= nil then
-			if update.content.encoding ~= nil then
-				parentNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
-			end
-			if update.content.length ~= nil then
-				parentNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
-			end
-			if update.content.bytes ~= nil then
-				parentNode:add( dptProto.fields.content, update.content.bytes.range )
-			end
+			addContent( parentNode, update.content )
 		end
 	end
 end
