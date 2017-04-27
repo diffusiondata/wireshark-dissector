@@ -50,7 +50,7 @@ end
 local function parseTopicDetails( detailsRange )
 	local any = detailsRange:range( 0, 1 )
 	if any:int() == 0 then
-		return { range = any, level = "NONE", type = { type = 0, range = any } }
+		return { range = any, level = "NONE", type = { type = diffusion.const.topicTypes.NONE, range = any } }
 	else
 		local type = detailsRange:range( 1, 1 )
 		local typeRange = detailsRange:range( 0, 2 )
