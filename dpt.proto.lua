@@ -308,6 +308,7 @@ dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.properties
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
 dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
+dptProto.fields.initialValue = ProtoField.string( "dpt.service.topic.initial.value", "Initial value" )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )

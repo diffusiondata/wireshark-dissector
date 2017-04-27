@@ -113,7 +113,10 @@ local function addAddTopicInformation( parentNode, info )
 		addTopicDetails( parentNode, info.topicDetails )
 	end
 	if info.content ~= nil then
-		addContent( parentNode, info.content )
+		local intialValueNode = parentNode:add( dptProto.fields.initialValue, "" )
+		addContent( intialValueNode, info.content )
+	else
+		parentNode:add( dptProto.fields.initialValue, "NONE" )
 	end
 end
 
