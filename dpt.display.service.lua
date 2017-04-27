@@ -32,6 +32,10 @@ local function addTopicDetails( parentNode, details )
 	local detailsNode = parentNode:add( dptProto.fields.topicDetails, details.range, "" )
 	detailsNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 	detailsNode:add( dptProto.fields.topicDetailsLevel, details.level )
+	if details.schema ~= nil then
+		info( diffusion.utilities.dump( details.schema ) )
+		detailsNode:add( dptProto.fields.topicDetailsSchema, details.schema.fullRange, details.schema.string )
+	end
 	if details.attributes then
 		detailsNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
 		detailsNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
