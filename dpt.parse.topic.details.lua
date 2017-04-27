@@ -39,7 +39,10 @@ local function parseAttributes( type, range )
 	}
 
 	-- Currently only Universal topic details are fully parsed
-	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
+	if type == diffusion.const.topicTypes.JSON or
+		type == diffusion.const.topicTypes.BINARY or
+		type == diffusion.const.topicTypes.STATELESS then
+
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength
 		return parsedAttributes, remainingAfterTopicProperties
 	else
@@ -49,7 +52,10 @@ local function parseAttributes( type, range )
 end
 
 local function parseSchema( type, range )
-	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
+	if type == diffusion.const.topicTypes.JSON or
+		type == diffusion.const.topicTypes.BINARY or
+		type == diffusion.const.topicTypes.STATELESS then
+
 		return { rangeLength = 0 }, range
 	end
 	return {
