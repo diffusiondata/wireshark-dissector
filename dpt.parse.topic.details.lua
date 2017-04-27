@@ -15,11 +15,13 @@ local function parseTopicProperties( range )
 	local numRange, remaining, numberOfProperties = varint( range )
 	if numberOfProperties == 0 then
 		return {
-			number = { range = numRange, number = numberOfProperties }
+			number = { range = numRange, number = numberOfProperties },
+			rangeLength = 1
 		}, remaining
 	end
 	return {
-		number = { range = numRange, number = numberOfProperties }
+		number = { range = numRange, number = numberOfProperties },
+		rangeLength = range:len()
 	}, nil
 end
 
@@ -31,20 +33,25 @@ local function parseAttributes( type, range )
 
 	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
 		return {
+			rangeLength = 3 + topicProperties.rangeLength,
 			autoSubscribe = autoSubscribe,
 			tidiesOnUnsubscribe = tidiesOnUnsubscribe,
 			reference = reference,
 			topicProperties = topicProperties
 		}, remainingAfterTopicProperties
 	end
-	return {}
+	return {
+		rangeLength = range:len()
+	}
 end
 
 local function parseSchema( type, range )
 	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
-		return {}, range
+		return { rangeLength = 0 }, range
 	end
-	return nil
+	return {
+		rangeLength = range:len()
+	}
 end
 
 local function parseTopicDetails( detailsRange )
@@ -55,21 +62,24 @@ local function parseTopicDetails( detailsRange )
 		local type = detailsRange:range( 1, 1 )
 		local typeRange = detailsRange:range( 0, 2 )
 		local level = "BASIC"
+		local rangeLength = 3
 
 		local schema, remainingAfterSchema
 		if detailsRange:range( 2, 1 ):int() ~= 0 then
 			level = "SCHEMA"
 			schema, remainingAfterSchema = parseSchema( type:int(), detailsRange:range( 3 ) )
+			rangeLength = rangeLength + schema.rangeLength
 		end
 
 		local attributes, remainingAfterAttributes
 		if remainingAfterSchema ~= nil and remainingAfterSchema:range( 0, 1 ):int() ~= 0 then
 			level = "FULL"
 			attributes, remainingAfterAttributes = parseAttributes( type:int(), remainingAfterSchema:range( 1 ) )
+			rangeLength = rangeLength + attributes.rangeLength + 1
 		end
 
 		return {
-			range = typeRange,
+			range = detailsRange:range( 0, rangeLength ),
 			level = level,
 			type = { type = type:int(), range = typeRange },
 			schema = schema,

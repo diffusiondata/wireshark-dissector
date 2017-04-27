@@ -29,7 +29,7 @@ local function addContent( parentNode, content )
 end
 
 local function addTopicDetails( parentNode, details )
-	local detailsNode = parentNode:add( dptProto.fields.topicDetails )
+	local detailsNode = parentNode:add( dptProto.fields.topicDetails, details.range, "" )
 	detailsNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 	detailsNode:add( dptProto.fields.topicDetailsLevel, details.level )
 	if details.attributes then
