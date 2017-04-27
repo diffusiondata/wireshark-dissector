@@ -29,12 +29,13 @@ local function addContent( parentNode, content )
 end
 
 local function addTopicDetails( parentNode, details )
-	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+	local detailsNode = parentNode:add( dptProto.fields.topicDetails )
+	detailsNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 	if details.attributes then
-		parentNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
-		parentNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
-		parentNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
-		parentNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
+		detailsNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
+		detailsNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
+		detailsNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
+		detailsNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
 	end
 end
 

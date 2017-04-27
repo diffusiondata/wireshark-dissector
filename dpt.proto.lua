@@ -296,14 +296,16 @@ dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta ty
 dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, updateResponseByBytes )
 dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
 
--- Add topic
-dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
-dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
+-- Topic details
 dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )
 dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details.auto.subscribe", "Auto-subscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTopicReference = ProtoField.string( "dpt.topic.details.topic.reference", "Topic reference" )
 dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.properties.number", "Topic properties" )
+
+-- Add topic
+dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
+dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )
