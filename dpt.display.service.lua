@@ -101,7 +101,7 @@ local function addAddTopicInformation( parentNode, info )
 		parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
 	end
 	if info.reference ~= nil then
-		parentNode:add( dptProto.fields.topicReference, info.reference.range, info.reference.int )
+		parentNode:add( dptProto.fields.detailsReference, info.reference.range, info.reference.int )
 	end
 	if info.topicDetails ~= nil then
 		addTopicDetails( parentNode, info.topicDetails )

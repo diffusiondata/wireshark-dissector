@@ -298,7 +298,7 @@ dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId"
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
-dptProto.fields.topicReference = ProtoField.uint32( "dpt.service.topicReference", "Topic reference" )
+dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
 dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )
 dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details.auto.subscribe", "Auto-subscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
