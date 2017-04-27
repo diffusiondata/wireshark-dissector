@@ -298,6 +298,7 @@ dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId"
 
 -- Topic details
 dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )
+dptProto.fields.topicDetailsLevel = ProtoField.string( "dpt.topic.details.level", "Detail level" )
 dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details.auto.subscribe", "Auto-subscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTopicReference = ProtoField.string( "dpt.topic.details.topic.reference", "Topic reference" )

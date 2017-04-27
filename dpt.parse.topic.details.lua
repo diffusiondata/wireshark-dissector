@@ -50,25 +50,27 @@ end
 local function parseTopicDetails( detailsRange )
 	local any = detailsRange:range( 0, 1 )
 	if any:int() == 0 then
-		return { range = any, type = { type = 0, range = any } }
+		return { range = any, level = "NONE", type = { type = 0, range = any } }
 	else
 		local type = detailsRange:range( 1, 1 )
 		local typeRange = detailsRange:range( 0, 2 )
+		local level = "BASIC"
 
 		local schema, remainingAfterSchema
 		if detailsRange:range( 2, 1 ):int() ~= 0 then
-			-- Schema
+			level = "SCHEMA"
 			schema, remainingAfterSchema = parseSchema( type:int(), detailsRange:range( 3 ) )
 		end
 
 		local attributes, remainingAfterAttributes
 		if remainingAfterSchema ~= nil and remainingAfterSchema:range( 0, 1 ):int() ~= 0 then
-			-- Attributes
+			level = "FULL"
 			attributes, remainingAfterAttributes = parseAttributes( type:int(), remainingAfterSchema:range( 1 ) )
 		end
 
 		return {
 			range = typeRange,
+			level = level,
 			type = { type = type:int(), range = typeRange },
 			schema = schema,
 			attributes = attributes
