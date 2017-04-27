@@ -31,18 +31,21 @@ local function parseAttributes( type, range )
 	local reference = lengthPrefixedString( range( 2 ) )
 	local topicProperties, remainingAfterTopicProperties = parseTopicProperties( reference.remaining )
 
-	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
-		return {
-			rangeLength = 3 + topicProperties.rangeLength,
-			autoSubscribe = autoSubscribe,
-			tidiesOnUnsubscribe = tidiesOnUnsubscribe,
-			reference = reference,
-			topicProperties = topicProperties
-		}, remainingAfterTopicProperties
-	end
-	return {
-		rangeLength = range:len()
+	local parsedAttributes = {
+		autoSubscribe = autoSubscribe,
+		tidiesOnUnsubscribe = tidiesOnUnsubscribe,
+		reference = reference,
+		topicProperties = topicProperties
 	}
+
+	-- Currently only Universal topic details are fully parsed
+	if type == diffusion.const.topicTypes.JSON or type == diffusion.const.topicTypes.BINARY then
+		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength
+		return parsedAttributes, remainingAfterTopicProperties
+	else
+		parsedAttributes.rangeLength = range:len()
+		return parsedAttributes, remainingAfterTopicProperties
+	end
 end
 
 local function parseSchema( type, range )
