@@ -45,6 +45,9 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.emptyValue ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsEmptyValue, details.attributes.emptyValue.fullRange, details.attributes.emptyValue.string )
 		end
+		if details.attributes.masterTopic ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsMasterTopic, details.attributes.masterTopic.fullRange, details.attributes.masterTopic.string )
+		end
 	end
 end
 

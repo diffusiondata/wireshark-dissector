@@ -45,10 +45,14 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + emptyValue.fullRange:len()
 
 		return parsedAttributes, emptyValue.remaining
-	end
+	elseif type == diffusion.const.topicTypes.SLAVE then
+		local masterTopic = lengthPrefixedString( remainingAfterTopicProperties )
 
-	-- Currently only Universal topic details are fully parsed
-	if type == diffusion.const.topicTypes.JSON or
+		parsedAttributes.masterTopic = masterTopic
+		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + masterTopic.fullRange:len()
+
+		return parsedAttributes, masterTopic.remaining
+	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
 		type == diffusion.const.topicTypes.SINGLE_VALUE then
@@ -64,7 +68,8 @@ end
 local function parseSchema( type, range )
 	if type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
-		type == diffusion.const.topicTypes.STATELESS then
+		type == diffusion.const.topicTypes.STATELESS or
+		type == diffusion.const.topicTypes.SLAVE then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or
