@@ -304,6 +304,7 @@ dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details
 dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
 dptProto.fields.topicDetailsTopicReference = ProtoField.string( "dpt.topic.details.topic.reference", "Topic reference" )
 dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.properties.number", "Topic properties" )
+dptProto.fields.topicDetailsEmptyValue = ProtoField.string( "dpt.topic.empty.field", "Empty field value" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

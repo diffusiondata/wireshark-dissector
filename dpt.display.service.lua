@@ -36,11 +36,15 @@ local function addTopicDetails( parentNode, details )
 		info( diffusion.utilities.dump( details.schema ) )
 		detailsNode:add( dptProto.fields.topicDetailsSchema, details.schema.fullRange, details.schema.string )
 	end
-	if details.attributes then
+	if details.attributes ~= nil then
 		detailsNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
 		detailsNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
 		detailsNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
 		detailsNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
+
+		if details.attributes.emptyValue ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsEmptyValue, details.attributes.emptyValue.fullRange, details.attributes.emptyValue.string )
+		end
 	end
 end
 

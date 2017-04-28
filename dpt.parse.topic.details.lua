@@ -38,6 +38,15 @@ local function parseAttributes( type, range )
 		topicProperties = topicProperties
 	}
 
+	if type == diffusion.const.topicTypes.RECORD then
+		local emptyValue = lengthPrefixedString( remainingAfterTopicProperties )
+
+		parsedAttributes.emptyValue = emptyValue
+		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + emptyValue.fullRange:len()
+
+		return parsedAttributes, emptyValue.remaining
+	end
+
 	-- Currently only Universal topic details are fully parsed
 	if type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
@@ -58,7 +67,9 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.STATELESS then
 
 		return { rangeLength = 0 }, range
-	elseif type == diffusion.const.topicTypes.SINGLE_VALUE then
+	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or
+		type == diffusion.const.topicTypes.RECORD then
+
 		local schema = lengthPrefixedString( range )
 		return {
 			schema = schema,
