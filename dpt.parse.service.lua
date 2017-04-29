@@ -235,13 +235,13 @@ local function parseControlRegistrationRequest( range )
 end
 
 local function parseAuthenticationControlRegistrationRequest( range )
-	local result, remaining = parseControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationParameters( range )
 	local handlerName = lengthPrefixedString( remaining )
 	return { controlRegInfo = result, handlerName = handlerName }
 end
 
 local function parseTopicControlRegistrationRequest( range )
-	local result, remaining = parseControlRegistrationRequest( range )
+	local result, remaining = parseControlRegistrationParameters( range )
 	local topicPath = lengthPrefixedString( remaining )
 	return { controlRegInfo = result, handlerTopicPath = topicPath }
 end
