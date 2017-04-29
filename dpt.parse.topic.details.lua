@@ -62,7 +62,8 @@ local function parseAttributes( type, range )
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
-		type == diffusion.const.topicTypes.SINGLE_VALUE then
+		type == diffusion.const.topicTypes.SINGLE_VALUE or
+		type == diffusion.const.topicTypes.CHILD_LIST then
 
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength
 		return parsedAttributes, remainingAfterTopicProperties
@@ -77,7 +78,8 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
 		type == diffusion.const.topicTypes.SLAVE or
-		type == diffusion.const.topicTypes.ROUTING then
+		type == diffusion.const.topicTypes.ROUTING or
+		type == diffusion.const.topicTypes.CHILD_LIST then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or
