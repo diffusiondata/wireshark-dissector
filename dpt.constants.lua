@@ -10,7 +10,7 @@ end
 
 -- Constants used by topic types
 local topicTypes = {
-    NODE = 0x00,
+    NONE = 0x00,
     STATELESS = 0x01,
     DELEGATED = 0x02,
     SINGLE_VALUE = 0x03,
