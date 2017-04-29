@@ -48,6 +48,9 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.masterTopic ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsMasterTopic, details.attributes.masterTopic.fullRange, details.attributes.masterTopic.string )
 		end
+		if details.attributes.routingHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRoutingHandler, details.attributes.routingHandler.fullRange, details.attributes.routingHandler.string )
+		end
 	end
 end
 
