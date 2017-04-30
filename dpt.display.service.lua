@@ -51,6 +51,9 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.routingHandler ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsRoutingHandler, details.attributes.routingHandler.fullRange, details.attributes.routingHandler.string )
 		end
+		if details.attributes.cachesMetadata ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCachesMetadata, details.attributes.cachesMetadata.range )
+		end
 	end
 end
 

@@ -307,6 +307,7 @@ dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.properties
 dptProto.fields.topicDetailsEmptyValue = ProtoField.string( "dpt.topic.empty.field", "Empty field value" )
 dptProto.fields.topicDetailsMasterTopic = ProtoField.string( "dpt.topic.master.topic", "Master topic" )
 dptProto.fields.topicDetailsRoutingHandler = ProtoField.string( "dpt.topic.routing.handler", "Routing handler" )
+dptProto.fields.topicDetailsCachesMetadata = ProtoField.uint8( "dpt.topic.caches.metadata", "Caches metadata", base.HEX, booleanByBtyes )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

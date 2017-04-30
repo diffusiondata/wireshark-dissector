@@ -59,6 +59,11 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + routingHandler.fullRange:len()
 
 		return parsedAttributes, routingHandler.remaining
+	elseif type == diffusion.const.topicTypes.TOPIC_NOTIFY then
+		parsedAttributes.cachesMetadata = { range = remainingAfterTopicProperties:range( 0, 1 ) }
+		parsedAttributes.rangeLength = 4 + topicProperties.rangeLength
+
+		return parsedAttributes, remainingAfterTopicProperties:range( 1 )
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
@@ -80,6 +85,7 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.SLAVE or
 		type == diffusion.const.topicTypes.ROUTING or
 		type == diffusion.const.topicTypes.CHILD_LIST then
+		type == diffusion.const.topicTypes.TOPIC_NOTIFY then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or
