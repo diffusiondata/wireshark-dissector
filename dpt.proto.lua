@@ -308,6 +308,9 @@ dptProto.fields.topicDetailsEmptyValue = ProtoField.string( "dpt.topic.empty.fie
 dptProto.fields.topicDetailsMasterTopic = ProtoField.string( "dpt.topic.master.topic", "Master topic" )
 dptProto.fields.topicDetailsRoutingHandler = ProtoField.string( "dpt.topic.routing.handler", "Routing handler" )
 dptProto.fields.topicDetailsCachesMetadata = ProtoField.uint8( "dpt.topic.caches.metadata", "Caches metadata", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsServiceType = ProtoField.string( "dpt.topic.service.type", "Service type" )
+dptProto.fields.topicDetailsServiceHandler = ProtoField.string( "dpt.topic.service.handler", "Service handler" )
+dptProto.fields.topicDetailsRequestTimeout = ProtoField.uint32( "dpt.topic.service.request.timeout", "Request timeout" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

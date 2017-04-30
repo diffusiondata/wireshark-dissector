@@ -64,6 +64,17 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 4 + topicProperties.rangeLength
 
 		return parsedAttributes, remainingAfterTopicProperties:range( 1 )
+	elseif type == diffusion.const.topicTypes.SERVICE then
+		local serviceType = lengthPrefixedString( remainingAfterTopicProperties )
+		local handler = lengthPrefixedString( serviceType.remaining )
+		local requestTimeoutRange, remaining, requestTimeout = varint( handler.remaining )
+
+		parsedAttributes.serviceType = serviceType
+		parsedAttributes.serviceHandler = handler
+		parsedAttributes.requestTimeout = { range = requestTimeoutRange, number = requestTimeout }
+		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + serviceType.fullRange:len() + handler.fullRange:len() + requestTimeoutRange:len()
+
+		return parsedAttributes, remaining
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
@@ -84,8 +95,9 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.STATELESS or
 		type == diffusion.const.topicTypes.SLAVE or
 		type == diffusion.const.topicTypes.ROUTING or
-		type == diffusion.const.topicTypes.CHILD_LIST then
-		type == diffusion.const.topicTypes.TOPIC_NOTIFY then
+		type == diffusion.const.topicTypes.CHILD_LIST or
+		type == diffusion.const.topicTypes.TOPIC_NOTIFY or
+		type == diffusion.const.topicTypes.SERVICE then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or

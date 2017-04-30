@@ -54,6 +54,15 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.cachesMetadata ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsCachesMetadata, details.attributes.cachesMetadata.range )
 		end
+		if details.attributes.serviceType ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsServiceType, details.attributes.serviceType.fullRange, details.attributes.serviceType.string )
+		end
+		if details.attributes.serviceHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsServiceHandler, details.attributes.serviceHandler.fullRange, details.attributes.serviceHandler.string )
+		end
+		if details.attributes.requestTimeout ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRequestTimeout, details.attributes.requestTimeout.range, details.attributes.requestTimeout.number )
+		end
 	end
 end
 
