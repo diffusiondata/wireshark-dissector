@@ -311,6 +311,7 @@ dptProto.fields.topicDetailsCachesMetadata = ProtoField.uint8( "dpt.topic.caches
 dptProto.fields.topicDetailsServiceType = ProtoField.string( "dpt.topic.service.type", "Service type" )
 dptProto.fields.topicDetailsServiceHandler = ProtoField.string( "dpt.topic.service.handler", "Service handler" )
 dptProto.fields.topicDetailsRequestTimeout = ProtoField.uint32( "dpt.topic.service.request.timeout", "Request timeout" )
+dptProto.fields.topicDetailsCustomHandler = ProtoField.string( "dpt.topic.custom.handler", "Custom handler" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

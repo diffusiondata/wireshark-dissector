@@ -59,6 +59,13 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + routingHandler.fullRange:len()
 
 		return parsedAttributes, routingHandler.remaining
+	elseif type == diffusion.const.topicTypes.CUSTOM then
+		local customHandler = lengthPrefixedString( remainingAfterTopicProperties )
+
+		parsedAttributes.customHandler = customHandler
+		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + customHandler.fullRange:len()
+
+		return parsedAttributes, customHandler.remaining
 	elseif type == diffusion.const.topicTypes.TOPIC_NOTIFY then
 		parsedAttributes.cachesMetadata = { range = remainingAfterTopicProperties:range( 0, 1 ) }
 		parsedAttributes.rangeLength = 4 + topicProperties.rangeLength
@@ -97,7 +104,8 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.ROUTING or
 		type == diffusion.const.topicTypes.CHILD_LIST or
 		type == diffusion.const.topicTypes.TOPIC_NOTIFY or
-		type == diffusion.const.topicTypes.SERVICE then
+		type == diffusion.const.topicTypes.SERVICE or
+		type == diffusion.const.topicTypes.CUSTOM then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or

@@ -63,6 +63,9 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.requestTimeout ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsRequestTimeout, details.attributes.requestTimeout.range, details.attributes.requestTimeout.number )
 		end
+		if details.attributes.customHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCustomHandler, details.attributes.customHandler.fullRange, details.attributes.customHandler.string )
+		end
 	end
 end
 
