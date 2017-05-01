@@ -82,6 +82,12 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 3 + topicProperties.rangeLength + serviceType.fullRange:len() + handler.fullRange:len() + requestTimeoutRange:len()
 
 		return parsedAttributes, remaining
+	elseif type == diffusion.const.topicTypes.PROTOCOL_BUFFER then
+		parsedAttributes.updateMode = { range = remainingAfterTopicProperties:range( 0, 1 ) }
+		parsedAttributes.deletionValue = lengthPrefixedString( remainingAfterTopicProperties:range( 1 ) )
+		parsedAttributes.rangeLength = 4 + topicProperties.rangeLength + parsedAttributes.deletionValue.fullRange:len()
+
+		return parsedAttributes, remainingAfterTopicProperties:range( 1 )
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
@@ -116,6 +122,15 @@ local function parseSchema( type, range )
 			schema = schema,
 			rangeLength = schema.fullRange:len()
 		}, schema.remaining
+	elseif type == diffusion.const.topicTypes.PROTOCOL_BUFFER then
+
+		local className = lengthPrefixedString( range )
+		local messageName = lengthPrefixedString( className.remaining )
+		return {
+			className = className,
+			messageName = messageName,
+			rangeLength = className.fullRange:len() + messageName.fullRange:len()
+		}, messageName.remaining
 	else
 		return {
 			rangeLength = range:len()

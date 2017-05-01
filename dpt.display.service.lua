@@ -66,6 +66,18 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.customHandler ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsCustomHandler, details.attributes.customHandler.fullRange, details.attributes.customHandler.string )
 		end
+		if details.attributes.className ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsProtoBufferClass, details.attributes.className.fullRange, details.attributes.className.string )
+		end
+		if details.attributes.messageName ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsMessageName, details.attributes.messageName.fullRange, details.attributes.messageName.string )
+		end
+		if details.attributes.updateMode ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsUpdateMode, details.attributes.updateMode.range )
+		end
+		if details.attributes.deletionValue ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsDeletionValue, details.attributes.deletionValue.fullRange, details.attributes.deletionValue.string )
+		end
 	end
 end
 

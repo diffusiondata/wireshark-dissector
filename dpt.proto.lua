@@ -215,6 +215,11 @@ local updateResponseByBytes = {
 	[0x8] = "DELTA_WITHOUT_VALUE"
 }
 
+local updateModeByByte = {
+	[0x01] = "PARTIAL",
+	[0x02] = "FULL"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -312,6 +317,10 @@ dptProto.fields.topicDetailsServiceType = ProtoField.string( "dpt.topic.service.
 dptProto.fields.topicDetailsServiceHandler = ProtoField.string( "dpt.topic.service.handler", "Service handler" )
 dptProto.fields.topicDetailsRequestTimeout = ProtoField.uint32( "dpt.topic.service.request.timeout", "Request timeout" )
 dptProto.fields.topicDetailsCustomHandler = ProtoField.string( "dpt.topic.custom.handler", "Custom handler" )
+dptProto.fields.topicDetailsProtoBufferClass = ProtoField.string( "dpt.topic.protobuffer.class", "Protocol Buffer class name" )
+dptProto.fields.topicDetailsMessageName = ProtoField.string( "dpt.topic.message.name", "Message name" )
+dptProto.fields.topicDetailsUpdateMode = ProtoField.uint8( "dpt.topic.update.mode", "Update mode", base.HEX, updateModeByByte )
+dptProto.fields.topicDetailsDeletionValue = ProtoField.string( "dpt.topic.deletion.value", "Deletion value" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
