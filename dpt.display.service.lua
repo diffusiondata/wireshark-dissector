@@ -78,6 +78,24 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.deletionValue ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsDeletionValue, details.attributes.deletionValue.fullRange, details.attributes.deletionValue.string )
 		end
+		if details.attributes.orderingPolicy ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsOrdering, details.attributes.orderingPolicy.range )
+		end
+		if details.attributes.duplicatesPolicy ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsDuplicates, details.attributes.duplicatesPolicy.range )
+		end
+		if details.attributes.order ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsOrder, details.attributes.order.range )
+		end
+		if details.attributes.ruleType ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRuleType, details.attributes.ruleType.range )
+		end
+		if details.attributes.comparator ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsComparator, details.attributes.comparator.fullRange, details.attributes.comparator.string )
+		end
+		if details.attributes.rules ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCollationRules, details.attributes.rules.fullRange, details.attributes.rules.string )
+		end
 	end
 end
 

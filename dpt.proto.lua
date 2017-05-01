@@ -321,6 +321,12 @@ dptProto.fields.topicDetailsProtoBufferClass = ProtoField.string( "dpt.topic.pro
 dptProto.fields.topicDetailsMessageName = ProtoField.string( "dpt.topic.message.name", "Message name" )
 dptProto.fields.topicDetailsUpdateMode = ProtoField.uint8( "dpt.topic.update.mode", "Update mode", base.HEX, updateModeByByte )
 dptProto.fields.topicDetailsDeletionValue = ProtoField.string( "dpt.topic.deletion.value", "Deletion value" )
+dptProto.fields.topicDetailsOrdering = ProtoField.uint8( "dpt.topic.ordering", "Ordering", base.HEX, diffusion.const.ordering.byByte )
+dptProto.fields.topicDetailsDuplicates = ProtoField.uint8( "dpt.topic.duplicates", "Duplicates", base.HEX, diffusion.const.duplicates.byByte )
+dptProto.fields.topicDetailsOrder = ProtoField.uint8( "dpt.topic.order", "Order", base.HEX, diffusion.const.order.byByte )
+dptProto.fields.topicDetailsRuleType = ProtoField.uint8( "dpt.topic.rule.type", "Rule type", base.HEX, diffusion.const.ruleType.byByte )
+dptProto.fields.topicDetailsComparator = ProtoField.string( "dpt.topic.comparator", "Comparator" )
+dptProto.fields.topicDetailsCollationRules = ProtoField.string( "dpt.topic.collation.rules", "Collation Rules" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

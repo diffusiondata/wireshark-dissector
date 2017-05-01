@@ -88,6 +88,36 @@ local function parseAttributes( type, range )
 		parsedAttributes.rangeLength = 4 + topicProperties.rangeLength + parsedAttributes.deletionValue.fullRange:len()
 
 		return parsedAttributes, remainingAfterTopicProperties:range( 1 )
+	elseif type == diffusion.const.topicTypes.PAGED_STRING then
+		parsedAttributes.orderingPolicy = { range = remainingAfterTopicProperties:range( 0, 1 ) }
+
+		local remaining
+		if parsedAttributes.orderingPolicy.range:int() ~= diffusion.const.ordering.UNORDERED then
+			parsedAttributes.duplicatesPolicy = { range = parsedAttributes.orderingPolicy.range:range( 0, 1 ) }
+
+			if parsedAttributes.orderingPolicy.range:int() ~= diffusion.const.ordering.DECLARED then
+				parsedAttributes.order = { range = parsedAttributes.duplicatesPolicy.range:range( 0, 1 ) }
+				parsedAttributes.ruleType = { range = parsedAttributes.duplicatesPolicy.range:range( 1, 2 ) }
+
+				if parsedAttributes.ruleType.range:int() == diffusion.const.ruleType.COLLATION then
+					parsedAttributes.rules = lengthPrefixedString( remainingAfterTopicProperties:range( 2, 3 ) )
+					remaining = remainingAfterTopicProperties:range( 3 )
+					parsedAttributes.rangeLength = 7 + topicProperties.rangeLength + parsedAttributes.rules.fullRange:len()
+				else
+					remaining = remainingAfterTopicProperties:range( 2 )
+					parsedAttributes.rangeLength = 7 + topicProperties.rangeLength
+				end
+			else
+				parsedAttributes.comparator = lengthPrefixedString( remainingAfterTopicProperties:range( 1 ) )
+				parsedAttributes.rangeLength = 5 + topicProperties.rangeLength + parsedAttributes.comparator.fullRange:len()
+				remaining = parsedAttributes.comparator.remaining
+			end
+		else
+			parsedAttributes.rangeLength = 4 + topicProperties.rangeLength
+			remaining = remainingAfterTopicProperties:range( 1 )
+		end
+
+		return parsedAttributes, remaining
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
@@ -111,7 +141,8 @@ local function parseSchema( type, range )
 		type == diffusion.const.topicTypes.CHILD_LIST or
 		type == diffusion.const.topicTypes.TOPIC_NOTIFY or
 		type == diffusion.const.topicTypes.SERVICE or
-		type == diffusion.const.topicTypes.CUSTOM then
+		type == diffusion.const.topicTypes.CUSTOM or
+		type == diffusion.const.topicTypes.PAGED_STRING then
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or

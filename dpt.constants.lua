@@ -46,9 +46,57 @@ local topicTypes = {
     }
 }
 
+-- Constants used by paged topic ordering
+local ordering = {
+    UNORDERED = 0x00,
+    DECLARED = 0x01,
+    COMPARATOR = 0x02,
+    byByte = {
+        [0x00] = "UNORDERED",
+        [0x01] = "DECLARED",
+        [0x02] = "COMPARATOR"
+    }
+}
+
+-- Constants used by paged topic duplicates
+local duplicates = {
+    FIRST = 0x01,
+    LAST = 0x02,
+    NOT_ALLOWED = 0x03,
+    byByte = {
+        [0x01] = "FIRST",
+        [0x02] = "LAST",
+        [0x03] = "NOT_ALLOWED"
+    }
+}
+
+-- Constants used by paged topic order
+local order = {
+    ASCENDING = 0x00,
+    DESCENDING = 0x01,
+    byByte = {
+        [0x00] = "ASCENDING",
+        [0x01] = "DESCENDING"
+    }
+}
+
+-- Constants used by paged topic order
+local ruleType = {
+    NONE = 0x00,
+    COLLATION = 0x01,
+    byByte = {
+        [0x00] = "NONE",
+        [0x01] = "COLLATION"
+    }
+}
+
 -- Package footer
 master.const = {
-    topicTypes = topicTypes
+    topicTypes = topicTypes,
+    ordering = ordering,
+    duplicates = duplicates,
+    order = order,
+    ruleType = ruleType
 }
 diffusion = master
 return master.const
