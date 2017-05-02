@@ -93,22 +93,22 @@ local function parseAttributes( type, range )
 
 		local remaining
 		if parsedAttributes.orderingPolicy.range:int() ~= diffusion.const.ordering.UNORDERED then
-			parsedAttributes.duplicatesPolicy = { range = parsedAttributes.orderingPolicy.range:range( 0, 1 ) }
+			parsedAttributes.duplicatesPolicy = { range = remainingAfterTopicProperties:range( 1, 1 ) }
 
-			if parsedAttributes.orderingPolicy.range:int() ~= diffusion.const.ordering.DECLARED then
-				parsedAttributes.order = { range = parsedAttributes.duplicatesPolicy.range:range( 0, 1 ) }
-				parsedAttributes.ruleType = { range = parsedAttributes.duplicatesPolicy.range:range( 1, 2 ) }
+			if parsedAttributes.orderingPolicy.range:int() == diffusion.const.ordering.DECLARED then
+				parsedAttributes.order = { range = remainingAfterTopicProperties:range( 2, 1 ) }
+				parsedAttributes.ruleType = { range = remainingAfterTopicProperties:range( 3, 1 ) }
 
 				if parsedAttributes.ruleType.range:int() == diffusion.const.ruleType.COLLATION then
-					parsedAttributes.rules = lengthPrefixedString( remainingAfterTopicProperties:range( 2, 3 ) )
-					remaining = remainingAfterTopicProperties:range( 3 )
+					parsedAttributes.rules = lengthPrefixedString( remainingAfterTopicProperties:range( 4 ) )
+					remaining = parsedAttributes.rules.remaining
 					parsedAttributes.rangeLength = 7 + topicProperties.rangeLength + parsedAttributes.rules.fullRange:len()
 				else
 					remaining = remainingAfterTopicProperties:range( 2 )
 					parsedAttributes.rangeLength = 7 + topicProperties.rangeLength
 				end
 			else
-				parsedAttributes.comparator = lengthPrefixedString( remainingAfterTopicProperties:range( 1 ) )
+				parsedAttributes.comparator = lengthPrefixedString( remainingAfterTopicProperties:range( 2 ) )
 				parsedAttributes.rangeLength = 5 + topicProperties.rangeLength + parsedAttributes.comparator.fullRange:len()
 				remaining = parsedAttributes.comparator.remaining
 			end
