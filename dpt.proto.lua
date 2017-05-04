@@ -327,6 +327,8 @@ dptProto.fields.topicDetailsOrder = ProtoField.uint8( "dpt.topic.order", "Order"
 dptProto.fields.topicDetailsRuleType = ProtoField.uint8( "dpt.topic.rule.type", "Rule type", base.HEX, diffusion.const.ruleType.byByte )
 dptProto.fields.topicDetailsComparator = ProtoField.string( "dpt.topic.comparator", "Comparator" )
 dptProto.fields.topicDetailsCollationRules = ProtoField.string( "dpt.topic.collation.rules", "Collation Rules" )
+dptProto.fields.topicDetailsOrderKey = ProtoField.string( "dpt.topic.order.key", "Order key" )
+dptProto.fields.topicDetailsOrderKeyFieldName = ProtoField.string( "dpt.topic.field.name", "Field name" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )

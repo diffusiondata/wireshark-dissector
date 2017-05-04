@@ -118,6 +118,58 @@ local function parseAttributes( type, range )
 		end
 
 		return parsedAttributes, remaining
+	elseif type == diffusion.const.topicTypes.PAGED_RECORD then
+		parsedAttributes.orderingPolicy = { range = remainingAfterTopicProperties:range( 0, 1 ) }
+
+		local remaining
+		if parsedAttributes.orderingPolicy.range:int() ~= diffusion.const.ordering.UNORDERED then
+			parsedAttributes.duplicatesPolicy = { range = remainingAfterTopicProperties:range( 1, 1 ) }
+
+			if parsedAttributes.orderingPolicy.range:int() == diffusion.const.ordering.DECLARED then
+				local numRange, remainingOrderKeys, numberOfKeys = varint( remainingAfterTopicProperties:range( 2 ) )
+
+				local orderKeys = {}
+				local keysLength = 0
+				local keyIndex = 1
+				while keyIndex < numberOfKeys + 1 do
+					local fieldName = lengthPrefixedString( remainingOrderKeys )
+					local order = { range = fieldName.remaining:range( 0, 1 ) }
+					local ruleType = { range = fieldName.remaining:range( 1, 1 ) }
+
+					local length = fieldName.fullRange:len() + 2
+					local rules
+					if ruleType.range:int() == diffusion.const.ruleType.COLLATION then
+						rules = lengthPrefixedString( fieldName.remaining:range( 2 ) )
+						remainingOrderKeys = rules.remaining
+						length = length + rules.fullRange:len()
+					else
+						remainingOrderKeys = fieldName.remaining:range( 2 )
+					end
+
+					orderKeys[keyIndex] = {
+						fieldName = fieldName,
+						order = order,
+						ruleType = ruleType,
+						rules = rules,
+						length = length
+					}
+					keysLength = keysLength + length
+					keyIndex = keyIndex + 1
+				end
+				parsedAttributes.rangeLength = numRange:len() + keysLength
+				parsedAttributes.orderKeys = orderKeys
+				remaining = remainingOrderKeys
+			else
+				parsedAttributes.comparator = lengthPrefixedString( remainingAfterTopicProperties:range( 2 ) )
+				parsedAttributes.rangeLength = 5 + topicProperties.rangeLength + parsedAttributes.comparator.fullRange:len()
+				remaining = parsedAttributes.comparator.remaining
+			end
+		else
+			parsedAttributes.rangeLength = 4 + topicProperties.rangeLength
+			remaining = remainingAfterTopicProperties:range( 1 )
+		end
+
+		return parsedAttributes, remaining
 	elseif type == diffusion.const.topicTypes.JSON or
 		type == diffusion.const.topicTypes.BINARY or
 		type == diffusion.const.topicTypes.STATELESS or
@@ -146,7 +198,8 @@ local function parseSchema( type, range )
 
 		return { rangeLength = 0 }, range
 	elseif type == diffusion.const.topicTypes.SINGLE_VALUE or
-		type == diffusion.const.topicTypes.RECORD then
+		type == diffusion.const.topicTypes.RECORD or
+		type == diffusion.const.topicTypes.PAGED_RECORD then
 
 		local schema = lengthPrefixedString( range )
 		return {

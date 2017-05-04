@@ -96,6 +96,17 @@ local function addTopicDetails( parentNode, details )
 		if details.attributes.rules ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsCollationRules, details.attributes.rules.fullRange, details.attributes.rules.string )
 		end
+		if details.attributes.orderKeys ~= nil then
+			for i, orderKey in ipairs( details.attributes.orderKeys ) do
+				local orderKeyNode = detailsNode:add( dptProto.fields.topicDetailsOrderKey )
+				orderKeyNode:add( dptProto.fields.topicDetailsOrderKeyFieldName, orderKey.fieldName.fullRange, orderKey.fieldName.string )
+				orderKeyNode:add( dptProto.fields.topicDetailsOrder, orderKey.order.range )
+				orderKeyNode:add( dptProto.fields.topicDetailsRuleType, orderKey.ruleType.range )
+				if orderKey.rules ~= nil then
+					orderKeyNode:add( dptProto.fields.topicDetailsCollationRules, orderKey.rules.fullRange, orderKey.rules.string )
+				end
+			end
+		end
 	end
 end
 
