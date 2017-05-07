@@ -13,16 +13,29 @@ local varint = diffusion.parseCommon.varint
 
 local function parseTopicProperties( range )
 	local numRange, remaining, numberOfProperties = varint( range )
-	if numberOfProperties == 0 then
-		return {
-			number = { range = numRange, number = numberOfProperties },
-			rangeLength = 1
-		}, remaining
+
+	local properties = {}
+	local length = 0
+	local propertyIndex = 1
+	while propertyIndex <= numberOfProperties do
+		local property = remaining:range( 0, 1 )
+		local propertyValue = lengthPrefixedString( remaining:range( 1 ) )
+
+		properties[propertyIndex] = {
+			id = property,
+			value = propertyValue
+		}
+
+		length = length + property:len() + propertyValue.fullRange:len()
+		propertyIndex = propertyIndex + 1
+		remaining = propertyValue.remaining
 	end
+
 	return {
 		number = { range = numRange, number = numberOfProperties },
-		rangeLength = range:len()
-	}, nil
+		properties = properties,
+		rangeLength = numRange:len() + length
+	}, remaining
 end
 
 local function parseAttributes( type, range )
@@ -131,7 +144,7 @@ local function parseAttributes( type, range )
 				local orderKeys = {}
 				local keysLength = 0
 				local keyIndex = 1
-				while keyIndex < numberOfKeys + 1 do
+				while keyIndex <= numberOfKeys do
 					local fieldName = lengthPrefixedString( remainingOrderKeys )
 					local order = { range = fieldName.remaining:range( 0, 1 ) }
 					local ruleType = { range = fieldName.remaining:range( 1, 1 ) }

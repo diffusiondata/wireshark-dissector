@@ -90,13 +90,34 @@ local ruleType = {
     }
 }
 
+-- Constants used by topic properties
+local topicProperty = {
+    byByte = {
+        [0x02] = "ATTACHMENT_CLASS",
+        [0x03] = "DATA_INITIALISER_CLASS",
+        [0x04] = "DELTA_ACK_REQUIRED",
+        [0x05] = "DELTA_ENCODING",
+        [0x08] = "DELTA_MESSAGE_CAPACITY",
+        [0x0a] = "LOAD_ACK_REQUIRED",
+        [0x0b] = "LOAD_ENCODING",
+        [0x0e] = "LOAD_HEADERS",
+        [0x0f] = "LOAD_MESSAGE_CAPACITY",
+        [0x10] = "LOCK_TIMEOUT",
+        [0x11] = "LOCKABLE",
+        [0x12] = "SUBSCRIPTION_HANDLER_CLASS",
+        [0x1e] = "PUBLISH_VALUES_ONLY",
+        [0x1f] = "VALIDATE_VALUES",
+    }
+}
+
 -- Package footer
 master.const = {
     topicTypes = topicTypes,
     ordering = ordering,
     duplicates = duplicates,
     order = order,
-    ruleType = ruleType
+    ruleType = ruleType,
+    topicProperty = topicProperty
 }
 diffusion = master
 return master.const

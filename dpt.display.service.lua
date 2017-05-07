@@ -41,6 +41,11 @@ local function addTopicDetails( parentNode, details )
 		detailsNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
 		detailsNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
 		detailsNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
+		for i, property in ipairs( details.attributes.topicProperties.properties ) do
+			local propertyNode = detailsNode:add( dptProto.fields.topicProperty )
+			propertyNode:add( dptProto.fields.topicPropertyName, property.id )
+			propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+		end
 
 		if details.attributes.emptyValue ~= nil then
 			detailsNode:add( dptProto.fields.topicDetailsEmptyValue, details.attributes.emptyValue.fullRange, details.attributes.emptyValue.string )
