@@ -290,8 +290,7 @@ function dptProto.init()
 	info( "dptProto.init()" )
 end
 
-function dptProto.dissector( tvb, pinfo, tree )
-
+local function protectedDissector( tvb, pinfo, tree )
 	-- Ignore cut off packets
 	if tvb:len() ~= tvb:reported_len() then
 		return 0
@@ -382,6 +381,16 @@ function dptProto.dissector( tvb, pinfo, tree )
 			pinfo.cols.info = descriptions:summarise()
 			pinfo.cols.info:fence()
 		end
+	end
+end
+
+function dptProto.dissector( tvb, pinfo, tree )
+	local status, result = pcall(function () protectedDissector( tvb, pinfo, tree ) end)
+	if status then
+		return result
+	else
+		info( result )
+		return 0
 	end
 end
 
