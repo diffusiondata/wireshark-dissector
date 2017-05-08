@@ -292,6 +292,11 @@ end
 
 function dptProto.dissector( tvb, pinfo, tree )
 
+	-- Ignore cut off packets
+	if tvb:len() ~= tvb:reported_len() then
+		return 0
+	end
+
 	local streamNumber = f_tcp_stream()
 
 	-- Is this a connection negotiation?
