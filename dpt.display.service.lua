@@ -1,6 +1,6 @@
 
 -- Display service package
--- This package adds information about services to the dissection tree that is displayed in Wireshark. 
+-- This package adds information about services to the dissection tree that is displayed in Wireshark.
 
 -- Package header
 local master = diffusion or {}
@@ -16,8 +16,103 @@ local p9ModeValues = diffusion.v5.p9ModeValues
 local statusResponseBytes = diffusion.proto.statusResponseBytes
 local v5 = diffusion.v5
 
+local function addContent( parentNode, content )
+	if content.encoding ~= nil then
+		parentNode:add( dptProto.fields.encodingHdr, content.encoding.range, content.encoding.int )
+	end
+	if content.length ~= nil then
+		parentNode:add( dptProto.fields.contentLength, content.length.range, content.length.int )
+	end
+	if content.bytes ~= nil then
+		parentNode:add( dptProto.fields.content, content.bytes.range )
+	end
+end
+
 local function addTopicDetails( parentNode, details )
-	parentNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+	local detailsNode = parentNode:add( dptProto.fields.topicDetails, details.range, "" )
+	detailsNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
+	detailsNode:add( dptProto.fields.topicDetailsLevel, details.level )
+	if details.schema ~= nil then
+		info( diffusion.utilities.dump( details.schema ) )
+		detailsNode:add( dptProto.fields.topicDetailsSchema, details.schema.fullRange, details.schema.string )
+	end
+	if details.attributes ~= nil then
+		detailsNode:add( dptProto.fields.topicDetailsAutoSubscribe, details.attributes.autoSubscribe )
+		detailsNode:add( dptProto.fields.topicDetailsTidiesOnUnsubscribe, details.attributes.tidiesOnUnsubscribe )
+		detailsNode:add( dptProto.fields.topicDetailsTopicReference, details.attributes.reference.fullRange, details.attributes.reference.string )
+		detailsNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
+		for i, property in ipairs( details.attributes.topicProperties.properties ) do
+			local propertyNode = detailsNode:add( dptProto.fields.topicProperty )
+			propertyNode:add( dptProto.fields.topicPropertyName, property.id )
+			propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+		end
+
+		if details.attributes.emptyValue ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsEmptyValue, details.attributes.emptyValue.fullRange, details.attributes.emptyValue.string )
+		end
+		if details.attributes.masterTopic ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsMasterTopic, details.attributes.masterTopic.fullRange, details.attributes.masterTopic.string )
+		end
+		if details.attributes.routingHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRoutingHandler, details.attributes.routingHandler.fullRange, details.attributes.routingHandler.string )
+		end
+		if details.attributes.cachesMetadata ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCachesMetadata, details.attributes.cachesMetadata.range )
+		end
+		if details.attributes.serviceType ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsServiceType, details.attributes.serviceType.fullRange, details.attributes.serviceType.string )
+		end
+		if details.attributes.serviceHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsServiceHandler, details.attributes.serviceHandler.fullRange, details.attributes.serviceHandler.string )
+		end
+		if details.attributes.requestTimeout ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRequestTimeout, details.attributes.requestTimeout.range, details.attributes.requestTimeout.number )
+		end
+		if details.attributes.customHandler ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCustomHandler, details.attributes.customHandler.fullRange, details.attributes.customHandler.string )
+		end
+		if details.attributes.className ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsProtoBufferClass, details.attributes.className.fullRange, details.attributes.className.string )
+		end
+		if details.attributes.messageName ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsMessageName, details.attributes.messageName.fullRange, details.attributes.messageName.string )
+		end
+		if details.attributes.updateMode ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsUpdateMode, details.attributes.updateMode.range )
+		end
+		if details.attributes.deletionValue ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsDeletionValue, details.attributes.deletionValue.fullRange, details.attributes.deletionValue.string )
+		end
+		if details.attributes.orderingPolicy ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsOrdering, details.attributes.orderingPolicy.range )
+		end
+		if details.attributes.duplicatesPolicy ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsDuplicates, details.attributes.duplicatesPolicy.range )
+		end
+		if details.attributes.order ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsOrder, details.attributes.order.range )
+		end
+		if details.attributes.ruleType ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsRuleType, details.attributes.ruleType.range )
+		end
+		if details.attributes.comparator ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsComparator, details.attributes.comparator.fullRange, details.attributes.comparator.string )
+		end
+		if details.attributes.rules ~= nil then
+			detailsNode:add( dptProto.fields.topicDetailsCollationRules, details.attributes.rules.fullRange, details.attributes.rules.string )
+		end
+		if details.attributes.orderKeys ~= nil then
+			for i, orderKey in ipairs( details.attributes.orderKeys ) do
+				local orderKeyNode = detailsNode:add( dptProto.fields.topicDetailsOrderKey )
+				orderKeyNode:add( dptProto.fields.topicDetailsOrderKeyFieldName, orderKey.fieldName.fullRange, orderKey.fieldName.string )
+				orderKeyNode:add( dptProto.fields.topicDetailsOrder, orderKey.order.range )
+				orderKeyNode:add( dptProto.fields.topicDetailsRuleType, orderKey.ruleType.range )
+				if orderKey.rules ~= nil then
+					orderKeyNode:add( dptProto.fields.topicDetailsCollationRules, orderKey.rules.fullRange, orderKey.rules.string )
+				end
+			end
+		end
+	end
 end
 
 -- Add description of a detail type set to the tree
@@ -83,10 +178,16 @@ local function addAddTopicInformation( parentNode, info )
 		parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
 	end
 	if info.reference ~= nil then
-		parentNode:add( dptProto.fields.topicReference, info.reference.range, info.reference.int )
+		parentNode:add( dptProto.fields.detailsReference, info.reference.range, info.reference.int )
 	end
 	if info.topicDetails ~= nil then
 		addTopicDetails( parentNode, info.topicDetails )
+	end
+	if info.content ~= nil then
+		local intialValueNode = parentNode:add( dptProto.fields.initialValue, "" )
+		addContent( intialValueNode, info.content )
+	else
+		parentNode:add( dptProto.fields.initialValue, "NONE" )
 	end
 end
 
@@ -108,15 +209,7 @@ local function addUpdateTopicInformation( parentNode, info )
 			parentNode:add( dptProto.fields.updateAction, update.updateAction.range, update.updateAction.int )
 		end
 		if update.content ~= nil then
-			if update.content.encoding ~= nil then
-				parentNode:add( dptProto.fields.encodingHdr, update.content.encoding.range, update.content.encoding.int )
-			end
-			if update.content.length ~= nil then
-				parentNode:add( dptProto.fields.contentLength, update.content.length.range, update.content.length.int )
-			end
-			if update.content.bytes ~= nil then
-				parentNode:add( dptProto.fields.content, update.content.bytes.range )
-			end
+			addContent( parentNode, update.content )
 		end
 	end
 end
@@ -181,7 +274,9 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.controlRegInfo ~= nil then
 			serviceNode:add( dptProto.fields.regServiceId, service.controlRegInfo.serviceId.range, service.controlRegInfo.serviceId.int )
 			serviceNode:add( dptProto.fields.controlGroup, service.controlRegInfo.controlGroup.fullRange, service.controlRegInfo.controlGroup.string )
-			serviceNode:add( dptProto.fields.conversation, service.controlRegInfo.conversationId.range, service.controlRegInfo.conversationId.int )
+			if service.controlRegInfo.conversationId ~= nil then
+				serviceNode:add( dptProto.fields.conversation, service.controlRegInfo.conversationId.range, service.controlRegInfo.conversationId.int )
+			end
 		end
 		if service.handlerName ~= nil then
 			serviceNode:add( dptProto.fields.handlerName, service.handlerName.fullRange, service.handlerName.string )

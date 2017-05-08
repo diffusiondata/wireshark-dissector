@@ -174,7 +174,7 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 	-- Assert there is enough to parse even the LLLL segment
 	if offset + LENGTH_LEN >  tvb:len() then
 		-- Signal Wireshark that more bytes are needed
-		pinfo.desegment_len = DESEGMENT_ONE_MORE_SEGMENT -- Using LENGTH_LEN gets us into trouble 
+		pinfo.desegment_len = DESEGMENT_ONE_MORE_SEGMENT -- Using LENGTH_LEN gets us into trouble
 		return -1
 	end
 
@@ -196,7 +196,7 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 	local msgTypeRange = tvb( offset, 1 )
 	msgDetails.msgType = msgTypeRange:uint()
 	offset = offset +1
-	
+
 	-- Get the encoding byte
 	local msgEncodingRange = tvb( offset, 1 )
 	msgDetails.msgEncoding = msgEncodingRange:uint()
@@ -220,11 +220,10 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
-	
+
 	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
 		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )
 		addServiceInformation( messageTree, serviceInfo, client )
-		local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentRange:len() ) )
 		-- Set the Info column of the tabular display -- NB: this must be called last
 		addDescription( pinfo, messageType, {}, serviceInfo, descriptions )
 	else
@@ -278,7 +277,6 @@ local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
 		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )
 		addServiceInformation( messageTree, serviceInfo, client )
-		local contentNode = messageTree:add( dptProto.fields.content, contentRange, string.format( "%d bytes", contentRange:len() ) )
 		-- Set the Info column of the tabular display -- NB: this must be called last
 		addDescription( pinfo, messageType, {}, serviceInfo, descriptions )
 	else

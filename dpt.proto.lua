@@ -13,7 +13,7 @@ local v5 = diffusion.v5
 local dptProto = Proto( "DPT", "Diffusion Protocol")
 
 local responseCodes = {
-    [100] = "OK - Connection Successful", 
+    [100] = "OK - Connection Successful",
     [101] = "Invalid Connection Protocol",
     [103] = "One or more of the specified topics are invalid",
     [105] = "Reconnection Successful",
@@ -81,25 +81,6 @@ local clientTypesByValue = {
     [0x29] = "UDP .Net Client",
     [0x2a] = "UDP Silverlight Client",
     [0x2b] = "UDP Publisher Client"
-}
-
-local topicTypesByByte = {
-    [0x00] = "NONE",
-    [0x01] = "STATELESS",
-    [0x02] = "DELEGATED",
-    [0x03] = "SINGLE_VALUE",
-    [0x04] = "RECORD",
-    [0x05] = "PROTOCOL_BUFFER",
-    [0x06] = "CUSTOM",
-    [0x07] = "SLAVE",
-    [0x08] = "SERVICE",
-    [0x09] = "PAGED_STRING",
-    [0x0a] = "PAGED_RECORD",
-    [0x0b] = "TOPIC_NOTIFY",
-    [0x0c] = "ROUTING",
-    [0x0d] = "CHILD_LIST",
-    [0x0e] = "BINARY",
-    [0x0f] = "JSON",
 }
 
 local statusResponseBytes = {
@@ -234,6 +215,11 @@ local updateResponseByBytes = {
 	[0x8] = "DELTA_WITHOUT_VALUE"
 }
 
+local updateModeByByte = {
+	[0x01] = "PARTIAL",
+	[0x02] = "FULL"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -293,7 +279,7 @@ dptProto.fields.conversation = ProtoField.uint32( "dpt.conversation.id", "Conver
 dptProto.fields.topicInfo = ProtoField.string( "dpt.service.topicInfo", "Topic Info" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
 dptProto.fields.topicPath = ProtoField.string( "dpt.service.topicInfo.topicPath", "Topic Path" )
-dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, topicTypesByByte )
+dptProto.fields.topicType = ProtoField.uint8( "dpt.service.topicInfo.topicType", "Topic Type", base.HEX, diffusion.const.topicTypes.byByte )
 dptProto.fields.selector = ProtoField.string( "dpt.service.selector", "Topic selector" )
 dptProto.fields.status = ProtoField.uint8( "dpt.service.status", "Status", base.HEX, statusResponseBytes )
 dptProto.fields.topicName = ProtoField.string( "dpt.service.topicName", "Topic Name" )
@@ -315,9 +301,42 @@ dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta ty
 dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, updateResponseByBytes )
 dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
 
+-- Topic details
+dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )
+dptProto.fields.topicDetailsLevel = ProtoField.string( "dpt.topic.details.level", "Detail level" )
+dptProto.fields.topicDetailsSchema = ProtoField.string( "dpt.topic.details.schema", "Schema" )
+dptProto.fields.topicDetailsAutoSubscribe = ProtoField.uint8( "dpt.topic.details.auto.subscribe", "Auto-subscribe", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsTidiesOnUnsubscribe = ProtoField.uint8( "dpt.topic.details.tidies.on.unsubscribe", "Tidies On Unsubscribe", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsTopicReference = ProtoField.string( "dpt.topic.details.topic.reference", "Topic reference" )
+dptProto.fields.topicPropertiesNumber = ProtoField.uint32( "dpt.topic.properties.number", "Topic properties" )
+dptProto.fields.topicDetailsEmptyValue = ProtoField.string( "dpt.topic.empty.field", "Empty field value" )
+dptProto.fields.topicDetailsMasterTopic = ProtoField.string( "dpt.topic.master.topic", "Master topic" )
+dptProto.fields.topicDetailsRoutingHandler = ProtoField.string( "dpt.topic.routing.handler", "Routing handler" )
+dptProto.fields.topicDetailsCachesMetadata = ProtoField.uint8( "dpt.topic.caches.metadata", "Caches metadata", base.HEX, booleanByBtyes )
+dptProto.fields.topicDetailsServiceType = ProtoField.string( "dpt.topic.service.type", "Service type" )
+dptProto.fields.topicDetailsServiceHandler = ProtoField.string( "dpt.topic.service.handler", "Service handler" )
+dptProto.fields.topicDetailsRequestTimeout = ProtoField.uint32( "dpt.topic.service.request.timeout", "Request timeout" )
+dptProto.fields.topicDetailsCustomHandler = ProtoField.string( "dpt.topic.custom.handler", "Custom handler" )
+dptProto.fields.topicDetailsProtoBufferClass = ProtoField.string( "dpt.topic.protobuffer.class", "Protocol Buffer class name" )
+dptProto.fields.topicDetailsMessageName = ProtoField.string( "dpt.topic.message.name", "Message name" )
+dptProto.fields.topicDetailsUpdateMode = ProtoField.uint8( "dpt.topic.update.mode", "Update mode", base.HEX, updateModeByByte )
+dptProto.fields.topicDetailsDeletionValue = ProtoField.string( "dpt.topic.deletion.value", "Deletion value" )
+dptProto.fields.topicDetailsOrdering = ProtoField.uint8( "dpt.topic.ordering", "Ordering", base.HEX, diffusion.const.ordering.byByte )
+dptProto.fields.topicDetailsDuplicates = ProtoField.uint8( "dpt.topic.duplicates", "Duplicates", base.HEX, diffusion.const.duplicates.byByte )
+dptProto.fields.topicDetailsOrder = ProtoField.uint8( "dpt.topic.order", "Order", base.HEX, diffusion.const.order.byByte )
+dptProto.fields.topicDetailsRuleType = ProtoField.uint8( "dpt.topic.rule.type", "Rule type", base.HEX, diffusion.const.ruleType.byByte )
+dptProto.fields.topicDetailsComparator = ProtoField.string( "dpt.topic.comparator", "Comparator" )
+dptProto.fields.topicDetailsCollationRules = ProtoField.string( "dpt.topic.collation.rules", "Collation Rules" )
+dptProto.fields.topicDetailsOrderKey = ProtoField.string( "dpt.topic.order.key", "Order key" )
+dptProto.fields.topicDetailsOrderKeyFieldName = ProtoField.string( "dpt.topic.field.name", "Field name" )
+dptProto.fields.topicProperty = ProtoField.string( "dpt.topic.property", "Topic Property" )
+dptProto.fields.topicPropertyName = ProtoField.uint8( "dpt.topic.property.name", "Name", base.HEX, diffusion.const.topicProperty.byByte )
+dptProto.fields.topicPropertyValue = ProtoField.string( "dpt.topic.property.value", "Value" )
+
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
-dptProto.fields.topicReference = ProtoField.uint32( "dpt.service.topicReference", "Topic reference" )
+dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
+dptProto.fields.initialValue = ProtoField.string( "dpt.service.topic.initial.value", "Initial value" )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )
@@ -369,4 +388,3 @@ master.proto = {
 }
 diffusion = master
 return master.proto
-
