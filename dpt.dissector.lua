@@ -22,6 +22,7 @@ local f_http_upgrade = diffusion.utilities.f_http_upgrade
 local f_http_uri = diffusion.utilities.f_http_uri
 local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
+local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpConnections = diffusion.info.tcpConnections
 local DescriptionsTable = diffusion.info.DescriptionsTable
@@ -293,6 +294,7 @@ end
 local function protectedDissector( tvb, pinfo, tree )
 	-- Ignore cut off packets
 	if tvb:len() ~= tvb:reported_len() then
+		info( string.format( "Skipping truncated frame %d", f_frame_number() ) )
 		return 0
 	end
 
@@ -389,7 +391,7 @@ function dptProto.dissector( tvb, pinfo, tree )
 	if status then
 		return result
 	else
-		info( result )
+		info( string.format( "Frame %d, error %s", f_frame_number(), result ) )
 		return 0
 	end
 end

@@ -16,10 +16,11 @@ local field_ipv6_srchost  = Field.new("ipv6.src_host")
 local field_tcp_srcport = Field.new("tcp.srcport")
 local field_tcp_stream  = Field.new("tcp.stream")
 local field_time_epoch = Field.new("frame.time_epoch")
-local field_http_response_code = Field.new("http.response.code");
-local field_http_connection = Field.new("http.connection");
-local field_http_upgrade = Field.new("http.upgrade");
-local field_http_uri = Field.new("http.request.uri");
+local field_frame_number = Field.new("frame.number")
+local field_http_response_code = Field.new("http.response.code")
+local field_http_connection = Field.new("http.connection")
+local field_http_upgrade = Field.new("http.upgrade")
+local field_http_uri = Field.new("http.request.uri")
 local field_ws_binary_payload
 local field_ws_text_payload
 
@@ -72,6 +73,11 @@ end
 -- Get the frame time stamp value
 local function f_time_epoch()
 	return field_time_epoch().value
+end
+
+-- Get the frame number
+local function f_frame_number()
+	return field_frame_number().value
 end
 
 local function dump(o)
@@ -170,6 +176,7 @@ master.utilities = {
 	dump = dump,
 	f_tcp_stream  = f_tcp_stream,
 	f_time_epoch = f_time_epoch,
+	f_frame_number = f_frame_number,
 	f_http_response_code = f_http_response_code,
 	f_http_connection = f_http_connection,
 	f_http_upgrade = f_http_upgrade,
