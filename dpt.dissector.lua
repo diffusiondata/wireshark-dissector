@@ -283,9 +283,7 @@ end
 local function call_http_dissector( tvb, pinfo, tree )
 	-- Ensure that the HTTP dissector can reassemble TCP packets
 	local can_desegment = pinfo.can_desegment
-	if pinfo.can_desegment > 0 then
-		pinfo.can_desegment = 2
-	end
+	pinfo.can_desegment = 2
 
 	http_dissector:call( tvb, pinfo, tree )
 
