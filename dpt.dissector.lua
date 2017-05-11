@@ -280,6 +280,18 @@ function dptProto.init()
 	info( "dptProto.init()" )
 end
 
+local function call_http_dissector( tvb, pinfo, tree )
+	-- Ensure that the HTTP dissector can reassemble TCP packets
+	local can_desegment = pinfo.can_desegment
+	if pinfo.can_desegment > 0 then
+		pinfo.can_desegment = 2
+	end
+
+	http_dissector:call( tvb, pinfo, tree )
+
+	pinfo.can_desegment = can_desegment
+end
+
 local function protectedDissector( tvb, pinfo, tree )
 	-- Ignore cut off packets
 	if tvb:len() ~= tvb:reported_len() then
@@ -304,7 +316,7 @@ local function protectedDissector( tvb, pinfo, tree )
 		return {}
 	end
 
-	http_dissector:call( tvb, pinfo, tree )
+	call_http_dissector( tvb, pinfo, tree )
 
 	local connection = f_http_connection()
 	local upgrade = f_http_upgrade()
