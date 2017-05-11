@@ -22,6 +22,7 @@ local f_http_upgrade = diffusion.utilities.f_http_upgrade
 local f_http_uri = diffusion.utilities.f_http_uri
 local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
+local ws_payload_length = diffusion.utilities.ws_payload_length
 local f_frame_number = diffusion.utilities.f_frame_number
 
 local tcpConnections = diffusion.info.tcpConnections
@@ -234,18 +235,15 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 	return offset
 end
 
-local function processWSMessage( tvb, pinfo, tree, start, descriptions )
+local function processWSMessage( tvb, pinfo, tree, descriptions )
 	local msgDetails = {}
-	local offset = start
+
+	msgDetails.msgSize = tvb:len()
 	-- Get the type by
-	local msgTypeRange = tvb( offset, 1 )
+	local msgTypeRange = tvb( 0, 1 )
 	msgDetails.msgType = msgTypeRange:uint()
-	offset = offset + 1
 	msgDetails.msgEncoding = 0
 	local messageType = messageTypeLookup(msgDetails.msgType)
-
-	-- Find message end
-	msgDetails.msgSize = tvb:len()
 
 	-- Add to the GUI the size-header, type-header & encoding-header
 	local messageRange = tvb( start, msgDetails.msgSize )
@@ -264,17 +262,10 @@ local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 	end
 	addClientConnectionInformation( messageTree, tvb, client, f_src_host(), f_src_port() )
 
-	-- Stop if there is no content
-	if tvb:len() == offset then
-		addDescription( pinfo, messageType, nil, nil, descriptions )
-		return -1
-	end
-
 	-- The content range
 	local contentSize = msgDetails.msgSize - 1
-	local contentRange = tvb( offset, contentSize )
+	local contentRange = tvb( 1, contentSize )
 
-	offset = offset + contentSize
 	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
 		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )
 		addServiceInformation( messageTree, serviceInfo, client )
@@ -283,8 +274,6 @@ local function processWSMessage( tvb, pinfo, tree, start, descriptions )
 	else
 		processContent( pinfo, contentRange, messageTree, messageType, msgDetails, descriptions )
 	end
-
-	return offset
 end
 
 function dptProto.init()
@@ -370,12 +359,8 @@ local function protectedDissector( tvb, pinfo, tree )
 				payloads = f_ws_t_payload()
 			end
 			for i, p in ipairs( payloads ) do
-				local offset = 0
-				local payload = p
-				repeat
-					-- -1 indicates incomplete read
-					offset = processWSMessage( payload, pinfo, tree, offset, descriptions )
-				until ( offset == -1 or offset >= payload:len() )
+				-- WS contains 1 Diffusion message per WS frame
+				processWSMessage( p, pinfo, tree, descriptions )
 			end
 
 			-- Set description

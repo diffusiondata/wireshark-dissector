@@ -21,6 +21,8 @@ local field_http_response_code = Field.new("http.response.code")
 local field_http_connection = Field.new("http.connection")
 local field_http_upgrade = Field.new("http.upgrade")
 local field_http_uri = Field.new("http.request.uri")
+local field_ws_payload_length = Field.new("websocket.payload_length")
+local field_ws_payload_length_ext_16 = Field.new("websocket.payload_length_ext_16")
 local field_ws_binary_payload
 local field_ws_text_payload
 
@@ -155,6 +157,15 @@ local function f_ws_t_payload()
 	end
 end
 
+local function ws_payload_length()
+	local len = field_ws_payload_length_ext_16() or field_ws_payload_length()
+	if len ~= nil then
+		return len.value
+	else
+		return nil
+	end
+end
+
 --- Returns representation of num in radix
 local function int_to_string(num, radix)
     local charrange = '0123456789abcdefghijklmnopqrstuvwxyz'
@@ -183,6 +194,7 @@ master.utilities = {
 	f_http_uri = f_http_uri,
 	f_ws_b_payload = f_ws_b_payload,
 	f_ws_t_payload = f_ws_t_payload,
+	ws_payload_length = ws_payload_length,
 	int_to_string = int_to_string,
 	RD = 0x01,
 	FD = 0x02,
