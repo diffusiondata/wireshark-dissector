@@ -325,7 +325,6 @@ end
 local function uriToQueryParameters( uriRange )
 	local parameterTable = {}
 
-	info( uriRange:len() )
 	-- Check length
 	if (uriRange:len() < 12) then
 		return nil
