@@ -26,6 +26,11 @@ local topicTypes = {
     CHILD_LIST = 0x0d,
     BINARY = 0x0e,
     JSON = 0x0f,
+    TIME_SERIES = 0x10,
+    STRING = 0x11,
+    INT64 = 0x12,
+    DOUBLE = 0x13,
+    RECORD_V2 = 0x14,
     byByte = {
         [0x00] = "NONE",
         [0x01] = "STATELESS",
@@ -43,6 +48,11 @@ local topicTypes = {
         [0x0d] = "CHILD_LIST",
         [0x0e] = "BINARY",
         [0x0f] = "JSON",
+        [0x10] = "TIME_SERIES",
+        [0x11] = "STRING",
+        [0x12] = "INT64",
+        [0x13] = "DOUBLE",
+        [0x14] = "RECORD_V2",
     }
 }
 
