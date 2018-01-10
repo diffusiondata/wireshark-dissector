@@ -625,6 +625,35 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 	return result
 end
 
+local function parseServiceError( serviceBodyRange, service, conversation, result )
+	local errorMessage = lengthPrefixedString( serviceBodyRange )
+	local codeRange, remaining, code = varint( errorMessage.remaining )
+
+	result.error = {
+		errorMessage = errorMessage,
+		errorCode = {
+			range = codeRange,
+			code = code
+		}
+	}
+
+	-- Calculate the response time
+	local reqTime
+	local tcpStream = f_tcp_stream()
+	local session = tcpConnections[tcpStream]
+	local isClient = session.client:matches( f_src_host(), f_src_port() )
+	if isClient then
+		-- Response is from the client so the server created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
+	else
+		-- Response is from the server so the client created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
+	end
+	result.responseTime = tostring( f_time_epoch() - reqTime )
+
+	return result
+end
+
 -- Parse the message as a service request or response
 local function parseAsV4ServiceMessage( range )
 	if range ~= nil and range:len() >= 2 then
@@ -679,6 +708,8 @@ local function parseAsV59ServiceMessage( modeRange, range )
 			return parseServiceRequest( serviceBodyRange, service, conversation, result )
 		elseif mode == v5.P9_MODE_RESPONSE then
 			return parseServiceResponse( serviceBodyRange, service, conversation, result )
+		elseif mode == v5.P9_MODE_ERROR then
+			return parseServiceError( serviceBodyRange, service, conversation, result )
 		else
 			return result
 		end

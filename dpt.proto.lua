@@ -294,6 +294,8 @@ dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Han
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
+dptProto.fields.errorMessage = ProtoField.string( "dpt.service.error.message", "Error message" )
+dptProto.fields.reasonCode = ProtoField.uint8( "dpt.service.error.code", "Error reason code" )
 
 -- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
