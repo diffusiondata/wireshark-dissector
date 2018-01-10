@@ -21,6 +21,38 @@ local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
 
+-- Parse a topic specifiation
+local function parseTopicSpecification( range )
+	local type = range:range( 0, 1 )
+	local numPropertiesRange, remaining, numProperties = varint( range:range( 1 ) )
+
+	local properties = {}
+	local length = 0
+	local propertyIndex = 1
+	while propertyIndex <= numProperties do
+		local propertyKey = lengthPrefixedString( remaining )
+		local propertyValue = lengthPrefixedString( propertyKey.remaining )
+
+		properties[propertyIndex] = {
+			key = propertyKey,
+			value = propertyValue
+		}
+
+		length = length + propertyKey.fullRange:len() + propertyValue.fullRange:len()
+		propertyIndex = propertyIndex + 1
+		remaining = propertyValue.remaining
+	end
+
+	return {
+		type = { type = type:uint(), range = typeRange },
+		properties = {
+			number = { range = numPropertiesRange, number = numProperties },
+			properties = properties,
+			rangeLength = numPropertiesRange:len() + length
+		}
+	}
+end
+
 -- Parse a set of detail types
 local function parseDetailTypeSet( range )
 	local numberOfDetailTypes = range:range( 0, 1 ):uint()
