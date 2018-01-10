@@ -349,6 +349,9 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.updateResult ~= nil then
 			serviceNode:add( dptProto.fields.updateResponse, service.updateResult.range )
 		end
+		if service.addResult ~= nil then
+			serviceNode:add( dptProto.fields.topicAddResult, service.addResult.range )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

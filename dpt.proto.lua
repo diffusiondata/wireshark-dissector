@@ -220,6 +220,11 @@ local updateModeByByte = {
 	[0x02] = "FULL"
 }
 
+local addTopicResult = {
+	[0x00] = "CREATED",
+	[0x01] = "EXISTS"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -338,6 +343,7 @@ dptProto.fields.topicPropertyValue = ProtoField.string( "dpt.topic.property.valu
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
 dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
 dptProto.fields.initialValue = ProtoField.string( "dpt.service.topic.initial.value", "Initial value" )
+dptProto.fields.topicAddResult = ProtoField.uint8( "dpt.service.topic.add.result", "Add result", base.HEX, addTopicResult )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )

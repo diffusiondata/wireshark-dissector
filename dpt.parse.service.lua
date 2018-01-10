@@ -491,6 +491,11 @@ local function parseUpdateResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
+local function parseAddResult( range )
+	local resultByteRange = range:range( 0, 1 )
+	return { range = resultByteRange, int = resultByteRange:int() }
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -599,10 +604,13 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.updateResult = parseUpdateResult( serviceBodyRange )
 	elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
 		result.updateResult = parseUpdateResult( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_ADD then
+		result.addResult = parseAddResult( serviceBodyRange )
 	end
 
 	-- Calculate the response time
 	local reqTime
+	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
 	local isClient = session.client:matches( f_src_host(), f_src_port() )
 	if isClient then
@@ -634,7 +642,7 @@ local function parseAsV4ServiceMessage( range )
 
 		if mode == v5.MODE_REQUEST then
 			return parseServiceRequest( serviceBodyRange, service, conversation, result )
-		elseif mode == v5.MODE_REQUEST then
+		elseif mode == v5.MODE_RESPONSE then
 			return parseServiceResponse( serviceBodyRange, service, conversation, result )
 		else
 			return result
@@ -669,7 +677,7 @@ local function parseAsV59ServiceMessage( modeRange, range )
 
 		if mode == v5.P9_MODE_REQUEST then
 			return parseServiceRequest( serviceBodyRange, service, conversation, result )
-		elseif mode == v5.P9_MODE_REQUEST then
+		elseif mode == v5.P9_MODE_RESPONSE then
 			return parseServiceResponse( serviceBodyRange, service, conversation, result )
 		else
 			return result
