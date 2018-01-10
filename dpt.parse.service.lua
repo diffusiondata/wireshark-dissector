@@ -392,6 +392,16 @@ local function parseAddTopicRequest( range )
 	}
 end
 
+-- Parse add topic request
+local function parseTopicAddRequest( range )
+	local topicName = lengthPrefixedString( range )
+	local specification = parseTopicSpecification ( topicName.remaining )
+	return {
+		topicName = topicName,
+		specification = specification
+	}
+end
+
 local function parseUpdateTopicSet( range )
 	local topicPath = lengthPrefixedString( range )
 	local lengthRange, remaining, length = varint( topicPath.remaining )
@@ -507,6 +517,9 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 	elseif service == v5.SERVICE_ADD_TOPIC then
 		local info = parseAddTopicRequest( serviceBodyRange )
 		result.addTopic = info
+	elseif service == v5.SERVICE_TOPIC_ADD then
+		local info = parseTopicAddRequest( serviceBodyRange )
+		result.topicAdd = info
 	elseif service == v5.SERVICE_REMOVE_TOPICS then
 		local selector = lengthPrefixedString( serviceBodyRange )
 		result.selector = { range = selector.fullRange, string = selector.string }
