@@ -212,7 +212,9 @@ local updateResponseByBytes = {
 	[0x5] = "INVALID_UPDATER",
 	[0x6] = "EXCLUSIVE_UPDATER_CONFLICT",
 	[0x7] = "INCOMPATIBLE_UPDATE",
-	[0x8] = "DELTA_WITHOUT_VALUE"
+	[0x8] = "DELTA_WITHOUT_VALUE",
+	[0x9] = "CLUSTER_REPARTITION",
+	[0xa] = "INCOMPATIBLE_STATE"
 }
 
 local updateModeByByte = {
