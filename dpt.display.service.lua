@@ -190,6 +190,19 @@ local function addAddTopicInformation( parentNode, info )
 	end
 end
 
+-- Add topic add request information
+local function addTopicAddInformation( parentNode, info )
+	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+	parentNode:add( dptProto.fields.topicType, info.specification.type.range, info.specification.type.type )
+
+	parentNode:add( dptProto.fields.topicPropertiesNumber, info.specification.properties.number.range, info.specification.properties.number.number )
+	for i, property in ipairs( info.specification.properties.properties ) do
+		local propertyNode = parentNode:add( dptProto.fields.topicProperty )
+		propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
+		propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+	end
+end
+
 -- Add update topic request information
 local function addUpdateTopicInformation( parentNode, info )
 	if info.conversationId ~= nil then
@@ -258,6 +271,10 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.addTopic ~= nil then
 			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
 			addAddTopicInformation( addTopicNode, service.addTopic )
+		end
+		if service.topicAdd ~= nil then
+			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
+			addTopicAddInformation( addTopicNode, service.topicAdd )
 		end
 		if service.topicInfo ~= nil then
 			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )

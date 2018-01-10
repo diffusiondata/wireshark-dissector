@@ -44,7 +44,7 @@ local function parseTopicSpecification( range )
 	end
 
 	return {
-		type = { type = type:uint(), range = typeRange },
+		type = { type = type:uint(), range = type },
 		properties = {
 			number = { range = numPropertiesRange, number = numProperties },
 			properties = properties,
@@ -395,7 +395,7 @@ end
 -- Parse add topic request
 local function parseTopicAddRequest( range )
 	local topicName = lengthPrefixedString( range )
-	local specification = parseTopicSpecification ( topicName.remaining )
+	local specification = parseTopicSpecification( topicName.remaining )
 	return {
 		topicName = topicName,
 		specification = specification
