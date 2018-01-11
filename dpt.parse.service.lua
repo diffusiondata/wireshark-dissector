@@ -53,6 +53,19 @@ local function parseTopicSpecification( range )
 	}
 end
 
+local function parseTopicSpecificationInfo( range )
+	local idRange, remaining, id = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local specification = parseTopicSpecification( path.remaining )
+
+	return {
+		range = range,
+		id = { range = idRange, int = id },
+		path = { range = path.fullRange, string = path.range:string() },
+		specification = specification
+	}
+end
+
 -- Parse a set of detail types
 local function parseDetailTypeSet( range )
 	local numberOfDetailTypes = range:range( 0, 1 ):uint()
@@ -530,6 +543,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.selector = { range = selector.fullRange, string = selector.string }
 	elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
 		result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
+	elseif service == v5.SERVICE_NOTIFY_SUBSCRIPTION then
+		result.topicSpecInfo = parseTopicSpecificationInfo( serviceBodyRange )
 	elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
 		result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
 	elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then

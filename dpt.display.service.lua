@@ -283,6 +283,18 @@ local function addServiceInformation( parentTreeNode, service, client )
 			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
 			addTopicDetails( topicInfoNode, service.topicInfo.details )
 		end
+		if service.topicSpecInfo ~= nil then
+			local topicInfoNodeDesc = string.format( "%d bytes", service.topicSpecInfo.range:len() )
+			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicSpecInfo.range, topicInfoNodeDesc )
+			topicInfoNode:add( dptProto.fields.topicId, service.topicSpecInfo.id.range, service.topicSpecInfo.id.int )
+			topicInfoNode:add( dptProto.fields.topicPath, service.topicSpecInfo.path.range, service.topicSpecInfo.path.string )
+			topicInfoNode:add( dptProto.fields.topicPropertiesNumber, service.topicSpecInfo.specification.properties.number.range, service.topicSpecInfo.specification.properties.number.number )
+			for i, property in ipairs( service.topicSpecInfo.specification.properties.properties ) do
+				local propertyNode = topicInfoNode:add( dptProto.fields.topicProperty )
+				propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
+				propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+			end
+		end
 		if service.topicUnsubscriptionInfo ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
 			serviceNode:add( dptProto.fields.topicUnSubReason, service.topicUnsubscriptionInfo.reason.range, service.topicUnsubscriptionInfo.reason.reason )
