@@ -57,6 +57,7 @@ local function parseTopicSpecificationInfo( range )
 	local idRange, remaining, id = varint( range )
 	local path = lengthPrefixedString( remaining )
 	local specification = parseTopicSpecification( path.remaining )
+	topicInfoTable:setInfo( f_tcp_stream(), id, path.range:string(), specification )
 
 	return {
 		range = range,
