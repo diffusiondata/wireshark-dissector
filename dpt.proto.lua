@@ -212,12 +212,19 @@ local updateResponseByBytes = {
 	[0x5] = "INVALID_UPDATER",
 	[0x6] = "EXCLUSIVE_UPDATER_CONFLICT",
 	[0x7] = "INCOMPATIBLE_UPDATE",
-	[0x8] = "DELTA_WITHOUT_VALUE"
+	[0x8] = "DELTA_WITHOUT_VALUE",
+	[0x9] = "CLUSTER_REPARTITION",
+	[0xa] = "INCOMPATIBLE_STATE"
 }
 
 local updateModeByByte = {
 	[0x01] = "PARTIAL",
 	[0x02] = "FULL"
+}
+
+local addTopicResult = {
+	[0x00] = "CREATED",
+	[0x01] = "EXISTS"
 }
 
 -- Connection negotiation fields
@@ -289,6 +296,8 @@ dptProto.fields.handlerName = ProtoField.string( "dpt.service.handlerName", "Han
 dptProto.fields.controlGroup = ProtoField.string( "dpt.service.controlGroup", "Control group" )
 dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Registration Service Identity", base.HEX, v5.serviceIdentity )
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
+dptProto.fields.errorMessage = ProtoField.string( "dpt.service.error.message", "Error message" )
+dptProto.fields.reasonCode = ProtoField.uint8( "dpt.service.error.code", "Error reason code" )
 
 -- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
@@ -331,12 +340,14 @@ dptProto.fields.topicDetailsOrderKey = ProtoField.string( "dpt.topic.order.key",
 dptProto.fields.topicDetailsOrderKeyFieldName = ProtoField.string( "dpt.topic.field.name", "Field name" )
 dptProto.fields.topicProperty = ProtoField.string( "dpt.topic.property", "Topic Property" )
 dptProto.fields.topicPropertyName = ProtoField.uint8( "dpt.topic.property.name", "Name", base.HEX, diffusion.const.topicProperty.byByte )
+dptProto.fields.topicPropertyKey = ProtoField.string( "dpt.topic.property.key", "Key" )
 dptProto.fields.topicPropertyValue = ProtoField.string( "dpt.topic.property.value", "Value" )
 
 -- Add topic
 dptProto.fields.addTopic = ProtoField.string( "dpt.service.addTopic", "Add topic" )
 dptProto.fields.detailsReference = ProtoField.uint32( "dpt.service.topic.details.reference", "Topic details reference" )
 dptProto.fields.initialValue = ProtoField.string( "dpt.service.topic.initial.value", "Initial value" )
+dptProto.fields.topicAddResult = ProtoField.uint8( "dpt.service.topic.add.result", "Add result", base.HEX, addTopicResult )
 
 -- Session listener registration
 dptProto.fields.sessionListenerRegistration = ProtoField.string( "dpt.service.sessionListenerRegistration", "Session listener registration" )

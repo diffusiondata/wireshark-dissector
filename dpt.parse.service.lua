@@ -21,6 +21,52 @@ local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
 
+-- Parse a topic specifiation
+local function parseTopicSpecification( range )
+	local type = range:range( 0, 1 )
+	local numPropertiesRange, remaining, numProperties = varint( range:range( 1 ) )
+
+	local properties = {}
+	local length = 0
+	local propertyIndex = 1
+	while propertyIndex <= numProperties do
+		local propertyKey = lengthPrefixedString( remaining )
+		local propertyValue = lengthPrefixedString( propertyKey.remaining )
+
+		properties[propertyIndex] = {
+			key = propertyKey,
+			value = propertyValue
+		}
+
+		length = length + propertyKey.fullRange:len() + propertyValue.fullRange:len()
+		propertyIndex = propertyIndex + 1
+		remaining = propertyValue.remaining
+	end
+
+	return {
+		type = { type = type:uint(), range = type },
+		properties = {
+			number = { range = numPropertiesRange, number = numProperties },
+			properties = properties,
+			rangeLength = numPropertiesRange:len() + length
+		}
+	}
+end
+
+local function parseTopicSpecificationInfo( range )
+	local idRange, remaining, id = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local specification = parseTopicSpecification( path.remaining )
+	topicInfoTable:setInfo( f_tcp_stream(), id, path.range:string(), specification )
+
+	return {
+		range = range,
+		id = { range = idRange, int = id },
+		path = { range = path.fullRange, string = path.range:string() },
+		specification = specification
+	}
+end
+
 -- Parse a set of detail types
 local function parseDetailTypeSet( range )
 	local numberOfDetailTypes = range:range( 0, 1 ):uint()
@@ -360,6 +406,16 @@ local function parseAddTopicRequest( range )
 	}
 end
 
+-- Parse add topic request
+local function parseTopicAddRequest( range )
+	local topicName = lengthPrefixedString( range )
+	local specification = parseTopicSpecification( topicName.remaining )
+	return {
+		topicName = topicName,
+		specification = specification
+	}
+end
+
 local function parseUpdateTopicSet( range )
 	local topicPath = lengthPrefixedString( range )
 	local lengthRange, remaining, length = varint( topicPath.remaining )
@@ -449,6 +505,11 @@ local function parseUpdateResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
+local function parseAddResult( range )
+	local resultByteRange = range:range( 0, 1 )
+	return { range = resultByteRange, int = resultByteRange:int() }
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -475,11 +536,16 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 	elseif service == v5.SERVICE_ADD_TOPIC then
 		local info = parseAddTopicRequest( serviceBodyRange )
 		result.addTopic = info
+	elseif service == v5.SERVICE_TOPIC_ADD then
+		local info = parseTopicAddRequest( serviceBodyRange )
+		result.topicAdd = info
 	elseif service == v5.SERVICE_REMOVE_TOPICS then
 		local selector = lengthPrefixedString( serviceBodyRange )
 		result.selector = { range = selector.fullRange, string = selector.string }
 	elseif service == v5.SERVICE_SUBSCRIPTION_NOTIFICATION then
 		result.topicInfo = parseSubscriptionNotification( serviceBodyRange )
+	elseif service == v5.SERVICE_NOTIFY_SUBSCRIPTION then
+		result.topicSpecInfo = parseTopicSpecificationInfo( serviceBodyRange )
 	elseif service == v5.SERVICE_UNSUBSCRIPTION_NOTIFICATION then
 		result.topicUnsubscriptionInfo = parseUnsubscriptionNotification( serviceBodyRange )
 	elseif service == v5.SERVICE_AUTHENTICATION_CONTROL_REGISTRATION then
@@ -554,10 +620,42 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.updateResult = parseUpdateResult( serviceBodyRange )
 	elseif service == v5.SERVICE_UPDATE_SOURCE_DELTA then
 		result.updateResult = parseUpdateResult( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_ADD then
+		result.addResult = parseAddResult( serviceBodyRange )
 	end
 
 	-- Calculate the response time
 	local reqTime
+	local tcpStream = f_tcp_stream()
+	local session = tcpConnections[tcpStream]
+	local isClient = session.client:matches( f_src_host(), f_src_port() )
+	if isClient then
+		-- Response is from the client so the server created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.server, conversation )
+	else
+		-- Response is from the server so the client created the conversation Id
+		reqTime = serviceMessageTable:getRequestTime( tcpStream, session.client, conversation )
+	end
+	result.responseTime = tostring( f_time_epoch() - reqTime )
+
+	return result
+end
+
+local function parseServiceError( serviceBodyRange, service, conversation, result )
+	local errorMessage = lengthPrefixedString( serviceBodyRange )
+	local codeRange, remaining, code = varint( errorMessage.remaining )
+
+	result.error = {
+		errorMessage = errorMessage,
+		errorCode = {
+			range = codeRange,
+			code = code
+		}
+	}
+
+	-- Calculate the response time
+	local reqTime
+	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
 	local isClient = session.client:matches( f_src_host(), f_src_port() )
 	if isClient then
@@ -589,7 +687,7 @@ local function parseAsV4ServiceMessage( range )
 
 		if mode == v5.MODE_REQUEST then
 			return parseServiceRequest( serviceBodyRange, service, conversation, result )
-		elseif mode == v5.MODE_REQUEST then
+		elseif mode == v5.MODE_RESPONSE then
 			return parseServiceResponse( serviceBodyRange, service, conversation, result )
 		else
 			return result
@@ -624,8 +722,10 @@ local function parseAsV59ServiceMessage( modeRange, range )
 
 		if mode == v5.P9_MODE_REQUEST then
 			return parseServiceRequest( serviceBodyRange, service, conversation, result )
-		elseif mode == v5.P9_MODE_REQUEST then
+		elseif mode == v5.P9_MODE_RESPONSE then
 			return parseServiceResponse( serviceBodyRange, service, conversation, result )
+		elseif mode == v5.P9_MODE_ERROR then
+			return parseServiceError( serviceBodyRange, service, conversation, result )
 		else
 			return result
 		end

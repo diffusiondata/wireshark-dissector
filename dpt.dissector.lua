@@ -216,9 +216,16 @@ local function processMessage( tvb, pinfo, tree, offset, descriptions )
 
 	addClientConnectionInformation( messageTree, tvb, client, f_src_host(), f_src_port() )
 
-	-- The content range
-	local contentSize = msgDetails.msgSize - HEADER_LEN
-	local contentRange = tvb( offset, contentSize )
+	local contentSize, contentRange
+	if msgDetails.msgType == 0x1c or msgDetails.msgType == 0x1d then
+		-- Close and abort do not have content
+		contentSize = 0
+		contentRange = tvb( 0, 0 )
+	else
+		-- The content range
+		contentSize = msgDetails.msgSize - HEADER_LEN
+		contentRange = tvb( offset, contentSize )
+	end
 
 	offset = offset + contentSize
 	local messageType = messageTypeLookup(msgDetails.msgType)
@@ -262,9 +269,16 @@ local function processWSMessage( tvb, pinfo, tree, descriptions )
 	end
 	addClientConnectionInformation( messageTree, tvb, client, f_src_host(), f_src_port() )
 
-	-- The content range
-	local contentSize = msgDetails.msgSize - 1
-	local contentRange = tvb( 1, contentSize )
+	local contentSize, contentRange
+	if msgDetails.msgType == 0x1c or msgDetails.msgType == 0x1d then
+		-- Close and abort do not have content
+		contentSize = 0
+		contentRange = tvb( 0, 0 )
+	else
+		-- The content range
+		contentSize = msgDetails.msgSize - 1
+		contentRange = tvb( 1, contentSize )
+	end
 
 	if messageType.id == v5.MODE_REQUEST or messageType.id == v5.MODE_RESPONSE or messageType.id == v5.MODE_ERROR then
 		local serviceInfo = parseAsV59ServiceMessage( msgTypeRange, contentRange )

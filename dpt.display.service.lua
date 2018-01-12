@@ -190,6 +190,19 @@ local function addAddTopicInformation( parentNode, info )
 	end
 end
 
+-- Add topic add request information
+local function addTopicAddInformation( parentNode, info )
+	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+	parentNode:add( dptProto.fields.topicType, info.specification.type.range, info.specification.type.type )
+
+	parentNode:add( dptProto.fields.topicPropertiesNumber, info.specification.properties.number.range, info.specification.properties.number.number )
+	for i, property in ipairs( info.specification.properties.properties ) do
+		local propertyNode = parentNode:add( dptProto.fields.topicProperty )
+		propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
+		propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+	end
+end
+
 -- Add update topic request information
 local function addUpdateTopicInformation( parentNode, info )
 	if info.conversationId ~= nil then
@@ -259,12 +272,28 @@ local function addServiceInformation( parentTreeNode, service, client )
 			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
 			addAddTopicInformation( addTopicNode, service.addTopic )
 		end
+		if service.topicAdd ~= nil then
+			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
+			addTopicAddInformation( addTopicNode, service.topicAdd )
+		end
 		if service.topicInfo ~= nil then
 			local topicInfoNodeDesc = string.format( "%d bytes", service.topicInfo.range:len() )
 			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
 			topicInfoNode:add( dptProto.fields.topicId, service.topicInfo.id.range, service.topicInfo.id.int )
 			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
 			addTopicDetails( topicInfoNode, service.topicInfo.details )
+		end
+		if service.topicSpecInfo ~= nil then
+			local topicInfoNodeDesc = string.format( "%d bytes", service.topicSpecInfo.range:len() )
+			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicSpecInfo.range, topicInfoNodeDesc )
+			topicInfoNode:add( dptProto.fields.topicId, service.topicSpecInfo.id.range, service.topicSpecInfo.id.int )
+			topicInfoNode:add( dptProto.fields.topicPath, service.topicSpecInfo.path.range, service.topicSpecInfo.path.string )
+			topicInfoNode:add( dptProto.fields.topicPropertiesNumber, service.topicSpecInfo.specification.properties.number.range, service.topicSpecInfo.specification.properties.number.number )
+			for i, property in ipairs( service.topicSpecInfo.specification.properties.properties ) do
+				local propertyNode = topicInfoNode:add( dptProto.fields.topicProperty )
+				propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
+				propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
+			end
 		end
 		if service.topicUnsubscriptionInfo ~= nil then
 			serviceNode:add( dptProto.fields.topicName, service.topicUnsubscriptionInfo.topic.range, service.topicUnsubscriptionInfo.topic.name )
@@ -331,6 +360,13 @@ local function addServiceInformation( parentTreeNode, service, client )
 		end
 		if service.updateResult ~= nil then
 			serviceNode:add( dptProto.fields.updateResponse, service.updateResult.range )
+		end
+		if service.addResult ~= nil then
+			serviceNode:add( dptProto.fields.topicAddResult, service.addResult.range )
+		end
+		if service.error ~= nil then
+			serviceNode:add( dptProto.fields.reasonCode, service.error.errorCode.range, service.error.errorCode.code )
+			serviceNode:add( dptProto.fields.errorMessage, service.error.errorMessage.fullRange, service.error.errorMessage.string )
 		end
 
 		-- Add generated information
