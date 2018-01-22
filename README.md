@@ -23,6 +23,7 @@ The files that need to be installed are:
 + dpt.parse.lua
 + dpt.parse.common.lua
 + dpt.parse.service.lua
++ dpt.parse.topic.details.lua
 + dpt.messages.lua
 + dpt.proto.lua
 + dpt.display.lua
@@ -30,6 +31,7 @@ The files that need to be installed are:
 + dpt.display.service.lua
 + dpt.v5.lua
 + dpt.dissector.lua
++ dpt.constants.lua
 
 Displayed Information
 =====================
