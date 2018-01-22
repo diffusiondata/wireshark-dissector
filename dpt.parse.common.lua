@@ -150,6 +150,18 @@ local function parseVarSessionId( tvb )
 	}, remaining
 end
 
+local function parseOptional( tvb, task )
+	local optionRange = tvb:range( 0, 1 )
+	local option = optionRange:int()
+	if option == 0x00 then
+		return {
+			remaining = tvb:range( 1 )
+		}
+	else
+		return task( tvb:range( 1 ) )
+	end
+end
+
 -- Package footer
 master.parseCommon = {
 	varint = varint,
