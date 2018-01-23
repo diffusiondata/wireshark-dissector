@@ -20,6 +20,7 @@ local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
+local parseOptional = diffusion.parseCommon.parseOptional
 
 -- Parse a topic specifiation
 local function parseTopicSpecification( range )
@@ -145,37 +146,29 @@ local function parseSessionDetails( range )
 	}
 	local offset = 1
 
-	local hasSummary = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasSummary ~= 0 then
+	parseOptional( range:range( offset ), function (tvb)
 		result.count = result.count + 1
-		result.summary = parseSummary( range:range( offset ) )
-		offset = offset + result.summary.range:len()
-	end
+		result.summary = parseSummary( range:range( offset + 1 ) )
+		offset = offset + result.summary.range:len() + 1
+	end )
 
-	local hasLocation = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasLocation ~= 0 then
+	parseOptional( range:range( offset ), function (tvb)
 		result.count = result.count + 1
-		result.location = parseLocation( range:range( offset ) )
-		offset = offset + result.location.range:len()
-	end
+		result.location = parseLocation( range:range( offset + 1 ) )
+		offset = offset + result.location.range:len() + 1
+	end )
 
-	local hasConnectorName = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasConnectorName ~= 0 then
+	parseOptional( range:range( offset ), function ( tvb )
 		result.count = result.count + 1
-		result.connector = lengthPrefixedString( range:range( offset ) )
-		offset = offset + result.connector.fullRange:len()
-	end
+		result.connector = lengthPrefixedString( range:range( offset + 1 ) )
+		offset = offset + result.connector.fullRange:len() + 1
+	end )
 
-	local hasServerName = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasServerName ~= 0 then
+	parseOptional( range:range( offset ), function ( tvb )
 		result.count = result.count + 1
-		result.server = lengthPrefixedString( range:range( offset ) )
-		offset = offset + result.server.fullRange:len()
-	end
+		result.server = lengthPrefixedString( range:range( offset + 1 ) )
+		offset = offset + result.server.fullRange:len() + 1
+	end )
 
 	result.range = range:range( 0, offset )
 	if offset == range:len() then

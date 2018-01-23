@@ -168,7 +168,8 @@ master.parseCommon = {
 	lengthPrefixedString = lengthPrefixedString,
 	lookupClientTypeByChar = lookupClientTypeByChar,
 	parseSessionId = parseSessionId,
-	parseVarSessionId = parseVarSessionId
+	parseVarSessionId = parseVarSessionId,
+	parseOptional = parseOptional
 }
 diffusion = master
 return master.parseCommon
