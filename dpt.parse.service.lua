@@ -197,16 +197,14 @@ end
 
 -- Parse a session listener registration
 local function parseSessionDetailsListenerRegistrationRequest( range )
-	local hasDetailTypes = range:range( 0, 1 ):uint()
-
-	if hasDetailTypes == 0 then
-		local cIdRange, remaining, cId = varint( range:range( 1 ) )
-		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
-	else
-		local detailTypeSet, remaining = parseDetailTypeSet( range:range( 1 ) )
+	return parseOptional( range:range( offset ), function ( tvb )
+		local detailTypeSet, remaining = parseDetailTypeSet( tvb )
 		local cIdRange, remaining, cId = varint( remaining )
 		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = detailTypeSet }
-	end
+	end, function ( tvb )
+		local cIdRange, remaining, cId = varint( tvb )
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
+	end )
 end
 
 -- Parse a session details lookup request

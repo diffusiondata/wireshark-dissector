@@ -150,13 +150,17 @@ local function parseVarSessionId( tvb )
 	}, remaining
 end
 
-local function parseOptional( tvb, task )
+local function parseOptional( tvb, task, absentTask )
 	local optionRange = tvb:range( 0, 1 )
 	local option = optionRange:int()
 	if option == 0x00 then
-		return {
-			remaining = tvb:range( 1 )
-		}
+		if absentTask ~= nil then
+			absentTask( tvb:range( 1 ) )
+		else
+			return {
+				remaining = tvb:range( 1 )
+			}
+		end
 	else
 		return task( tvb:range( 1 ) )
 	end
