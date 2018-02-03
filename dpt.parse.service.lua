@@ -441,6 +441,9 @@ local function parseUpdateTopicDelta( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
@@ -491,6 +494,9 @@ local function parseUpdateSourceDelta( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
