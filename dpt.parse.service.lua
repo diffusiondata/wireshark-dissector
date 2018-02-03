@@ -417,6 +417,9 @@ local function parseUpdateTopicSet( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
