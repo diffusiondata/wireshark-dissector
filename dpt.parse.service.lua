@@ -462,6 +462,9 @@ local function parseUpdateSourceSet( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
