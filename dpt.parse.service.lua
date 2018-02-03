@@ -612,7 +612,9 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 	-- Parse the response for service specific information
 	if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 		local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
-		result.newUpdateSourceState = info
+		result.updateSourceInfo = {
+			newUpdateSourceState = info
+		}
 	elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 		result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
 	elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
