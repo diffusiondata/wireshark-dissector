@@ -8,7 +8,7 @@
 dofile( USER_DIR.."dpt.constants.lua" )
 dofile( USER_DIR.."dpt.utilities.lua" )
 dofile( USER_DIR.."dpt.info.lua" )
-dofile( USER_DIR.."dpt.v5.lua" )
+dofile( USER_DIR.."dpt.services.lua" )
 dofile( USER_DIR.."dpt.parse.common.lua" )
 dofile( USER_DIR.."dpt.parse.topic.details.lua" )
 dofile( USER_DIR.."dpt.parse.service.lua" )

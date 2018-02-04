@@ -29,7 +29,7 @@ The files that need to be installed are:
 + dpt.display.lua
 + dpt.display.connection.lua
 + dpt.display.service.lua
-+ dpt.v5.lua
++ dpt.services.lua
 + dpt.dissector.lua
 + dpt.constants.lua
 
