@@ -503,6 +503,23 @@ local function parseUpdateSourceDelta( range )
 	}
 end
 
+local function parseMessagingSend( range )
+	local path = lengthPrefixedString( range )
+	local dataType = lengthPrefixedString( path.remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -604,6 +621,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 				int = conversationId
 			}
 		}
+	elseif service == v5.SERVICE_MESSAGING_SEND then
+		result.send = parseMessagingSend( serviceBodyRange )
 	end
 	return result
 end

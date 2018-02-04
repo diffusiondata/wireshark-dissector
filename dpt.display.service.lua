@@ -368,6 +368,12 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.reasonCode, service.error.errorCode.range, service.error.errorCode.code )
 			serviceNode:add( dptProto.fields.errorMessage, service.error.errorMessage.fullRange, service.error.errorMessage.string )
 		end
+		if service.send ~= nil then
+			serviceNode:add( dptProto.fields.path, service.send.path.range, service.send.path.string )
+			serviceNode:add( dptProto.fields.dataType, service.send.dataType.range, service.send.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, service.send.bytes.length.range,  service.send.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, service.send.bytes.range )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
