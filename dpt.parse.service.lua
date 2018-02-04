@@ -22,10 +22,8 @@ local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
 local parseOptional = diffusion.parseCommon.parseOptional
 
--- Parse a topic specifiation
-local function parseTopicSpecification( range )
-	local type = range:range( 0, 1 )
-	local numPropertiesRange, remaining, numProperties = varint( range:range( 1 ) )
+local function parseProperties( range )
+	local numPropertiesRange, remaining, numProperties = varint( range )
 
 	local properties = {}
 	local length = 0
@@ -45,12 +43,20 @@ local function parseTopicSpecification( range )
 	end
 
 	return {
+		number = { range = numPropertiesRange, number = numProperties },
+		properties = properties,
+		rangeLength = numPropertiesRange:len() + length
+	}, remaining
+end
+
+-- Parse a topic specifiation
+local function parseTopicSpecification( range )
+	local type = range:range( 0, 1 )
+
+	local properties = parseProperties( range:range( 1 ) )
+	return {
 		type = { type = type:uint(), range = type },
-		properties = {
-			number = { range = numPropertiesRange, number = numProperties },
-			properties = properties,
-			rangeLength = numPropertiesRange:len() + length
-		}
+		properties = properties
 	}
 end
 
@@ -520,6 +526,31 @@ local function parseMessagingSend( range )
 	}
 end
 
+local function parseMessagingSendToSession( range )
+	local cIdRange, remaining, cId = varint( range )
+	local sessionId, remaining = parseVarSessionId( remaining )
+	local path = lengthPrefixedString( remaining )
+	local properties, remaining = parseProperties( path.remaining )
+	local dataType = lengthPrefixedString( remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		sessionId = sessionId,
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -623,6 +654,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		}
 	elseif service == v5.SERVICE_MESSAGING_SEND then
 		result.send = parseMessagingSend( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CLIENT then
+		result.sendToSession = parseMessagingSendToSession( serviceBodyRange )
 	end
 	return result
 end

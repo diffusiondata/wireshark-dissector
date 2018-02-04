@@ -374,6 +374,15 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.contentLength, service.send.bytes.length.range,  service.send.bytes.length.length )
 			serviceNode:add( dptProto.fields.content, service.send.bytes.range )
 		end
+		if service.sendToSession ~= nil then
+			local s = service.sendToSession
+			serviceNode:add( dptProto.fields.requestId, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.sessionId, s.sessionId.range, s.sessionId.clientId)
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.dataType, s.dataType.range, s.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, s.bytes.range )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

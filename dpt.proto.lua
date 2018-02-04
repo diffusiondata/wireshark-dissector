@@ -300,6 +300,7 @@ dptProto.fields.errorMessage = ProtoField.string( "dpt.service.error.message", "
 dptProto.fields.reasonCode = ProtoField.uint8( "dpt.service.error.code", "Error reason code" )
 dptProto.fields.path = ProtoField.string( "dpt.service.path", "Path" )
 dptProto.fields.dataType = ProtoField.string( "dpt.service.dataType", "Data Type" )
+dptProto.fields.requestId = ProtoField.uint32( "dpt.service.requestId", "Conversation ID (request)" )
 
 -- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
