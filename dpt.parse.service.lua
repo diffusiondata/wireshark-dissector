@@ -551,6 +551,21 @@ local function parseMessagingSendToSession( range )
 	}
 end
 
+local function parseMessagingResponse( range )
+	local dataType = lengthPrefixedString( range )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
 local function parseRequestControlRegistration( range )
 	local result, remaining = parseControlRegistrationParameters( range )
 	local path = lengthPrefixedString( remaining )
@@ -711,6 +726,12 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.updateResult = parseUpdateResult( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_ADD then
 		result.addResult = parseAddResult( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CLIENT then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_SEND then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
 	end
 
 	-- Calculate the response time
