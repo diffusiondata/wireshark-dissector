@@ -551,6 +551,36 @@ local function parseMessagingSendToSession( range )
 	}
 end
 
+local function parseRequestControlRegistration( range )
+	local result, remaining = parseControlRegistrationParameters( range )
+	local path = lengthPrefixedString( remaining )
+
+	local numPropertiesRange, remaining, numProperties = varint( path.remaining )
+
+	local properties = {}
+	local length = 0
+	local propertyIndex = 1
+	while propertyIndex <= numProperties do
+		local propertyKey = lengthPrefixedString( remaining )
+
+		properties[propertyIndex] = {
+			key = propertyKey
+		}
+
+		length = length + propertyKey.fullRange:len()
+		propertyIndex = propertyIndex + 1
+		remaining = propertyKey.remaining
+	end
+
+	return {
+		controlRegInfo = result,
+		handlerPath = path,
+		number = { range = numPropertiesRange, number = numProperties },
+		properties = properties,
+		rangeLength = numPropertiesRange:len() + length
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -656,6 +686,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.send = parseMessagingSend( serviceBodyRange )
 	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CLIENT then
 		result.sendToSession = parseMessagingSendToSession( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CONTROL_REGISTRATION then
+		result.requestControlRegistration = parseRequestControlRegistration( serviceBodyRange )
 	end
 	return result
 end
