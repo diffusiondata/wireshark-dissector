@@ -403,6 +403,14 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
 			serviceNode:add( dptProto.fields.content, s.bytes.range )
 		end
+		if service.forwardRequest ~= nil then
+			local s = service.forwardRequest
+			serviceNode:add( dptProto.fields.sessionId, s.sessionId.range, s.sessionId.clientId)
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.dataType, s.dataType.range, s.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, s.bytes.range )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

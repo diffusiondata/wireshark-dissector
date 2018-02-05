@@ -596,6 +596,25 @@ local function parseRequestControlRegistration( range )
 	}
 end
 
+local function parseForwardRequest( range )
+	local sessionId, remaining = parseVarSessionId( range )
+	local path = lengthPrefixedString( remaining )
+	local dataType = lengthPrefixedString( path.remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		sessionId = sessionId,
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -703,6 +722,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.sendToSession = parseMessagingSendToSession( serviceBodyRange )
 	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CONTROL_REGISTRATION then
 		result.requestControlRegistration = parseRequestControlRegistration( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
+		result.forwardRequest = parseForwardRequest( serviceBodyRange )
 	end
 	return result
 end
