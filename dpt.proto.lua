@@ -227,6 +227,13 @@ local addTopicResult = {
 	[0x01] = "EXISTS"
 }
 
+local topicNotificationType = {
+	[0x0] = "ADDED",
+	[0x1] = "SELECTED",
+	[0x2] = "REMOVED",
+	[0x3] = "DESELECTED"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -394,6 +401,9 @@ dptProto.fields.throttleClientQueueLimit = ProtoField.uint32( "dpt.service.clien
 -- Client close service
 dptProto.fields.clientClose = ProtoField.string( "dpt.service.clientControl.clientClose", "Client close" )
 dptProto.fields.clientCloseReason = ProtoField.string( "dpt.service.clientControl.clientClose.reason", "Client close reason" )
+
+-- Topic notification services
+dptProto.fields.topicNotificationType = ProtoField.uint8( "dpt.service.topicNotification.type", "Notification type", base.HEX, topicNotificationType )
 
 -- Package footer
 master.proto = {
