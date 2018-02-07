@@ -754,6 +754,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.forwardRequest = parseForwardRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_SELECTION then
 		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_DESELECTION then
+		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_EVENTS then
 		result.notificationEvent = parseTopicNotificationEvent( serviceBodyRange )
 	end
