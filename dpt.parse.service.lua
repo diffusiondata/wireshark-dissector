@@ -615,6 +615,18 @@ local function parseForwardRequest( range )
 	}
 end
 
+local function parseTopicNotificationSelection( range )
+	local cIdRange, remaining, cId = varint( range )
+	local path = lengthPrefixedString( remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		path = path
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -724,6 +736,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.requestControlRegistration = parseRequestControlRegistration( serviceBodyRange )
 	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
 		result.forwardRequest = parseForwardRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_SELECTION then
+		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
 	end
 	return result
 end

@@ -411,6 +411,11 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
 			serviceNode:add( dptProto.fields.content, s.bytes.range )
 		end
+		if service.notificationSelection ~= nil then
+			local s = service.notificationSelection
+			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
