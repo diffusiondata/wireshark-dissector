@@ -758,6 +758,14 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_EVENTS then
 		result.notificationEvent = parseTopicNotificationEvent( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_DEREGISTRATION then
+		local conversationRange, remaining, conversationId = varint( serviceBodyRange )
+		result.notificationDereg = {
+			conversationId = {
+				range = conversationRange,
+				int = conversationId
+			}
+		}
 	end
 	return result
 end

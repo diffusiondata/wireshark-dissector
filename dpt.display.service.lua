@@ -428,6 +428,9 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.topicNotificationType, s.type )
 			addSpecification( serviceNode, s.specification )
 		end
+		if service.notificationDereg ~= nil then
+			serviceNode:add( dptProto.fields.conversation, service.notificationDereg.conversationId.range, service.notificationDereg.conversationId.int )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then
