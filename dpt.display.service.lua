@@ -419,7 +419,7 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.notificationSelection ~= nil then
 			local s = service.notificationSelection
 			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
-			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.selector, s.path.range, s.path.string )
 		end
 		if service.notificationEvent ~= nil then
 			local s = service.notificationEvent
