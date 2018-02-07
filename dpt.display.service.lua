@@ -190,17 +190,22 @@ local function addAddTopicInformation( parentNode, info )
 	end
 end
 
--- Add topic add request information
-local function addTopicAddInformation( parentNode, info )
-	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
-	parentNode:add( dptProto.fields.topicType, info.specification.type.range, info.specification.type.type )
+local function addSpecification( parentNode, specification )
+	parentNode:add( dptProto.fields.topicType, specification.type.range, specification.type.type )
 
-	parentNode:add( dptProto.fields.topicPropertiesNumber, info.specification.properties.number.range, info.specification.properties.number.number )
-	for i, property in ipairs( info.specification.properties.properties ) do
+	parentNode:add( dptProto.fields.topicPropertiesNumber, specification.properties.number.range, specification.properties.number.number )
+	for i, property in ipairs( specification.properties.properties ) do
 		local propertyNode = parentNode:add( dptProto.fields.topicProperty )
 		propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
 		propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
 	end
+end
+
+-- Add topic add request information
+local function addTopicAddInformation( parentNode, info )
+	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+
+	addSpecification( parentNode, info.specification )
 end
 
 -- Add update topic request information
@@ -415,6 +420,13 @@ local function addServiceInformation( parentTreeNode, service, client )
 			local s = service.notificationSelection
 			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
 			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+		end
+		if service.notificationEvent ~= nil then
+			local s = service.notificationEvent
+			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.topicNotificationType, s.type )
+			addSpecification( serviceNode, s.specification )
 		end
 
 		-- Add generated information
