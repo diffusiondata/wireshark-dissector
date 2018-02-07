@@ -643,6 +643,20 @@ local function parseTopicNotificationEvent( range )
 	}
 end
 
+local function parseTopicNotificationDescendantEvent( range )
+	local cIdRange, remaining, cId = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local typeByteRange = path.remaining:range( 0, 1 )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		path = path,
+		type = typeByteRange
+	}
+end
+
 local function parseUpdateResult( range )
 	local resultByteRange = range:range( 0, 1 )
 	return { range = resultByteRange, int = resultByteRange:int() }
@@ -758,6 +772,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_EVENTS then
 		result.notificationEvent = parseTopicNotificationEvent( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_DESCENDANT_EVENTS then
+		result.notificationEvent = parseTopicNotificationDescendantEvent( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_DEREGISTRATION then
 		local conversationRange, remaining, conversationId = varint( serviceBodyRange )
 		result.notificationDereg = {

@@ -426,7 +426,9 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
 			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
 			serviceNode:add( dptProto.fields.topicNotificationType, s.type )
-			addSpecification( serviceNode, s.specification )
+			if s.specification ~= nil then
+				addSpecification( serviceNode, s.specification )
+			end
 		end
 		if service.notificationDereg ~= nil then
 			serviceNode:add( dptProto.fields.conversation, service.notificationDereg.conversationId.range, service.notificationDereg.conversationId.int )
