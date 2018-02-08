@@ -20,11 +20,10 @@ local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
+local parseOptional = diffusion.parseCommon.parseOptional
 
--- Parse a topic specifiation
-local function parseTopicSpecification( range )
-	local type = range:range( 0, 1 )
-	local numPropertiesRange, remaining, numProperties = varint( range:range( 1 ) )
+local function parseProperties( range )
+	local numPropertiesRange, remaining, numProperties = varint( range )
 
 	local properties = {}
 	local length = 0
@@ -44,12 +43,20 @@ local function parseTopicSpecification( range )
 	end
 
 	return {
+		number = { range = numPropertiesRange, number = numProperties },
+		properties = properties,
+		rangeLength = numPropertiesRange:len() + length
+	}, remaining
+end
+
+-- Parse a topic specifiation
+local function parseTopicSpecification( range )
+	local type = range:range( 0, 1 )
+
+	local properties = parseProperties( range:range( 1 ) )
+	return {
 		type = { type = type:uint(), range = type },
-		properties = {
-			number = { range = numPropertiesRange, number = numProperties },
-			properties = properties,
-			rangeLength = numPropertiesRange:len() + length
-		}
+		properties = properties
 	}
 end
 
@@ -145,37 +152,29 @@ local function parseSessionDetails( range )
 	}
 	local offset = 1
 
-	local hasSummary = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasSummary ~= 0 then
+	parseOptional( range:range( offset ), function (tvb)
 		result.count = result.count + 1
-		result.summary = parseSummary( range:range( offset ) )
-		offset = offset + result.summary.range:len()
-	end
+		result.summary = parseSummary( range:range( offset + 1 ) )
+		offset = offset + result.summary.range:len() + 1
+	end )
 
-	local hasLocation = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasLocation ~= 0 then
+	parseOptional( range:range( offset ), function (tvb)
 		result.count = result.count + 1
-		result.location = parseLocation( range:range( offset ) )
-		offset = offset + result.location.range:len()
-	end
+		result.location = parseLocation( range:range( offset + 1 ) )
+		offset = offset + result.location.range:len() + 1
+	end )
 
-	local hasConnectorName = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasConnectorName ~= 0 then
+	parseOptional( range:range( offset ), function ( tvb )
 		result.count = result.count + 1
-		result.connector = lengthPrefixedString( range:range( offset ) )
-		offset = offset + result.connector.fullRange:len()
-	end
+		result.connector = lengthPrefixedString( range:range( offset + 1 ) )
+		offset = offset + result.connector.fullRange:len() + 1
+	end )
 
-	local hasServerName = range:range( offset, 1 ):uint();
-	offset = offset + 1
-	if hasServerName ~= 0 then
+	parseOptional( range:range( offset ), function ( tvb )
 		result.count = result.count + 1
-		result.server = lengthPrefixedString( range:range( offset ) )
-		offset = offset + result.server.fullRange:len()
-	end
+		result.server = lengthPrefixedString( range:range( offset + 1 ) )
+		offset = offset + result.server.fullRange:len() + 1
+	end )
 
 	result.range = range:range( 0, offset )
 	if offset == range:len() then
@@ -204,16 +203,14 @@ end
 
 -- Parse a session listener registration
 local function parseSessionDetailsListenerRegistrationRequest( range )
-	local hasDetailTypes = range:range( 0, 1 ):uint()
-
-	if hasDetailTypes == 0 then
-		local cIdRange, remaining, cId = varint( range:range( 1 ) )
-		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
-	else
-		local detailTypeSet, remaining = parseDetailTypeSet( range:range( 1 ) )
+	return parseOptional( range:range( offset ), function ( tvb )
+		local detailTypeSet, remaining = parseDetailTypeSet( tvb )
 		local cIdRange, remaining, cId = varint( remaining )
 		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = detailTypeSet }
-	end
+	end, function ( tvb )
+		local cIdRange, remaining, cId = varint( tvb )
+		return { conversationId = { range = cIdRange, int = cId }, detailTypeSet = { range = range:range( 0, 1 ), length = 0 } }
+	end )
 end
 
 -- Parse a session details lookup request
@@ -426,6 +423,9 @@ local function parseUpdateTopicSet( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
@@ -447,6 +447,9 @@ local function parseUpdateTopicDelta( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
@@ -468,6 +471,9 @@ local function parseUpdateSourceSet( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
@@ -494,9 +500,160 @@ local function parseUpdateSourceDelta( range )
 				length = {
 					range = lengthRange,
 					int = length
+				},
+				bytes = {
+					range = remaining
 				}
 			}
 		}
+	}
+end
+
+local function parseMessagingSend( range )
+	local path = lengthPrefixedString( range )
+	local dataType = lengthPrefixedString( path.remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
+local function parseMessagingSendToSession( range )
+	local cIdRange, remaining, cId = varint( range )
+	local sessionId, remaining = parseVarSessionId( remaining )
+	local path = lengthPrefixedString( remaining )
+	local properties, remaining = parseProperties( path.remaining )
+	local dataType = lengthPrefixedString( remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		sessionId = sessionId,
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
+local function parseMessagingResponse( range )
+	local dataType = lengthPrefixedString( range )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
+local function parseRequestControlRegistration( range )
+	local result, remaining = parseControlRegistrationParameters( range )
+	local path = lengthPrefixedString( remaining )
+
+	local numPropertiesRange, remaining, numProperties = varint( path.remaining )
+
+	local properties = {}
+	local length = 0
+	local propertyIndex = 1
+	while propertyIndex <= numProperties do
+		local propertyKey = lengthPrefixedString( remaining )
+
+		properties[propertyIndex] = {
+			key = propertyKey
+		}
+
+		length = length + propertyKey.fullRange:len()
+		propertyIndex = propertyIndex + 1
+		remaining = propertyKey.remaining
+	end
+
+	return {
+		controlRegInfo = result,
+		handlerPath = path,
+		number = { range = numPropertiesRange, number = numProperties },
+		properties = properties,
+		rangeLength = numPropertiesRange:len() + length
+	}
+end
+
+local function parseForwardRequest( range )
+	local sessionId, remaining = parseVarSessionId( range )
+	local path = lengthPrefixedString( remaining )
+	local dataType = lengthPrefixedString( path.remaining )
+	local lengthRange, bytesRange, length = varint( dataType.remaining )
+	return {
+		sessionId = sessionId,
+		path = path,
+		dataType = dataType,
+		bytes = {
+			length = {
+				range = lengthRange,
+				length = length
+			},
+			range = bytesRange
+		}
+	}
+end
+
+local function parseTopicNotificationSelection( range )
+	local cIdRange, remaining, cId = varint( range )
+	local path = lengthPrefixedString( remaining )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		path = path
+	}
+end
+
+local function parseTopicNotificationEvent( range )
+	local cIdRange, remaining, cId = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local typeByteRange = path.remaining:range( 0, 1 )
+	local specification = parseTopicSpecification( path.remaining:range( 1 ) )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		path = path,
+		type = typeByteRange,
+		specification = specification
+	}
+end
+
+local function parseTopicNotificationDescendantEvent( range )
+	local cIdRange, remaining, cId = varint( range )
+	local path = lengthPrefixedString( remaining )
+	local typeByteRange = path.remaining:range( 0, 1 )
+	return {
+		conversationId = {
+			range = cIdRange,
+			int = cId
+		},
+		path = path,
+		type = typeByteRange
 	}
 end
 
@@ -601,6 +758,30 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 				int = conversationId
 			}
 		}
+	elseif service == v5.SERVICE_MESSAGING_SEND then
+		result.send = parseMessagingSend( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CLIENT then
+		result.sendToSession = parseMessagingSendToSession( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CONTROL_REGISTRATION then
+		result.requestControlRegistration = parseRequestControlRegistration( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
+		result.forwardRequest = parseForwardRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_SELECTION then
+		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_DESELECTION then
+		result.notificationSelection = parseTopicNotificationSelection( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_EVENTS then
+		result.notificationEvent = parseTopicNotificationEvent( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_DESCENDANT_EVENTS then
+		result.notificationEvent = parseTopicNotificationDescendantEvent( serviceBodyRange )
+	elseif service == v5.SERVICE_TOPIC_NOTIFICATION_DEREGISTRATION then
+		local conversationRange, remaining, conversationId = varint( serviceBodyRange )
+		result.notificationDereg = {
+			conversationId = {
+				range = conversationRange,
+				int = conversationId
+			}
+		}
 	end
 	return result
 end
@@ -609,7 +790,9 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 	-- Parse the response for service specific information
 	if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 		local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
-		result.newUpdateSourceState = info
+		result.updateSourceInfo = {
+			newUpdateSourceState = info
+		}
 	elseif service == v5.SERVICE_GET_SESSION_DETAILS then
 		result.lookupSessionDetailsResponse = parseSessionDetails( serviceBodyRange )
 	elseif service == v5.SERVICE_UPDATE_TOPIC_SET then
@@ -622,6 +805,12 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.updateResult = parseUpdateResult( serviceBodyRange )
 	elseif service == v5.SERVICE_TOPIC_ADD then
 		result.addResult = parseAddResult( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_CLIENT then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_SEND then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
+		result.requestResponse = parseMessagingResponse( serviceBodyRange )
 	end
 
 	-- Calculate the response time

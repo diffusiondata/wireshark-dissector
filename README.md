@@ -9,7 +9,7 @@ Installation
 ============
 
 + Ensure your Wireshark has Lua installed
-+ The dissector has been tested on both 1.12 and 1.99 versions of Wireshark
++ The dissector has been tested on version 2.2.6 of Wireshark
 + Attempt to run the install.sh script using bash, this may call out to sudo to update the init.lua file
 
 If the install script fails or you are using Windows:
@@ -23,13 +23,15 @@ The files that need to be installed are:
 + dpt.parse.lua
 + dpt.parse.common.lua
 + dpt.parse.service.lua
++ dpt.parse.topic.details.lua
 + dpt.messages.lua
 + dpt.proto.lua
 + dpt.display.lua
 + dpt.display.connection.lua
 + dpt.display.service.lua
-+ dpt.v5.lua
++ dpt.services.lua
 + dpt.dissector.lua
++ dpt.constants.lua
 
 Displayed Information
 =====================

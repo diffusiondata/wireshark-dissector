@@ -190,17 +190,22 @@ local function addAddTopicInformation( parentNode, info )
 	end
 end
 
--- Add topic add request information
-local function addTopicAddInformation( parentNode, info )
-	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
-	parentNode:add( dptProto.fields.topicType, info.specification.type.range, info.specification.type.type )
+local function addSpecification( parentNode, specification )
+	parentNode:add( dptProto.fields.topicType, specification.type.range, specification.type.type )
 
-	parentNode:add( dptProto.fields.topicPropertiesNumber, info.specification.properties.number.range, info.specification.properties.number.number )
-	for i, property in ipairs( info.specification.properties.properties ) do
+	parentNode:add( dptProto.fields.topicPropertiesNumber, specification.properties.number.range, specification.properties.number.number )
+	for i, property in ipairs( specification.properties.properties ) do
 		local propertyNode = parentNode:add( dptProto.fields.topicProperty )
 		propertyNode:add( dptProto.fields.topicPropertyKey, property.key.fullRange, property.key.string )
 		propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
 	end
+end
+
+-- Add topic add request information
+local function addTopicAddInformation( parentNode, info )
+	parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
+
+	addSpecification( parentNode, info.specification )
 end
 
 -- Add update topic request information
@@ -367,6 +372,66 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.error ~= nil then
 			serviceNode:add( dptProto.fields.reasonCode, service.error.errorCode.range, service.error.errorCode.code )
 			serviceNode:add( dptProto.fields.errorMessage, service.error.errorMessage.fullRange, service.error.errorMessage.string )
+		end
+		if service.send ~= nil then
+			serviceNode:add( dptProto.fields.path, service.send.path.range, service.send.path.string )
+			serviceNode:add( dptProto.fields.dataType, service.send.dataType.range, service.send.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, service.send.bytes.length.range,  service.send.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, service.send.bytes.range )
+		end
+		if service.sendToSession ~= nil then
+			local s = service.sendToSession
+			serviceNode:add( dptProto.fields.requestId, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.sessionId, s.sessionId.range, s.sessionId.clientId)
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.dataType, s.dataType.range, s.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, s.bytes.range )
+		end
+		if service.requestControlRegistration ~= nil then
+			local controlRegInfo = service.requestControlRegistration.controlRegInfo
+			local handlerPath = service.requestControlRegistration.handlerPath
+			serviceNode:add( dptProto.fields.regServiceId, controlRegInfo.serviceId.range, controlRegInfo.serviceId.int )
+			serviceNode:add( dptProto.fields.controlGroup, controlRegInfo.controlGroup.fullRange, controlRegInfo.controlGroup.string )
+			if controlRegInfo.conversationId ~= nil then
+				serviceNode:add( dptProto.fields.conversation, controlRegInfo.conversationId.range, controlRegInfo.conversationId.int )
+			end
+			serviceNode:add( dptProto.fields.handlerTopicPath, handlerPath.fullRange, handlerPath.string )
+			serviceNode:add( dptProto.fields.sessionPropertiesNumber, service.requestControlRegistration.number.range, service.requestControlRegistration.number.number )
+			for i, property in ipairs( service.requestControlRegistration.properties ) do
+				serviceNode:add( dptProto.fields.sessionPropertyKey, property.key.fullRange, property.key.string )
+			end
+		end
+		if service.requestResponse ~= nil then
+			local s = service.requestResponse
+			serviceNode:add( dptProto.fields.dataType, s.dataType.range, s.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, s.bytes.range )
+		end
+		if service.forwardRequest ~= nil then
+			local s = service.forwardRequest
+			serviceNode:add( dptProto.fields.sessionId, s.sessionId.range, s.sessionId.clientId)
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.dataType, s.dataType.range, s.dataType.string )
+			serviceNode:add( dptProto.fields.contentLength, s.bytes.length.range,  s.bytes.length.length )
+			serviceNode:add( dptProto.fields.content, s.bytes.range )
+		end
+		if service.notificationSelection ~= nil then
+			local s = service.notificationSelection
+			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.selector, s.path.range, s.path.string )
+		end
+		if service.notificationEvent ~= nil then
+			local s = service.notificationEvent
+			serviceNode:add( dptProto.fields.conversation, s.conversationId.range, s.conversationId.int )
+			serviceNode:add( dptProto.fields.path, s.path.range, s.path.string )
+			serviceNode:add( dptProto.fields.topicNotificationType, s.type )
+			if s.specification ~= nil then
+				addSpecification( serviceNode, s.specification )
+			end
+		end
+		if service.notificationDereg ~= nil then
+			serviceNode:add( dptProto.fields.conversation, service.notificationDereg.conversationId.range, service.notificationDereg.conversationId.int )
 		end
 
 		-- Add generated information

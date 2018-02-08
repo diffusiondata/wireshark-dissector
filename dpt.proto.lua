@@ -227,6 +227,13 @@ local addTopicResult = {
 	[0x01] = "EXISTS"
 }
 
+local topicNotificationType = {
+	[0x0] = "ADDED",
+	[0x1] = "SELECTED",
+	[0x2] = "REMOVED",
+	[0x3] = "DESELECTED"
+}
+
 -- Connection negotiation fields
 dptProto.fields.connectionMagicNumber = ProtoField.uint8( "dpt.connection.magicNumber", "Magic number" , base.HEX )
 dptProto.fields.connectionProtoNumber = ProtoField.uint8( "dpt.connection.protocolVersion", "Protocol version" )
@@ -252,7 +259,7 @@ dptProto.fields.alias = ProtoField.string( "dpt.header.alias", "Alias" )
 dptProto.fields.headers = ProtoField.string( "dptProto.headers", "Headers" )
 dptProto.fields.userHeaders = ProtoField.string( "dptProto.userHeaders", "User headers" )
 dptProto.fields.fixedHeaders = ProtoField.string( "dptProto.fixedHeaders", "Fixed headers" )
-dptProto.fields.content = ProtoField.string( "dptProto.content", "Content" )
+dptProto.fields.content = ProtoField.bytes( "dptProto.content", "Content" )
 dptProto.fields.connection = ProtoField.string( "dptProto.connection", "Connection" )
 dptProto.fields.sizeHdr = ProtoField.uint32( "dptProto.size", "Size" )
 dptProto.fields.messageLengthSize = ProtoField.uint8( "dptProto.messageLengthSize", "Size Length", base.DEC )
@@ -298,6 +305,11 @@ dptProto.fields.regServiceId = ProtoField.uint8( "dpt.service.regServiceId", "Re
 dptProto.fields.handlerTopicPath = ProtoField.string( "dpt.service.handlerTopicPath", "Handler topic path" )
 dptProto.fields.errorMessage = ProtoField.string( "dpt.service.error.message", "Error message" )
 dptProto.fields.reasonCode = ProtoField.uint8( "dpt.service.error.code", "Error reason code" )
+dptProto.fields.path = ProtoField.string( "dpt.service.path", "Path" )
+dptProto.fields.dataType = ProtoField.string( "dpt.service.dataType", "Data Type" )
+dptProto.fields.requestId = ProtoField.uint32( "dpt.service.requestId", "Conversation ID (request)" )
+dptProto.fields.sessionPropertiesNumber = ProtoField.uint32( "dpt.session.properties.number", "Session properties" )
+dptProto.fields.sessionPropertyKey = ProtoField.string( "dpt.session.property.key", "Key" )
 
 -- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
@@ -389,6 +401,9 @@ dptProto.fields.throttleClientQueueLimit = ProtoField.uint32( "dpt.service.clien
 -- Client close service
 dptProto.fields.clientClose = ProtoField.string( "dpt.service.clientControl.clientClose", "Client close" )
 dptProto.fields.clientCloseReason = ProtoField.string( "dpt.service.clientControl.clientClose.reason", "Client close reason" )
+
+-- Topic notification services
+dptProto.fields.topicNotificationType = ProtoField.uint8( "dpt.service.topicNotification.type", "Notification type", base.HEX, topicNotificationType )
 
 -- Package footer
 master.proto = {

@@ -150,13 +150,30 @@ local function parseVarSessionId( tvb )
 	}, remaining
 end
 
+local function parseOptional( tvb, task, absentTask )
+	local optionRange = tvb:range( 0, 1 )
+	local option = optionRange:int()
+	if option == 0x00 then
+		if absentTask ~= nil then
+			absentTask( tvb:range( 1 ) )
+		else
+			return {
+				remaining = tvb:range( 1 )
+			}
+		end
+	else
+		return task( tvb:range( 1 ) )
+	end
+end
+
 -- Package footer
 master.parseCommon = {
 	varint = varint,
 	lengthPrefixedString = lengthPrefixedString,
 	lookupClientTypeByChar = lookupClientTypeByChar,
 	parseSessionId = parseSessionId,
-	parseVarSessionId = parseVarSessionId
+	parseVarSessionId = parseVarSessionId,
+	parseOptional = parseOptional
 }
 diffusion = master
 return master.parseCommon
