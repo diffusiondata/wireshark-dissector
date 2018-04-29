@@ -31,6 +31,7 @@ local topicTypes = {
     INT64 = 0x12,
     DOUBLE = 0x13,
     RECORD_V2 = 0x14,
+    UNKNOWN = 0x15,
     byByte = {
         [0x00] = "NONE",
         [0x01] = "STATELESS",
@@ -53,6 +54,7 @@ local topicTypes = {
         [0x12] = "INT64",
         [0x13] = "DOUBLE",
         [0x14] = "RECORD_V2",
+        [0x15] = "UNKNOWN"
     }
 }
 
