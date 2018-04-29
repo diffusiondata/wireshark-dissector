@@ -4,7 +4,7 @@
 
 -- Package header
 local master = diffusion or {}
-if master.parseService ~= nil then
+if master.parseTopicDetails ~= nil then
 	return master.parseTopicDetails
 end
 
