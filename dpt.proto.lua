@@ -92,6 +92,9 @@ local topicRemovalReasonByBytes = {
 	[0x00] = "Unsubscription requested",
 	[0x01] = "Control client or server unsubscription",
 	[0x02] = "Topic Removal",
+	[0x03] = "No longer authorized to access",
+	[0x04] = "Unknown reason",
+	[0x05] = "Back pressure detected"
 }
 
 local updateSourceStateByBytes = {
