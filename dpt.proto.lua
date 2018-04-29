@@ -153,7 +153,8 @@ local closeReasonByBytes = {
 	[0x08] = "Aborted",
 	[0x09] = "Lost messages",
 	[0x0a] = "Server closing",
-	[0x0b] = "Closed by controller"
+	[0x0b] = "Closed by controller",
+	[0x0c] = "Failed over"
 }
 
 local v5ClientTypeByBytes = {
