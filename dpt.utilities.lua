@@ -179,6 +179,28 @@ local function int_to_string(num, radix)
     return s
 end
 
+-- Find the delimeterCount-th occurance of ch in this, or -1. delimeterCount indexes from zero.
+local function indexn(ba, ch, delimiterCount)
+	for i = 0, ba:len()-1 do
+		if ba:get_index( i ) == ch then
+			-- Found a match, but is it the right one?
+			if delimiterCount == 0 then
+				return i
+			end
+			delimiterCount = delimiterCount -1
+		end
+	end
+	return -1
+end
+
+-- Find the delimeterCount-th occurance of ch in this, or -1. delimeterCount indexes from zero.
+local function index(ba, ch)
+	for i = 0, ba:len()-1 do
+		if ba:get_index( i ) == ch then return i end
+	end
+	return -1
+end
+
 -- Package footer
 master.utilities = {
 	f_src_host = f_src_host,
@@ -198,7 +220,9 @@ master.utilities = {
 	int_to_string = int_to_string,
 	RD = 0x01,
 	FD = 0x02,
-	WSMD = 0x08
+	WSMD = 0x08,
+	indexn = indexn,
+	index = index
 }
 diffusion = master
 return master.utilities

@@ -14,6 +14,7 @@ local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
 local f_http_uri = diffusion.utilities.f_http_uri
 local dump = diffusion.utilities.dump
+local index = diffusion.utilities.index
 local aliasTable = diffusion.info.aliasTable
 local tcpConnections = diffusion.info.tcpConnections
 local serviceMessageTable = diffusion.info.serviceMessageTable
@@ -32,7 +33,7 @@ local RD, FD = diffusion.utilities.RD, diffusion.utilities.FD
 -- The remaining header range will be nil if there are no more headers
 -- The alias.range will be nil if there is no alias present in the header
 local function parseTopicHeader( headerRange )
-	local topicEndIndex = headerRange:bytes():index( FD )
+	local topicEndIndex = index( headerRange:bytes(), FD )
 	local topicExpressionRange
 
 	if topicEndIndex > -1 then
@@ -43,7 +44,7 @@ local function parseTopicHeader( headerRange )
 		headerRange = nil
 	end
 
-	local delimIndex = topicExpressionRange:bytes():index( 0x21 )
+	local delimIndex = index( topicExpressionRange:bytes(), 0x21 )
 	local tcpStream = f_tcp_stream()
 	local topicObject
 	local aliasObject
@@ -120,7 +121,7 @@ local function parseRecordFields( recordRange )
 end
 
 local function parseField( headerRange )
-	local fieldEndIndex = headerRange:bytes():index( FD )
+	local fieldEndIndex = index( headerRange:bytes(), FD )
 	if fieldEndIndex > -1 then
 		return headerRange:range( 0, fieldEndIndex ), headerRange:range( fieldEndIndex + 1 )
 	else
@@ -200,7 +201,7 @@ local function parseConnectionRequest( tvb, client )
 		topicSetOffset = 0
 	end
 
-	local fdBreak = range( topicSetOffset ):bytes():index( FD )
+	local fdBreak = index( range( topicSetOffset ):bytes(), FD )
 	if fdBreak >= 0 then
 		if topicSetOffset < range:len() then
 			-- Mark up the login topicset - if there are any

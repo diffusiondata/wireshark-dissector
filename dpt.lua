@@ -6,8 +6,8 @@
 -- This assumes that files are in USER_DIR
 -- require looks in wireshark directories.
 dofile( USER_DIR.."dpt.extensions.lua" )
-dofile( USER_DIR.."dpt.constants.lua" )
 dofile( USER_DIR.."dpt.utilities.lua" )
+dofile( USER_DIR.."dpt.constants.lua" )
 dofile( USER_DIR.."dpt.info.lua" )
 dofile( USER_DIR.."dpt.services.lua" )
 dofile( USER_DIR.."dpt.parse.common.lua" )

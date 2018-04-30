@@ -14,6 +14,8 @@ local parseTopicHeader = diffusion.parse.parseTopicHeader
 local parseRecordFields = diffusion.parse.parseRecordFields
 local parseField = diffusion.parse.parseField
 local parseAckId = diffusion.parse.parseAckId
+local indexn = diffusion.utilities.indexn
+local index = diffusion.utilities.index
 
 
 -- -----------------------------------
@@ -40,7 +42,7 @@ end
 -- Populate the headers tree with separate fixed headers and user headers
 function MessageType:markupHeaders( headerRange )
 	-- Find the RD marking the fixed|user boundary
-	local headerBreak = headerRange:bytes():indexn( FD, self.fixedHeaderCount -1 )
+	local headerBreak = indexn( headerRange:bytes(), FD, self.fixedHeaderCount -1 )
 	if headerBreak == -1 then
 		-- no user headers, only fixed headers
 		return { fixedHeaders = { range = headerRange, string = headerRange:string():escapeDiff() } }
@@ -131,7 +133,7 @@ function topicLoadType:markupHeaders( headerRange )
 end
 
 function topicLoadType:getDescription()
-	return string.format( "%s, %s", self.name, self.loadDescription ) 
+	return string.format( "%s, %s", self.name, self.loadDescription )
 end
 
 -- Functionality specific to Delta Messages
@@ -161,7 +163,7 @@ function deltaType:markupHeaders( headerRange )
 end
 
 function deltaType:getDescription()
-	return string.format( "%s, %s", self.name, self.topicDescription ) 
+	return string.format( "%s, %s", self.name, self.topicDescription )
 end
 
 -- Functionality specific to Subscriptions - the info column, mostly
@@ -175,7 +177,7 @@ function subscribeType:markupHeaders( headerRange )
 end
 
 function subscribeType:getDescription()
-	return self.subscriptionDescription 
+	return self.subscriptionDescription
 end
 
 -- Functionality specific to Command Messages
@@ -188,7 +190,7 @@ function commandMessageType:markupHeaders( headerRange )
 	topic = info.topic.string
 	alias = info.alias.string
 
-	local commandEndIndex = headerRange:bytes():index( FD )
+	local commandEndIndex = index( headerRange:bytes(), FD )
 	local commandRange
 	local commandObject
 	local parametersObject
@@ -215,7 +217,7 @@ function commandMessageType:markupHeaders( headerRange )
 end
 
 function commandMessageType:getDescription()
-	return self.commandDescription 
+	return self.commandDescription
 end
 
 -- Functionality specific to Command Topic Load
@@ -229,13 +231,13 @@ function commandTopicLoadType:markupHeaders( headerRange )
 	alias = info.alias.string
 
 	-- Parse command topic category
-	local commandTopicCategoryEndIndex = headerRange:bytes():index( FD )
+	local commandTopicCategoryEndIndex = index( headerRange:bytes(), FD )
 	local commandTopicCategoryRange = headerRange:range( 0, commandTopicCategoryEndIndex )
 	local commandTopicCategoryObject = { range = commandTopicCategoryRange, string = commandTopicCategoryRange:string() }
 
 	-- Parse command Topic Type
 	headerRange = headerRange:range( commandTopicCategoryEndIndex + 1 )
-	local commandTopicTypeEndIndex = headerRange:bytes():index( FD )
+	local commandTopicTypeEndIndex = index( headerRange:bytes(), FD )
 	local commandRange, commandTopicTypeObject, parametersObject, commandTopicTypeRange
 	if commandTopicTypeEndIndex > -1 then
 		commandTopicTypeRange = headerRange:range( 0, commandTopicTypeEndIndex )
@@ -274,7 +276,7 @@ function commandTopicNotificationType:markupHeaders( headerRange )
 	alias = info.alias.string
 
 	-- Parse notification type
-	local notificationTypeEndIndex = headerRange:bytes():index( FD )
+	local notificationTypeEndIndex = index( headerRange:bytes(), FD )
 	local notificationTypeRange, notificationTypeObject, parametersObject
 	if notificationTypeEndIndex > -1 then
 		notificationTypeRange = headerRange:range( 0, notificationTypeEndIndex )
@@ -299,7 +301,7 @@ function commandTopicNotificationType:markupHeaders( headerRange )
 end
 
 function commandTopicNotificationType:getDescription()
-	return self.commandTopicLoadDescription 
+	return self.commandTopicLoadDescription
 end
 
 local fetchType = MessageType:new( 0x21, "Fetch", 1 )

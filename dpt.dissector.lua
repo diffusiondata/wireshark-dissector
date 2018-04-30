@@ -24,6 +24,7 @@ local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
 local ws_payload_length = diffusion.utilities.ws_payload_length
 local f_frame_number = diffusion.utilities.f_frame_number
+local index = diffusion.utilities.index
 
 local tcpConnections = diffusion.info.tcpConnections
 local DescriptionsTable = diffusion.info.DescriptionsTable
@@ -127,7 +128,7 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 
 	local headerInfo, serviceInfo, records
 	-- The headers & body -- find the 1st RD in the content
-	local headerBreak = contentRange:bytes():index( RD )
+	local headerBreak = index( contentRange:bytes(), RD )
 	if headerBreak >= 0 then
 		local headerRange = contentRange:range( 0, headerBreak )
 
