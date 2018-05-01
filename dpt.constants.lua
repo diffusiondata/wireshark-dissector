@@ -102,8 +102,8 @@ local ruleType = {
     }
 }
 
--- Constants used by topic properties
-local topicProperty = {
+-- Constants used by topic properties, protocols 5-11
+local olderTopicProperty = {
     byByte = {
         [0x02] = "ATTACHMENT_CLASS",
         [0x03] = "DATA_INITIALISER_CLASS",
@@ -122,6 +122,25 @@ local topicProperty = {
     }
 }
 
+-- Constants used by topic properties, protocols 12+
+local topicProperty = {
+    byByte = {
+        [0x02] = "TIME_SERIES_EVENT_VALUE_TYPE",
+        [0x03] = "TIME_SERIES_RETAINED_RANGE",
+        [0x04] = "TIME_SERIES_SUBSCRIPTION_RANGE",
+        [0x05] = "SCHEMA",
+        [0x06] = "DONT_RETAIN_VALUE",
+        [0x07] = "PERSISTENT",
+        [0x08] = "REMOVAL",
+        [0x09] = "_CREATOR",
+        [0x0a] = "CONFLATION",
+        [0x0b] = "OWNER",
+        [0x1e] = "PUBLISH_VALUES_ONLY",
+        [0x1f] = "VALIDATE_VALUES"
+    }
+}
+
+
 -- Package footer
 master.const = {
     topicTypes = topicTypes,
@@ -129,7 +148,8 @@ master.const = {
     duplicates = duplicates,
     order = order,
     ruleType = ruleType,
-    topicProperty = topicProperty
+    topicProperty = topicProperty,
+    olderTopicProperty = olderTopicProperty
 }
 diffusion = master
 return master.const
