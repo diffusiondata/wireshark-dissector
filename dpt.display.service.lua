@@ -28,7 +28,7 @@ local function addContent( parentNode, content )
 	end
 end
 
-local function addTopicDetails( parentNode, details )
+local function addTopicDetails( parentNode, details, client )
 	local detailsNode = parentNode:add( dptProto.fields.topicDetails, details.range, "" )
 	detailsNode:add( dptProto.fields.topicType, details.type.range, details.type.type )
 	detailsNode:add( dptProto.fields.topicDetailsLevel, details.level )
@@ -42,7 +42,11 @@ local function addTopicDetails( parentNode, details )
 		detailsNode:add( dptProto.fields.topicPropertiesNumber, details.attributes.topicProperties.number.range, details.attributes.topicProperties.number.number )
 		for i, property in ipairs( details.attributes.topicProperties.properties ) do
 			local propertyNode = detailsNode:add( dptProto.fields.topicProperty )
-			propertyNode:add( dptProto.fields.topicPropertyName, property.id )
+			if client.protoVersion == nil or client.protoVersion < 12 then
+				propertyNode:add( dptProto.fields.olderTopicPropertyName, property.id )
+			else
+				propertyNode:add( dptProto.fields.topicPropertyName, property.id )
+			end
 			propertyNode:add( dptProto.fields.topicPropertyValue, property.value.fullRange, property.value.string )
 		end
 
@@ -172,7 +176,7 @@ local function addSessionListenerEvent( parentNode, info )
 end
 
 -- Add add topic request information
-local function addAddTopicInformation( parentNode, info )
+local function addAddTopicInformation( parentNode, info, client )
 	if info.topicName ~= nil then
 		parentNode:add( dptProto.fields.topicName, info.topicName.fullRange, info.topicName.string )
 	end
@@ -180,7 +184,7 @@ local function addAddTopicInformation( parentNode, info )
 		parentNode:add( dptProto.fields.detailsReference, info.reference.range, info.reference.int )
 	end
 	if info.topicDetails ~= nil then
-		addTopicDetails( parentNode, info.topicDetails )
+		addTopicDetails( parentNode, info.topicDetails, client )
 	end
 	if info.content ~= nil then
 		local intialValueNode = parentNode:add( dptProto.fields.initialValue, "" )
@@ -275,7 +279,7 @@ local function addServiceInformation( parentTreeNode, service, client )
 		end
 		if service.addTopic ~= nil then
 			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
-			addAddTopicInformation( addTopicNode, service.addTopic )
+			addAddTopicInformation( addTopicNode, service.addTopic, client )
 		end
 		if service.topicAdd ~= nil then
 			local addTopicNode = serviceNode:add( dptProto.fields.addTopic, service.body, "" )
@@ -286,7 +290,7 @@ local function addServiceInformation( parentTreeNode, service, client )
 			local topicInfoNode = serviceNode:add( dptProto.fields.topicInfo, service.topicInfo.range, topicInfoNodeDesc )
 			topicInfoNode:add( dptProto.fields.topicId, service.topicInfo.id.range, service.topicInfo.id.int )
 			topicInfoNode:add( dptProto.fields.topicPath, service.topicInfo.path.range, service.topicInfo.path.string )
-			addTopicDetails( topicInfoNode, service.topicInfo.details )
+			addTopicDetails( topicInfoNode, service.topicInfo.details, client )
 		end
 		if service.topicSpecInfo ~= nil then
 			local topicInfoNodeDesc = string.format( "%d bytes", service.topicSpecInfo.range:len() )

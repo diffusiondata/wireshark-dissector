@@ -356,6 +356,7 @@ dptProto.fields.topicDetailsOrderKey = ProtoField.string( "dpt.topic.order.key",
 dptProto.fields.topicDetailsOrderKeyFieldName = ProtoField.string( "dpt.topic.field.name", "Field name" )
 dptProto.fields.topicProperty = ProtoField.string( "dpt.topic.property", "Topic Property" )
 dptProto.fields.topicPropertyName = ProtoField.uint8( "dpt.topic.property.name", "Name", base.HEX, diffusion.const.topicProperty.byByte )
+dptProto.fields.olderTopicPropertyName = ProtoField.uint8( "dpt.topic.property.name.older", "Name", base.HEX, diffusion.const.olderTopicProperty.byByte )
 dptProto.fields.topicPropertyKey = ProtoField.string( "dpt.topic.property.key", "Key" )
 dptProto.fields.topicPropertyValue = ProtoField.string( "dpt.topic.property.value", "Value" )
 
