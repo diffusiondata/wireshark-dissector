@@ -13,7 +13,7 @@ local dptProto = diffusion.proto.dptProto
 local serviceIdentity = diffusion.v5.serviceIdentity
 local modeValues = diffusion.v5.modeValues
 local p9ModeValues = diffusion.v5.p9ModeValues
-local statusResponseBytes = diffusion.proto.statusResponseBytes
+local statusResponseBytes = diffusion.const.statusResponseBytes
 local v5 = diffusion.v5
 
 local function addContent( parentNode, content )
