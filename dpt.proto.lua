@@ -186,9 +186,7 @@ dptProto.fields.topicNotificationType = ProtoField.uint8( "dpt.service.topicNoti
 
 -- Package footer
 master.proto = {
-	dptProto = dptProto,
-	TOPIC_VALUE_MESSAGE_TYPE = 0x04,
-	TOPIC_DELTA_MESSAGE_TYPE = 0x05
+	dptProto = dptProto
 }
 diffusion = master
 return master.proto

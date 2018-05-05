@@ -8,6 +8,8 @@ if master.parseCommon ~= nil then
 	return master.parseCommon
 end
 
+local clientTypesByChar = master.constants.clientTypesByChar
+
 -- Decode the varint used by command serialiser
 -- Takes a range containing the varint
 -- Returns: a range containing the varint, a range excluding the varint, the
@@ -87,25 +89,6 @@ local function lengthPrefixedString( range )
 		end
 	end
 end
-
-local clientTypesByChar = {
-	["J"] = "Java Client",
-	["N"] = "HTTP .Net Client",
-	["WN"] = "WebSocket .Net Client",
-	["F"] = "Flash Bridge Client",
-	["S"] = "Silverlight Bridge Client",
-	["B"] = "HTTP Browser Client",
-	["WJ"] = "WebSocket Java Client",
-	["WB"] = "WebSocket Browser Client",
-	["I"] = "Introspector Client",
-	["WI"] = "WebSocket Introspector Client",
-	["W"] = "HTTP Windows Phone Client",
-	["F"] = "Flash Client",
-	["CA"] = "Flash Comet (HTTPC) Client",
-	["FA"] = "HTTP Flash Client",
-	["SA"] = "HTTP Silverlight Client",
-	["BS"] = "IFrame Streaming Client"
-}
 
 local function lookupClientTypeByChar( clientType )
 	local type = clientTypesByChar[clientType]

@@ -366,6 +366,24 @@ local topicNotificationType = {
 	[0x3] = "DESELECTED"
 }
 
+local clientTypesByChar = {
+	["J"] = "Java Client",
+	["N"] = "HTTP .Net Client",
+	["WN"] = "WebSocket .Net Client",
+	["F"] = "Flash Bridge Client",
+	["S"] = "Silverlight Bridge Client",
+	["B"] = "HTTP Browser Client",
+	["WJ"] = "WebSocket Java Client",
+	["WB"] = "WebSocket Browser Client",
+	["I"] = "Introspector Client",
+	["WI"] = "WebSocket Introspector Client",
+	["W"] = "HTTP Windows Phone Client",
+	["F"] = "Flash Client",
+	["CA"] = "Flash Comet (HTTPC) Client",
+	["FA"] = "HTTP Flash Client",
+	["SA"] = "HTTP Silverlight Client",
+	["BS"] = "IFrame Streaming Client"
+}
 
 -- Package footer
 master.const = {
@@ -397,7 +415,11 @@ master.const = {
     updateResponseByBytes = updateResponseByBytes,
     updateModeByByte = updateModeByByte,
     addTopicResult = addTopicResult,
-    topicNotificationType = topicNotificationType
+    topicNotificationType = topicNotificationType,
+    clientTypesByChar = clientTypesByChar,
+    TOPIC_VALUE_MESSAGE_TYPE = 0x04,
+    TOPIC_DELTA_MESSAGE_TYPE = 0x05,
+    DIFFUSION_MAGIC_NUMBER = 0x23
 }
 diffusion = master
 return master.const

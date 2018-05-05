@@ -34,8 +34,10 @@ local nameByID = diffusion.messages.nameByID
 local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
-local TOPIC_VALUE_MESSAGE_TYPE = diffusion.proto.TOPIC_VALUE_MESSAGE_TYPE
-local TOPIC_DELTA_MESSAGE_TYPE = diffusion.proto.TOPIC_DELTA_MESSAGE_TYPE
+
+local DIFFUSION_MAGIC_NUMBER = diffusion.constants.DIFFUSION_MAGIC_NUMBER
+local TOPIC_VALUE_MESSAGE_TYPE = diffusion.constants.TOPIC_VALUE_MESSAGE_TYPE
+local TOPIC_DELTA_MESSAGE_TYPE = diffusion.constants.TOPIC_DELTA_MESSAGE_TYPE
 
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseAsV59ServiceMessage = diffusion.parseService.parseAsV59ServiceMessage
@@ -57,7 +59,6 @@ local SERVICE_TOPIC = v5.SERVICE_TOPIC
 
 local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
-local DIFFUSION_MAGIC_NUMBER = 0x23
 
 local tcp_dissector_table = DissectorTable.get("tcp.port")
 local http_dissector = tcp_dissector_table:get_dissector(80)
