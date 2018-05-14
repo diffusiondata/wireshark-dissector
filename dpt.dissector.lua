@@ -24,6 +24,7 @@ local f_ws_b_payload = diffusion.utilities.f_ws_b_payload
 local f_ws_t_payload = diffusion.utilities.f_ws_t_payload
 local ws_payload_length = diffusion.utilities.ws_payload_length
 local f_frame_number = diffusion.utilities.f_frame_number
+local index = diffusion.utilities.index
 
 local tcpConnections = diffusion.info.tcpConnections
 local DescriptionsTable = diffusion.info.DescriptionsTable
@@ -33,8 +34,10 @@ local nameByID = diffusion.messages.nameByID
 local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
-local TOPIC_VALUE_MESSAGE_TYPE = diffusion.proto.TOPIC_VALUE_MESSAGE_TYPE
-local TOPIC_DELTA_MESSAGE_TYPE = diffusion.proto.TOPIC_DELTA_MESSAGE_TYPE
+
+local DIFFUSION_MAGIC_NUMBER = diffusion.constants.DIFFUSION_MAGIC_NUMBER
+local TOPIC_VALUE_MESSAGE_TYPE = diffusion.constants.TOPIC_VALUE_MESSAGE_TYPE
+local TOPIC_DELTA_MESSAGE_TYPE = diffusion.constants.TOPIC_DELTA_MESSAGE_TYPE
 
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseAsV59ServiceMessage = diffusion.parseService.parseAsV59ServiceMessage
@@ -56,7 +59,6 @@ local SERVICE_TOPIC = v5.SERVICE_TOPIC
 
 local LENGTH_LEN = 4 -- LLLL
 local HEADER_LEN = 2 + LENGTH_LEN -- LLLLTE, usually
-local DIFFUSION_MAGIC_NUMBER = 0x23
 
 local tcp_dissector_table = DissectorTable.get("tcp.port")
 local http_dissector = tcp_dissector_table:get_dissector(80)
@@ -127,7 +129,7 @@ local function processContent( pinfo, contentRange, messageTree, messageType, ms
 
 	local headerInfo, serviceInfo, records
 	-- The headers & body -- find the 1st RD in the content
-	local headerBreak = contentRange:bytes():index( RD )
+	local headerBreak = index( contentRange:bytes(), RD )
 	if headerBreak >= 0 then
 		local headerRange = contentRange:range( 0, headerBreak )
 
