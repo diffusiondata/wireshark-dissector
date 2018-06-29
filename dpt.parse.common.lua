@@ -8,7 +8,7 @@ if master.parseCommon ~= nil then
 	return master.parseCommon
 end
 
-local clientTypesByChar = master.constants.clientTypesByChar
+local clientTypesByChar = master.const.clientTypesByChar
 
 -- Decode the varint used by command serialiser
 -- Takes a range containing the varint

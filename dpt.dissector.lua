@@ -35,9 +35,9 @@ local messageTypeLookup = diffusion.messages.messageTypeLookup
 
 local dptProto = diffusion.proto.dptProto
 
-local DIFFUSION_MAGIC_NUMBER = diffusion.constants.DIFFUSION_MAGIC_NUMBER
-local TOPIC_VALUE_MESSAGE_TYPE = diffusion.constants.TOPIC_VALUE_MESSAGE_TYPE
-local TOPIC_DELTA_MESSAGE_TYPE = diffusion.constants.TOPIC_DELTA_MESSAGE_TYPE
+local DIFFUSION_MAGIC_NUMBER = diffusion.const.DIFFUSION_MAGIC_NUMBER
+local TOPIC_VALUE_MESSAGE_TYPE = diffusion.const.TOPIC_VALUE_MESSAGE_TYPE
+local TOPIC_DELTA_MESSAGE_TYPE = diffusion.const.TOPIC_DELTA_MESSAGE_TYPE
 
 local parseAsV4ServiceMessage = diffusion.parseService.parseAsV4ServiceMessage
 local parseAsV59ServiceMessage = diffusion.parseService.parseAsV59ServiceMessage
