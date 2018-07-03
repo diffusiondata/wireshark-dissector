@@ -837,6 +837,8 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.requestResponse = parseMessagingResponse( serviceBodyRange )
 	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
 		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
+		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	end
 
 	-- Calculate the response time
