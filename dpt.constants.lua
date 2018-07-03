@@ -385,6 +385,11 @@ local clientTypesByChar = {
 	["BS"] = "IFrame Streaming Client"
 }
 
+local lockScopeByBytes = {
+  [0x0] = "UNLOCK_ON_SESSION_LOSS",
+  [0x1] = "UNLOCK_ON_CONNECTION_LOSS"
+}
+
 -- Package footer
 master.const = {
     topicTypes = topicTypes,
@@ -417,6 +422,7 @@ master.const = {
     addTopicResult = addTopicResult,
     topicNotificationType = topicNotificationType,
     clientTypesByChar = clientTypesByChar,
+    lockScopeByBytes = lockScopeByBytes,
     TOPIC_VALUE_MESSAGE_TYPE = 0x04,
     TOPIC_DELTA_MESSAGE_TYPE = 0x05,
     DIFFUSION_MAGIC_NUMBER = 0x23

@@ -667,6 +667,17 @@ local function parseAddResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
+local function parseAcquireLockRequest( range )
+		local lockName = lengthPrefixedString( range )
+		local idRange, remaining, id = varint( lockName.remaining )
+		local scopeByteRange = remaining:range( 0, 1 )
+		return {
+			lockName = lockName,
+			id = { range = idRange, int = id },
+			scope = scopeByteRange
+		}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -782,6 +793,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 				int = conversationId
 			}
 		}
+	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
+		result.acquireLock = parseAcquireLockRequest( serviceBodyRange )
 	end
 	return result
 end

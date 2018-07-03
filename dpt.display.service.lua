@@ -437,6 +437,12 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.notificationDereg ~= nil then
 			serviceNode:add( dptProto.fields.conversation, service.notificationDereg.conversationId.range, service.notificationDereg.conversationId.int )
 		end
+		if service.acquireLock ~= nil then
+			local s = service.acquireLock
+			serviceNode:add( dptProto.fields.lockName, s.lockName.range, s.lockName.string )
+			serviceNode:add( dptProto.fields.lockRequestId, s.id.range, s.id.int )
+			serviceNode:add( dptProto.fields.lockScope, s.scope )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

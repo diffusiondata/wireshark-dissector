@@ -89,6 +89,11 @@ dptProto.fields.requestId = ProtoField.uint32( "dpt.service.requestId", "Convers
 dptProto.fields.sessionPropertiesNumber = ProtoField.uint32( "dpt.session.properties.number", "Session properties" )
 dptProto.fields.sessionPropertyKey = ProtoField.string( "dpt.session.property.key", "Key" )
 
+-- Session lock fields
+dptProto.fields.lockName = ProtoField.string( "dpt.service.lock.name", "Lock name" )
+dptProto.fields.lockRequestId = ProtoField.uint32( "dpt.service.lock.request.id", "Request ID" )
+dptProto.fields.lockScope = ProtoField.uint8( "dpt.service.lock.scope", "Scope", base.HEX, master.const.lockScopeByBytes )
+
 -- Update topic
 dptProto.fields.updateSourceTopicPath = ProtoField.string( "dpt.service.updateSourceTopicPath", "Update source topic path" )
 dptProto.fields.oldUpdateSourceState = ProtoField.uint8( "dpt.service.updateSourceState.old", "Old update source state", base.HEX, master.const.updateSourceStateByBytes )
