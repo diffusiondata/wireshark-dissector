@@ -678,6 +678,15 @@ local function parseSessionLockAcquisition( range )
 		}
 end
 
+local function parseSessionLockCancellation( range )
+		local lockName = lengthPrefixedString( range )
+		local idRange, remaining, id = varint( lockName.remaining )
+		return {
+			lockName = lockName,
+			id = { range = idRange, int = id }
+		}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -794,7 +803,9 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 			}
 		}
 	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
-		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
+		result.sessionLockRequest = parseSessionLockAcquisition( serviceBodyRange )
+	elseif service == v5.SERVICE_CANCEL_ACQUIRE_SESSION_LOCK then
+		result.sessionLockCancellation = parseSessionLockCancellation( serviceBodyRange )
 	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
 		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	end

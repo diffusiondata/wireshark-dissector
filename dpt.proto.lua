@@ -92,6 +92,7 @@ dptProto.fields.sessionPropertyKey = ProtoField.string( "dpt.session.property.ke
 -- Session lock fields
 dptProto.fields.lockName = ProtoField.string( "dpt.service.lock.name", "Lock name" )
 dptProto.fields.lockRequestId = ProtoField.uint32( "dpt.service.lock.request.id", "Request ID" )
+dptProto.fields.sequence = ProtoField.uint32( "dpt.service.lock.sequence", "Sequence" )
 dptProto.fields.lockScope = ProtoField.uint8( "dpt.service.lock.scope", "Scope", base.HEX, master.const.lockScopeByBytes )
 
 -- Update topic
