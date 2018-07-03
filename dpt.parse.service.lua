@@ -667,7 +667,7 @@ local function parseAddResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
-local function parseAcquireLockRequest( range )
+local function parseSessionLockAcquisition( range )
 		local lockName = lengthPrefixedString( range )
 		local idRange, remaining, id = varint( lockName.remaining )
 		local scopeByteRange = remaining:range( 0, 1 )
@@ -794,7 +794,9 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 			}
 		}
 	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
-		result.acquireLock = parseAcquireLockRequest( serviceBodyRange )
+		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
+	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
+		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	end
 	return result
 end
