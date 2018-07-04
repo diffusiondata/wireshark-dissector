@@ -667,6 +667,26 @@ local function parseAddResult( range )
 	return { range = resultByteRange, int = resultByteRange:int() }
 end
 
+local function parseSessionLockAcquisition( range )
+		local lockName = lengthPrefixedString( range )
+		local idRange, remaining, id = varint( lockName.remaining )
+		local scopeByteRange = remaining:range( 0, 1 )
+		return {
+			lockName = lockName,
+			id = { range = idRange, int = id },
+			scope = scopeByteRange
+		}
+end
+
+local function parseSessionLockCancellation( range )
+		local lockName = lengthPrefixedString( range )
+		local idRange, remaining, id = varint( lockName.remaining )
+		return {
+			lockName = lockName,
+			id = { range = idRange, int = id }
+		}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -782,6 +802,12 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 				int = conversationId
 			}
 		}
+	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
+		result.sessionLockRequest = parseSessionLockAcquisition( serviceBodyRange )
+	elseif service == v5.SERVICE_CANCEL_ACQUIRE_SESSION_LOCK then
+		result.sessionLockCancellation = parseSessionLockCancellation( serviceBodyRange )
+	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
+		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	end
 	return result
 end
@@ -811,6 +837,10 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.requestResponse = parseMessagingResponse( serviceBodyRange )
 	elseif service == v5.SERVICE_MESSAGING_RECEIVER_SERVER then
 		result.requestResponse = parseMessagingResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_ACQUIRE_SESSION_LOCK then
+		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
+	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
+		result.sessionLockReleased = serviceBodyRange:range( 0, 1 )
 	end
 
 	-- Calculate the response time
