@@ -430,6 +430,10 @@ local function parseWSConnectionResponse( tvb, client )
 	end
 end
 
+local function decodeMessageType( byte )
+	return bit32.band( byte, 0x3f )
+end
+
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
@@ -439,7 +443,8 @@ master.parse = {
 	parseConnectionRequest = parseConnectionRequest,
 	parseConnectionResponse = parseConnectionResponse,
 	parseWSConnectionRequest = parseWSConnectionRequest,
-	parseWSConnectionResponse = parseWSConnectionResponse
+	parseWSConnectionResponse = parseWSConnectionResponse,
+	decodeMessageType = decodeMessageType
 }
 diffusion = master
 return master.parse
