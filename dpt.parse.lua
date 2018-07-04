@@ -434,6 +434,10 @@ local function decodeMessageType( byte )
 	return bit32.band( byte, 0x3f )
 end
 
+local function decodeMessageEncoding( byte )
+	return bit32.rshift( byte, 6 )
+end
+
 -- Package footer
 master.parse = {
 	parseTopicHeader = parseTopicHeader,
@@ -444,7 +448,9 @@ master.parse = {
 	parseConnectionResponse = parseConnectionResponse,
 	parseWSConnectionRequest = parseWSConnectionRequest,
 	parseWSConnectionResponse = parseWSConnectionResponse,
-	decodeMessageType = decodeMessageType
+	decodeMessageType = decodeMessageType,
+	decodeMessageEncoding = decodeMessageEncoding
+
 }
 diffusion = master
 return master.parse
