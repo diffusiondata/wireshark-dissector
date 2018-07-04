@@ -3,6 +3,7 @@ local master = diffusion or {}
 if master.extensions ~= nil then
 	return master.extensions
 end
+local RD, FD = master.utilities.RD, master.utilities.FD
 
 -- Mark up non-printing delimiters
 function string:escapeDiff()
