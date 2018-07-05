@@ -45,6 +45,8 @@ local parseConnectionRequest = diffusion.parse.parseConnectionRequest
 local parseConnectionResponse = diffusion.parse.parseConnectionResponse
 local parseWSConnectionRequest = diffusion.parse.parseWSConnectionRequest
 local parseWSConnectionResponse = diffusion.parse.parseWSConnectionResponse
+local decodeMessageType = diffusion.parse.decodeMessageType
+local decodeMessageEncoding = diffusion.parse.decodeMessageEncoding
 local varint = diffusion.parseCommon.varint
 
 local addClientConnectionInformation = diffusion.displayConnection.addClientConnectionInformation
@@ -250,8 +252,8 @@ local function processWSMessage( tvb, pinfo, tree, descriptions )
 	msgDetails.msgSize = tvb:len()
 	-- Get the type by
 	local msgTypeRange = tvb( 0, 1 )
-	msgDetails.msgType = msgTypeRange:uint()
-	msgDetails.msgEncoding = 0
+	msgDetails.msgType = decodeMessageType( msgTypeRange:uint() )
+	msgDetails.msgEncoding = decodeMessageEncoding( msgTypeRange:uint() )
 	local messageType = messageTypeLookup(msgDetails.msgType)
 
 	-- Add to the GUI the size-header, type-header & encoding-header
@@ -259,7 +261,8 @@ local function processWSMessage( tvb, pinfo, tree, descriptions )
 	local messageTree = tree:add( dptProto, messageRange )
 
 	messageTree:add( dptProto.fields.sizeHdr, messageRange, msgDetails.msgSize )
-	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange )
+	local typeNode = messageTree:add( dptProto.fields.typeHdr, msgTypeRange, msgDetails.msgType )
+	messageTree:add( dptProto.fields.encodingHdr, msgTypeRange, msgDetails.msgEncoding )
 	local messageTypeName = nameByID( msgDetails.msgType )
 	typeNode:append_text( " = " .. messageTypeName )
 
