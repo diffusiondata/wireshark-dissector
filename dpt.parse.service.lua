@@ -922,15 +922,8 @@ local function parseAsV59ServiceMessage( modeRange, range )
 		-- Parse service header
 		local serviceRange = range:range( 0, 1 )
 		local service = serviceRange:uint()
-		local conversationRange = range:range( 1, 1 )
-		local conversation = conversationRange:uint()
+		local conversationRange, serviceBodyRange, conversation = varint( range:range( 1 ) )
 		local mode = modeRange:uint()
-		local serviceBodyRange
-		if range:len() > 2 then
-			serviceBodyRange = range:range( 2 )
-		else
-			serviceBodyRange = range:range( 1, 0 )
-		end
 		-- Get values for service node
 		local serviceNodeRange = range
 
