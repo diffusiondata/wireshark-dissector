@@ -369,7 +369,10 @@ local function parseWSConnectionRequest( tvb, client )
 	local uriRange = f_http_uri()
 	local parameters = uriToQueryParameters( uriRange )
 	if parameters == nil then
-		return nil
+		parameters = diffusion.utilities.f_http_request_headers()
+		if parameters == nil then
+			return nil
+		end
 	end
 
 	local clientType = lookupClientTypeByChar( parameters["ty"]:string() )

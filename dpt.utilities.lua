@@ -21,6 +21,7 @@ local field_http_response_code = Field.new("http.response.code")
 local field_http_connection = Field.new("http.connection")
 local field_http_upgrade = Field.new("http.upgrade")
 local field_http_uri = Field.new("http.request.uri")
+local field_http_request_line = Field.new("http.request.line")
 local field_ws_payload_length = Field.new("websocket.payload_length")
 local field_ws_payload_length_ext_16 = Field.new("websocket.payload_length_ext_16")
 local field_ws_binary_payload
@@ -131,6 +132,72 @@ local function f_http_uri()
 	end
 end
 
+-- Return a numbered table containing the ranges of each HTTP header
+local function f_http_request_lines()
+	local f = {field_http_request_line()}
+	if f ~= nil then
+		local headers = {}
+		for i in pairs(f) do
+			headers[i] = f[i].range
+		end
+		return headers
+	else
+		return nil
+	end
+end
+
+-- Return a table containing the ranges of each HTTP header mapping from the
+-- header field name
+local function f_http_request_headers()
+	local lines = f_http_request_lines()
+
+	if lines ~= nil then
+		local headers = {}
+		for i in pairs(lines) do
+			local fieldEnd = 0;
+
+			-- Find end of field name
+			while fieldEnd < lines[i]:len() do
+				local character = lines[i]( fieldEnd, 1 ):string();
+				if character ~= ":" and character ~= " " then
+					fieldEnd = fieldEnd + 1
+				else
+					break
+				end
+			end
+
+			-- Find start of value
+			local valueStart = fieldEnd;
+			while valueStart < lines[i]:len() do
+				local character = lines[i]( valueStart, 1 ):string();
+				if character == ":" or character == " " or character == "\n" or character == "\r" then
+					valueStart = valueStart + 1
+				else
+					break
+				end
+			end
+
+			-- Find end of value
+			local valueEnd = valueStart;
+			while valueEnd < lines[i]:len() do
+				local character = lines[i]( valueEnd, 1 ):string();
+				if character ~= "\n" and character ~= "\r" then
+					valueEnd = valueEnd + 1
+				else
+					break
+				end
+			end
+
+			local field = lines[i]( 0, fieldEnd ):string()
+
+			headers[field] = lines[i]( valueStart, valueEnd - valueStart )
+		end
+		return headers
+	else
+		return nil
+	end
+end
+
 local function f_ws_b_payload()
 	local f = {field_ws_binary_payload()}
 	if f ~= nil then
@@ -214,6 +281,7 @@ master.utilities = {
 	f_http_connection = f_http_connection,
 	f_http_upgrade = f_http_upgrade,
 	f_http_uri = f_http_uri,
+	f_http_request_headers = f_http_request_headers,
 	f_ws_b_payload = f_ws_b_payload,
 	f_ws_t_payload = f_ws_t_payload,
 	ws_payload_length = ws_payload_length,
