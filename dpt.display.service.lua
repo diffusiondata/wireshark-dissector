@@ -212,6 +212,38 @@ local function addTopicAddInformation( parentNode, info )
 	addSpecification( parentNode, info.specification )
 end
 
+local function addConstraint( parentNode, constraint )
+	local constraintNode = parentNode:add( dptProto.fields.constraint, constraint.range, "", "Constraint" )
+	constraintNode:add( dptProto.fields.constraintType, constraint.type )
+	if constraint.lock ~= nil then
+		constraintNode:add( dptProto.fields.lockName, constraint.lock.lockName.range, constraint.lock.lockName.string )
+		constraintNode:add( dptProto.fields.lockRequestId, constraint.lock.id.range, constraint.lock.id.int )
+	end
+	if constraint.content ~= nil then
+		constraintNode:add( dptProto.fields.content, constraint.content.fullRange )
+	end
+	if constraint.with ~= nil then
+		constraintNode:add( dptProto.fields.jsonWithNumber, constraint.with.number.range, constraint.with.number.number )
+		for i, with in ipairs( constraint.with.map ) do
+			local withNode = constraintNode:add( dptProto.fields.jsonWith, constraint.with.range, "", "With" )
+			withNode:add( dptProto.fields.jsonWithPointer, with.key.fullRange, with.key.string )
+			withNode:add( dptProto.fields.jsonWithBytes, with.value.fullRange )
+		end
+	end
+	if constraint.without ~= nil then
+		constraintNode:add( dptProto.fields.jsonWithoutNumber, constraint.without.number.range, constraint.without.number.number )
+		for i, without in ipairs( constraint.without.set ) do
+			constraintNode:add( dptProto.fields.jsonWithoutPointer, without.fullRange, without.string )
+		end
+	end
+	if constraint.constraints ~= nil then
+		info( diffusion.utilities.dump( constraint.constraints ) )
+		for i, cons in ipairs( constraint.constraints.set ) do
+			addConstraint( constraintNode, cons )
+		end
+	end
+end
+
 -- Add update topic request information
 local function addUpdateTopicInformation( parentNode, info )
 	if info.conversationId ~= nil then
@@ -238,8 +270,7 @@ local function addUpdateTopicInformation( parentNode, info )
 	end
 	local constraint = info.constraint
 	if constraint ~= nil then
-		local constraintNode = parentNode:add( dptProto.fields.constraint, constraint.range, "", "Constraint" )
-		constraintNode:add( dptProto.fields.constraintType, constraint.type )
+		addConstraint( parentNode, constraint )
 	end
 end
 

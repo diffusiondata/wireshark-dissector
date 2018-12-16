@@ -108,6 +108,12 @@ dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse",
 dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
 dptProto.fields.constraint = ProtoField.bytes( "dpt.service.constraint", "Constraint" )
 dptProto.fields.constraintType = ProtoField.uint32( "dpt.service.constraintType", "Type", base.HEX, master.const.constraintTypeByBytes )
+dptProto.fields.jsonWithNumber = ProtoField.uint32( "dpt.service.json.with.number", "With number" )
+dptProto.fields.jsonWith = ProtoField.bytes( "dpt.service.json.with", "With" )
+dptProto.fields.jsonWithPointer = ProtoField.string( "dpt.service.json.with.pointer", "With pointer" )
+dptProto.fields.jsonWithBytes = ProtoField.bytes( "dpt.service.json.with.bytes", "With value" )
+dptProto.fields.jsonWithoutNumber = ProtoField.uint32( "dpt.service.json.without.number", "Without number" )
+dptProto.fields.jsonWithoutPointer = ProtoField.string( "dpt.service.json.without.pointer", "Without" )
 
 -- Topic details
 dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )

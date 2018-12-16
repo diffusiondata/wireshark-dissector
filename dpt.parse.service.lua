@@ -18,34 +18,77 @@ local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
 local varint = diffusion.parseCommon.varint
 local lengthPrefixedString = diffusion.parseCommon.lengthPrefixedString
+local lengthPrefixedBytes = diffusion.parseCommon.lengthPrefixedBytes
 local parseVarSessionId = diffusion.parseCommon.parseVarSessionId
 local parseTopicDetails = diffusion.parseTopicDetails.parse
 local parseOptional = diffusion.parseCommon.parseOptional
 
-local function parseProperties( range )
-	local numPropertiesRange, remaining, numProperties = varint( range )
+local function parseSet( range, valueParser )
+	local numRange, remaining, num = varint( range )
 
-	local properties = {}
+	local set = {}
 	local length = 0
-	local propertyIndex = 1
-	while propertyIndex <= numProperties do
-		local propertyKey = lengthPrefixedString( remaining )
-		local propertyValue = lengthPrefixedString( propertyKey.remaining )
+	local index = 1
+	while index <= num do
+		local value = valueParser( remaining )
 
-		properties[propertyIndex] = {
-			key = propertyKey,
-			value = propertyValue
-		}
+		set[index] = value
 
-		length = length + propertyKey.fullRange:len() + propertyValue.fullRange:len()
-		propertyIndex = propertyIndex + 1
-		remaining = propertyValue.remaining
+		if value.fullRange ~= nil then
+			length = length + value.fullRange:len()
+		else
+			length = length + value.range:len()
+		end
+		index = index + 1
+		remaining = value.remaining
 	end
 
 	return {
-		number = { range = numPropertiesRange, number = numProperties },
-		properties = properties,
-		rangeLength = numPropertiesRange:len() + length
+		number = { range = numRange, number = num },
+		set = set,
+		rangeLength = numRange:len() + length
+	}, remaining
+end
+
+local function parseMap( range, keyParser, valueParser )
+	local numRange, remaining, num = varint( range )
+
+	local map = {}
+	local length = 0
+	local index = 1
+	while index <= num do
+		local key = keyParser( remaining )
+		local value = valueParser( key.remaining )
+
+		map[index] = {
+			key = key,
+			value = value
+		}
+
+		length = length + key.fullRange:len() + value.fullRange:len()
+		index = index + 1
+		remaining = value.remaining
+	end
+
+	return {
+		number = { range = numRange, number = num },
+		map = map,
+		rangeLength = numRange:len() + length,
+		range = range:range( 0, numRange:len() + length )
+	}, remaining
+end
+
+local function parseProperties( range )
+	local map, remaining = parseMap(
+		range,
+		function ( r ) return lengthPrefixedString( r ) end,
+		function ( r ) return lengthPrefixedString( r ) end
+	)
+
+	return {
+		number = map.number,
+		properties = map.map,
+		rangeLength = map.rangeLength
 	}, remaining
 end
 
@@ -683,16 +726,56 @@ local function parseSessionLockCancellation( range )
 		local idRange, remaining, id = varint( lockName.remaining )
 		return {
 			lockName = lockName,
-			id = { range = idRange, int = id }
-		}
+			id = { range = idRange, int = id },
+			fullRange = range( 0, lockName.fullRange:len() + idRange:len() )
+		}, remaining
 end
 
 local function parseConstraint( range )
 	local type = range:range( 0, 1 )
 	local result = {
 		type = type,
-		range = range
 	}
+
+	local typeId = type:uint()
+	if typeId == 1 then
+		local constraints, r = parseSet(
+			range:range( 1 ),
+			function ( n ) return parseConstraint( n ) end
+		)
+		result.constraints = constraints
+		result.remaining = r
+		result.range = range:range( 0, range:len() - r:len() )
+	elseif typeId == 2 then
+		result.content = lengthPrefixedBytes( range:range( 1 ) )
+		result.remaining = result.content.remaining
+		result.range = range:range( 0, 1 + result.content.fullRange:len() )
+	elseif typeId == 4 then
+		local lock, remaining = parseSessionLockCancellation( range:range( 1 ) )
+		result.lock = lock
+		result.remaining = remaining
+		result.range = range:range( 0, 1 + result.lock.fullRange:len() )
+	elseif typeId == 6 then
+		local with, remaining = parseMap(
+			range:range( 1 ),
+			function (r) return lengthPrefixedString(r) end,
+			function (r) return lengthPrefixedBytes(r) end
+		)
+		local without, r = parseSet(
+			remaining,
+			function (r) return lengthPrefixedString(r) end
+		)
+		result.with = with
+		result.without = without
+		result.remaining = r
+		result.range = range:range( 0, 1 + result.with.rangeLength + result.without.rangeLength )
+	elseif range:len() > 1 then
+		result.remaining = range:range( 1 )
+		result.range = range:range( 0, 1 )
+	else
+		result.remaining = range:range( 0, 0 )
+		result.range = range:range( 0, 1 )
+	end
 
 	return result
 end

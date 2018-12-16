@@ -90,6 +90,25 @@ local function lengthPrefixedString( range )
 	end
 end
 
+local function lengthPrefixedBytes( range )
+	if range ~= nil then
+		local lengthRange, rRange, length = varint( range )
+		local fullLength = lengthRange:len() + length
+
+		if length == 0 then
+			return { range = range:range( 0, 0 ), fullRange = lengthRange, remaining = rRange }
+		end
+
+		local bytesRange = rRange:range( 0, length )
+		if rRange:len() > length then
+			local remainingRange = rRange:range( length )
+			return { range = bytesRange, remaining = remainingRange, fullRange = range( 0, fullLength ) }
+		else
+			return { range = bytesRange, fullRange = range( 0, fullLength ) }
+		end
+	end
+end
+
 local function lookupClientTypeByChar( clientType )
 	local type = clientTypesByChar[clientType]
 	if type == nil then
@@ -153,6 +172,7 @@ end
 master.parseCommon = {
 	varint = varint,
 	lengthPrefixedString = lengthPrefixedString,
+	lengthPrefixedBytes = lengthPrefixedBytes,
 	lookupClientTypeByChar = lookupClientTypeByChar,
 	parseSessionId = parseSessionId,
 	parseVarSessionId = parseVarSessionId,
