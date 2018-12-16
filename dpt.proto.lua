@@ -106,6 +106,8 @@ dptProto.fields.contentLength = ProtoField.uint32( "dptProto.content.length", "C
 dptProto.fields.deltaType = ProtoField.uint8( "dpt.service.deltaType", "Delta type", base.HEX, master.const.deltaType )
 dptProto.fields.updateResponse = ProtoField.uint8( "dpt.service.updateResponse", "Update response", base.HEX, master.const.updateResponseByBytes )
 dptProto.fields.updateSourceId = ProtoField.uint32( "dpt.service.updateSourceId", "Conversation ID (update source)" )
+dptProto.fields.constraint = ProtoField.bytes( "dpt.service.constraint", "Constraint" )
+dptProto.fields.constraintType = ProtoField.uint32( "dpt.service.constraintType", "Type", base.HEX, master.const.constraintTypeByBytes )
 
 -- Topic details
 dptProto.fields.topicDetails = ProtoField.string( "dpt.topic.details", "Topic details" )

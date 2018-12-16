@@ -218,6 +218,9 @@ local function addUpdateTopicInformation( parentNode, info )
 		parentNode:add( dptProto.fields.updateSourceId, info.conversationId.range, info.conversationId.int )
 	end
 	parentNode:add( dptProto.fields.topicName, info.topicPath.fullRange, info.topicPath.string )
+	if info.type ~= nil then
+		parentNode:add( dptProto.fields.topicType, info.type.range, info.type.type )
+	end
 	local update = info.update;
 	if update ~= nil then
 		if update.deltaType ~= nil then
@@ -232,6 +235,11 @@ local function addUpdateTopicInformation( parentNode, info )
 		if update.content ~= nil then
 			addContent( parentNode, update.content )
 		end
+	end
+	local constraint = info.constraint
+	if constraint ~= nil then
+		local constraintNode = parentNode:add( dptProto.fields.constraint, constraint.range, "", "Constraint" )
+		constraintNode:add( dptProto.fields.constraintType, constraint.type )
 	end
 end
 

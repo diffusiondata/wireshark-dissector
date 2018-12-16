@@ -687,6 +687,40 @@ local function parseSessionLockCancellation( range )
 		}
 end
 
+local function parseConstraint( range )
+	local type = range:range( 0, 1 )
+	local result = {
+		type = type,
+		range = range
+	}
+
+	return result
+end
+
+local function parseTopicSetRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local type = topicPath.remaining:range( 0, 1 )
+	local lengthRange, remaining, length = varint( topicPath.remaining:range( 1 ) )
+	local constraint = parseConstraint( remaining:range( length ) )
+
+	return {
+		topicPath = topicPath,
+		type = { type = type:uint(), range = type },
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				},
+				bytes = {
+					range = remaining:range( 0, length )
+				}
+			}
+		},
+		constraint = constraint
+	}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -808,6 +842,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.sessionLockCancellation = parseSessionLockCancellation( serviceBodyRange )
 	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
 		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
+	elseif service == v5.SERVICE_SET_TOPIC then
+		result.updateInfo = parseTopicSetRequest( serviceBodyRange )
 	end
 	return result
 end

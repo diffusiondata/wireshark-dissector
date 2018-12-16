@@ -390,6 +390,16 @@ local lockScopeByBytes = {
   [0x1] = "UNLOCK_ON_CONNECTION_LOSS"
 }
 
+local constraintTypeByBytes = {
+  [0x0] = "Unconstrained",
+  [0x1] = "Conjunction",
+  [0x2] = "Binary value",
+  [0x3] = "No value",
+  [0x4] = "Locked",
+  [0x5] = "No topic",
+  [0x6] = "Partial JSON"
+}
+
 -- Package footer
 master.const = {
     topicTypes = topicTypes,
@@ -423,6 +433,7 @@ master.const = {
     topicNotificationType = topicNotificationType,
     clientTypesByChar = clientTypesByChar,
     lockScopeByBytes = lockScopeByBytes,
+    constraintTypeByBytes = constraintTypeByBytes,
     TOPIC_VALUE_MESSAGE_TYPE = 0x04,
     TOPIC_DELTA_MESSAGE_TYPE = 0x05,
     DIFFUSION_MAGIC_NUMBER = 0x23
