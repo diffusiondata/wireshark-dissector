@@ -253,6 +253,9 @@ local function addUpdateTopicInformation( parentNode, info )
 	if info.type ~= nil then
 		parentNode:add( dptProto.fields.topicType, info.type.range, info.type.type )
 	end
+	if info.specification ~= nil then
+		addSpecification( parentNode, info.specification )
+	end
 	local update = info.update;
 	if update ~= nil then
 		if update.deltaType ~= nil then

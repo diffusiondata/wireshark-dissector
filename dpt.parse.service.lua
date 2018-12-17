@@ -96,11 +96,11 @@ end
 local function parseTopicSpecification( range )
 	local type = range:range( 0, 1 )
 
-	local properties = parseProperties( range:range( 1 ) )
+	local properties, remaining = parseProperties( range:range( 1 ) )
 	return {
 		type = { type = type:uint(), range = type },
 		properties = properties
-	}
+	}, remaining
 end
 
 local function parseTopicSpecificationInfo( range )
@@ -804,6 +804,30 @@ local function parseTopicSetRequest( range )
 	}
 end
 
+local function parseTopicAndAndSetRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local specification, r = parseTopicSpecification( topicPath.remaining )
+	local lengthRange, remaining, length = varint( r )
+	local constraint = parseConstraint( remaining:range( length ) )
+
+	return {
+		topicPath = topicPath,
+		specification = specification,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				},
+				bytes = {
+					range = remaining:range( 0, length )
+				}
+			}
+		},
+		constraint = constraint
+	}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -927,6 +951,8 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	elseif service == v5.SERVICE_SET_TOPIC then
 		result.updateInfo = parseTopicSetRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_ADD_AND_SET_TOPIC then
+		result.updateInfo = parseTopicAndAndSetRequest( serviceBodyRange )
 	end
 	return result
 end
