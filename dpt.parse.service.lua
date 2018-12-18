@@ -828,6 +828,78 @@ local function parseTopicAndAndSetRequest( range )
 	}
 end
 
+local function parseCreateUpdateStreamRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local type = topicPath.remaining:range( 0, 1 )
+	local constraint = parseConstraint( topicPath.remaining:range( 1 ) )
+
+	return {
+		topicPath = topicPath,
+		type = { type = type:uint(), range = type },
+		constraint = constraint
+	}
+end
+
+local function parseCreateUpdateStreamAndSetRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local type = topicPath.remaining:range( 0, 1 )
+	local lengthRange, remaining, length = varint( topicPath.remaining:range( 1 ) )
+	local constraint = parseConstraint( remaining:range( length ) )
+
+	return {
+		topicPath = topicPath,
+		type = { type = type:uint(), range = type },
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				},
+				bytes = {
+					range = remaining:range( 0, length )
+				}
+			}
+		},
+		constraint = constraint
+	}
+end
+
+local function parseStreamAddTopicRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local specification, r = parseTopicSpecification( topicPath.remaining )
+	local constraint = parseConstraint( r )
+
+	return {
+		topicPath = topicPath,
+		specification = specification,
+		constraint = constraint
+	}
+end
+
+local function parseStreamAddAndSetTopicRequest( range )
+	local topicPath = lengthPrefixedString( range )
+	local specification, r = parseTopicSpecification( topicPath.remaining )
+	local lengthRange, remaining, length = varint( r )
+	local constraint = parseConstraint( remaining:range( length ) )
+
+	return {
+		topicPath = topicPath,
+		specification = specification,
+		update = {
+			content = {
+				length = {
+					range = lengthRange,
+					int = length
+				},
+				bytes = {
+					range = remaining:range( 0, length )
+				}
+			}
+		},
+		constraint = constraint
+	}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -953,6 +1025,14 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.updateInfo = parseTopicSetRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_ADD_AND_SET_TOPIC then
 		result.updateInfo = parseTopicAndAndSetRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
+		result.updateInfo = parseCreateUpdateStreamRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
+		result.updateInfo = parseCreateUpdateStreamAndSetRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
+		result.updateInfo = parseStreamAddTopicRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
+		--result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
 	end
 	return result
 end
