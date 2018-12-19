@@ -14,6 +14,7 @@ local f_src_port = diffusion.utilities.f_src_port
 local f_src_host = diffusion.utilities.f_src_host
 local topicInfoTable = diffusion.info.topicInfoTable
 local tcpConnections = diffusion.info.tcpConnections
+local updateStreamTable = diffusion.info.updateStreamTable
 local serviceMessageTable = diffusion.info.serviceMessageTable
 local v5 = diffusion.v5
 local varint = diffusion.parseCommon.varint
@@ -1049,17 +1050,23 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 		result.updateInfo = parseTopicAndAndSetRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
 		result.updateInfo = parseCreateUpdateStreamRequest( serviceBodyRange )
+		updateStreamTable:recordCreateRequest( tcpStream, result )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
 		result.updateInfo = parseCreateUpdateStreamAndSetRequest( serviceBodyRange )
+		updateStreamTable:recordCreateRequest( tcpStream, result )
 	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
 		result.updateInfo = parseStreamAddTopicRequest( serviceBodyRange )
+		updateStreamTable:recordCreateRequest( tcpStream, result )
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
 		result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
+		updateStreamTable:recordCreateRequest( tcpStream, result )
 	end
 	return result
 end
 
 local function parseServiceResponse( serviceBodyRange, service, conversation, result )
+	local tcpStream = f_tcp_stream()
+
 	-- Parse the response for service specific information
 	if service == v5.SERVICE_UPDATE_SOURCE_REGISTRATION then
 		local info = parseUpdateSourceRegistrationResponse( serviceBodyRange )
@@ -1090,17 +1097,20 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.sessionLockReleased = serviceBodyRange:range( 0, 1 )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
 		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
+		updateStreamTable:recordCreateResponse( tcpStream, result )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
 		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
+		updateStreamTable:recordCreateResponse( tcpStream, result )
 	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
 		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
+		updateStreamTable:recordCreateResponse( tcpStream, result )
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
 		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
+		updateStreamTable:recordCreateResponse( tcpStream, result )
 	end
 
 	-- Calculate the response time
 	local reqTime
-	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
 	local isClient = session.client:matches( f_src_host(), f_src_port() )
 	if isClient then

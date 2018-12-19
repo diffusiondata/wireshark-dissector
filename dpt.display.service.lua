@@ -503,6 +503,10 @@ local function addServiceInformation( parentTreeNode, service, client )
 			if service.createUpdateStreamResult.addResult ~= nil then
 				serviceNode:add( dptProto.fields.topicAddResult, service.createUpdateStreamResult.addResult.range )
 			end
+			if service.createUpdateStreamResult.path ~= nil then
+				local pathNode = serviceNode:add( dptProto.fields.path, service.createUpdateStreamResult.path )
+				pathNode:set_generated()
+			end
 			serviceNode:add( dptProto.fields.topicId, service.createUpdateStreamResult.updateStreamId.topicId.range, service.createUpdateStreamResult.updateStreamId.topicId.int )
 			serviceNode:add( dptProto.fields.streamId, service.createUpdateStreamResult.updateStreamId.instance.range, service.createUpdateStreamResult.updateStreamId.instance.int )
 			serviceNode:add( dptProto.fields.partitionId, service.createUpdateStreamResult.updateStreamId.partition.range, service.createUpdateStreamResult.updateStreamId.partition.int )

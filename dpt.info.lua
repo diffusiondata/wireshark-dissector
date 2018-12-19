@@ -174,6 +174,105 @@ end
 
 local topicInfoTable = TopicInfoTable:new()
 
+local UpdateStreamInfo = {}
+function UpdateStreamInfo:new()
+	local result = {}
+	setmetatable( result, self )
+	self.__index = self
+	return result
+end
+function UpdateStreamInfo:recordCreateRequest( tcpStream, request )
+	local updateStream = {
+		path = request.updateInfo.topicPath.string
+	}
+	if self[tcpStream] ~= nil then
+		self[tcpStream].conversations[request.conversation.int] = updateStream
+	else
+		local conversations = {}
+		conversations[request.conversation.int] = updateStream
+		self[tcpStream] = {
+			conversations = conversations,
+		}
+	end
+end
+function UpdateStreamInfo:recordCreateResponse( tcpStream, response )
+	if self.streams == nil then
+		self.streams = {}
+	end
+
+	local updateStreamId = response.createUpdateStreamResult.updateStreamId;
+	local conn = self[tcpStream]
+	if conn ~= nil then
+		local updateStream = conn.conversations[response.conversation.int]
+		if updateStream ~= nil then
+			-- Found the update stream creation request
+
+			-- Find the stream information for the partition
+			local partition = self.streams[updateStreamId.partition.int]
+			if partition == nil then
+				partition = {}
+				self.streams[updateStreamId.partition.int] = partition
+			end
+
+			-- Find the stream information for the generation
+			local generation = partition[updateStreamId.generation.int]
+			if generation == nil then
+				generation = {}
+				partition[updateStreamId.generation.int] = generation
+			end
+
+			-- Find the stream information for the topic Id
+			local topicInfo = generation[updateStreamId.topicId.int]
+			if topicInfo == nil then
+				topicInfo = {}
+				generation[updateStreamId.topicId.int] = topicInfo
+			end
+
+			-- Update the stream information for the instance
+			topicInfo[updateStreamId.instance.int] = updateStream
+
+			-- Update response with path
+			response.createUpdateStreamResult.path = updateStream.path
+
+			-- Return stream information
+			return updateStream
+		end
+	end
+end
+function UpdateStreamInfo:getUpdateStream( updateStreamId )
+	if self.streams == nil then
+		info( "No streams" )
+		return nil
+	end
+
+	info( diffusion.utilities.dump( self ) )
+
+	-- Find the stream information for the partition
+	local partition = self.streams[updateStreamId.partition.int]
+	if partition == nil then
+		info( string.format( "No partition %d", updateStreamId.partition.int ) )
+		return nil
+	end
+
+	-- Find the stream information for the generation
+	local generation = partition[updateStreamId.generation.int]
+	if generation == nil then
+		info( "No generation" )
+		return nil
+	end
+
+	-- Find the stream information for the topic Id
+	local topicInfo = generation[updateStreamId.topicId.int]
+	if topicInfo == nil then
+		info( "No topic" )
+		return nil
+	end
+
+	-- Return stream information
+	return topicInfo[updateStreamId.instance.int]
+end
+local updateStreamTable = UpdateStreamInfo:new()
+
 -- Package footer
 master.info = {
 	aliasTable = aliasTable,
@@ -182,7 +281,8 @@ master.info = {
 	clientTable = clientTable,
 	serverTable = serverTable,
 	serviceMessageTable = serviceMessageTable,
-	DescriptionsTable = DescriptionsTable
+	DescriptionsTable = DescriptionsTable,
+	updateStreamTable = updateStreamTable
 }
 diffusion = master
 return master.info
