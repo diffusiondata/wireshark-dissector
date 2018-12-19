@@ -1032,7 +1032,7 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
 		result.updateInfo = parseStreamAddTopicRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
-		--result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
+		result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
 	end
 	return result
 end
