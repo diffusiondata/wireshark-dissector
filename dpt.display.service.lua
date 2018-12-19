@@ -499,6 +499,15 @@ local function addServiceInformation( parentTreeNode, service, client )
 		if service.sessionLockReleased ~= nil then
 			serviceNode:add( dptProto.fields.sessionLockReleased, service.sessionLockReleased )
 		end
+		if service.createUpdateStreamResult ~= nil then
+			if service.createUpdateStreamResult.addResult ~= nil then
+				serviceNode:add( dptProto.fields.topicAddResult, service.createUpdateStreamResult.addResult.range )
+			end
+			serviceNode:add( dptProto.fields.topicId, service.createUpdateStreamResult.updateStreamId.topicId.range, service.createUpdateStreamResult.updateStreamId.topicId.int )
+			serviceNode:add( dptProto.fields.streamId, service.createUpdateStreamResult.updateStreamId.instance.range, service.createUpdateStreamResult.updateStreamId.instance.int )
+			serviceNode:add( dptProto.fields.partitionId, service.createUpdateStreamResult.updateStreamId.partition.range, service.createUpdateStreamResult.updateStreamId.partition.int )
+			serviceNode:add( dptProto.fields.generation, service.createUpdateStreamResult.updateStreamId.generation.range, service.createUpdateStreamResult.updateStreamId.generation.int )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

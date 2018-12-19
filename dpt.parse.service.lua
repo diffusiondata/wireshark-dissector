@@ -900,6 +900,28 @@ local function parseStreamAddAndSetTopicRequest( range )
 	}
 end
 
+local function parseUpdateStreamId( range )
+		local topicIdRange, instanceOnwards, topicId = varint( range )
+		local instanceRange, partitionOnwards, instance = varint( instanceOnwards )
+		local partitionIdRange, generationOnwards, partitionId = varint( partitionOnwards )
+		local generationRange, r, generation = varint( generationOnwards )
+
+		return {
+			topicId = { range = topicIdRange, int = topicId },
+			instance = { range = instanceRange, int = instance },
+			partition = { range = partitionIdRange, int = partitionId },
+			generation = { range = generationRange, int = generation }
+		}
+end
+
+local function parseUpdateStreamAddTopicResponse( range )
+	local creationResultRange, remaining, creationResult = varint( range )
+	return {
+		addResult = { range = creationResultRange, int = creationResult },
+		updateStreamId = parseUpdateStreamId( remaining )
+	}
+end
+
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
 	local tcpStream = f_tcp_stream()
 	local session = tcpConnections[tcpStream]
@@ -1066,6 +1088,14 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 		result.sessionLockAcquisition = parseSessionLockAcquisition( serviceBodyRange )
 	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
 		result.sessionLockReleased = serviceBodyRange:range( 0, 1 )
+	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
+		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
+	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
+		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
+	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
+		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
+	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
+		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
 	end
 
 	-- Calculate the response time
