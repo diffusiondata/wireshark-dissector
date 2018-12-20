@@ -829,10 +829,12 @@ local function parseTopicAndAndSetRequest( range )
 	}
 end
 
-local function parseCreateUpdateStreamRequest( range )
+local function parseCreateUpdateStreamRequest( range, tcpStream, conversation )
 	local topicPath = lengthPrefixedString( range )
 	local type = topicPath.remaining:range( 0, 1 )
 	local constraint = parseConstraint( topicPath.remaining:range( 1 ) )
+
+	updateStreamTable:recordCreateRequest( tcpStream, conversation, topicPath.string )
 
 	return {
 		topicPath = topicPath,
@@ -841,11 +843,13 @@ local function parseCreateUpdateStreamRequest( range )
 	}
 end
 
-local function parseCreateUpdateStreamAndSetRequest( range )
+local function parseCreateUpdateStreamAndSetRequest( range, tcpStream, conversation )
 	local topicPath = lengthPrefixedString( range )
 	local type = topicPath.remaining:range( 0, 1 )
 	local lengthRange, remaining, length = varint( topicPath.remaining:range( 1 ) )
 	local constraint = parseConstraint( remaining:range( length ) )
+
+	updateStreamTable:recordCreateRequest( tcpStream, conversation, topicPath.string )
 
 	return {
 		topicPath = topicPath,
@@ -865,10 +869,12 @@ local function parseCreateUpdateStreamAndSetRequest( range )
 	}
 end
 
-local function parseStreamAddTopicRequest( range )
+local function parseStreamAddTopicRequest( range, tcpStream, conversation )
 	local topicPath = lengthPrefixedString( range )
 	local specification, r = parseTopicSpecification( topicPath.remaining )
 	local constraint = parseConstraint( r )
+
+	updateStreamTable:recordCreateRequest( tcpStream, conversation, topicPath.string )
 
 	return {
 		topicPath = topicPath,
@@ -877,11 +883,13 @@ local function parseStreamAddTopicRequest( range )
 	}
 end
 
-local function parseStreamAddAndSetTopicRequest( range )
+local function parseStreamAddAndSetTopicRequest( range, tcpStream, conversation )
 	local topicPath = lengthPrefixedString( range )
 	local specification, r = parseTopicSpecification( topicPath.remaining )
 	local lengthRange, remaining, length = varint( r )
 	local constraint = parseConstraint( remaining:range( length ) )
+
+	updateStreamTable:recordCreateRequest( tcpStream, conversation, topicPath.string )
 
 	return {
 		topicPath = topicPath,
@@ -906,20 +914,48 @@ local function parseUpdateStreamId( range )
 		local instanceRange, partitionOnwards, instance = varint( instanceOnwards )
 		local partitionIdRange, generationOnwards, partitionId = varint( partitionOnwards )
 		local generationRange, r, generation = varint( generationOnwards )
+		local length = topicIdRange:len() + instanceRange:len() + partitionIdRange:len() + generationRange:len()
 
 		return {
 			topicId = { range = topicIdRange, int = topicId },
 			instance = { range = instanceRange, int = instance },
 			partition = { range = partitionIdRange, int = partitionId },
-			generation = { range = generationRange, int = generation }
+			generation = { range = generationRange, int = generation },
+			range = range:range( 0, length )
 		}, r
 end
 
-local function parseUpdateStreamAddTopicResponse( range )
+local function parseCreateUpdateStreamResponse( range, conversation )
+	local updateStreamId = parseUpdateStreamId( range )
+	local updateStream = updateStreamTable:recordCreateResponse( f_tcp_stream(), conversation, updateStreamId )
+	local path
+	if updateStream ~= nil then
+		path = updateStream.path
+	end
+
+	return {
+		updateStreamInfo = {
+			updateStreamId = updateStreamId,
+			path = path
+		}
+	}
+end
+
+local function parseUpdateStreamAddTopicResponse( range, conversation )
 	local creationResultRange, remaining, creationResult = varint( range )
+	local updateStreamId = parseUpdateStreamId( remaining )
+	local updateStream = updateStreamTable:recordCreateResponse( f_tcp_stream(), conversation, updateStreamId )
+	local path
+	if updateStream ~= nil then
+		path = updateStream.path
+	end
+
 	return {
 		addResult = { range = creationResultRange, int = creationResult },
-		updateStreamId = parseUpdateStreamId( remaining )
+		updateStreamInfo = {
+			updateStreamId = updateStreamId,
+			path = path
+		}
 	}
 end
 
@@ -927,19 +963,21 @@ local function parseUpdateStreamRequest( range )
 	local updateStreamId, remaining = parseUpdateStreamId( range )
 	local bytes = lengthPrefixedBytes( remaining )
 
-	local result = {
-		updateStreamId = updateStreamId,
+	local path
+	local updateStream = updateStreamTable:getUpdateStream( updateStreamId )
+	if updateStream ~= nil then
+		path = updateStream.path
+	end
+
+	return {
+		updateStreamInfo = {
+			updateStreamId = updateStreamId,
+			path = path
+		},
 		update = {
 			content = bytes
 		}
 	}
-
-	local updateStream = updateStreamTable:getUpdateStream( updateStreamId )
-	if updateStream ~= nil then
-		result.path = updateStream.path
-	end
-
-	return result
 end
 
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
@@ -1068,17 +1106,13 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 	elseif service == v5.SERVICE_ADD_AND_SET_TOPIC then
 		result.updateInfo = parseTopicAndAndSetRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
-		result.updateInfo = parseCreateUpdateStreamRequest( serviceBodyRange )
-		updateStreamTable:recordCreateRequest( tcpStream, result )
+		result.updateInfo = parseCreateUpdateStreamRequest( serviceBodyRange, tcpStream, conversation )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
-		result.updateInfo = parseCreateUpdateStreamAndSetRequest( serviceBodyRange )
-		updateStreamTable:recordCreateRequest( tcpStream, result )
+		result.updateInfo = parseCreateUpdateStreamAndSetRequest( serviceBodyRange, tcpStream, conversation )
 	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
-		result.updateInfo = parseStreamAddTopicRequest( serviceBodyRange )
-		updateStreamTable:recordCreateRequest( tcpStream, result )
+		result.updateInfo = parseStreamAddTopicRequest( serviceBodyRange, tcpStream, conversation )
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
-		result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
-		updateStreamTable:recordCreateRequest( tcpStream, result )
+		result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange, tcpStream, conversation )
 	elseif service == v5.SERVICE_STREAM_SET_TOPIC then
 		result.updateStreamRequest = parseUpdateStreamRequest( serviceBodyRange )
 	elseif service == v5.SERVICE_STREAM_APPLY_DELTA then
@@ -1119,17 +1153,13 @@ local function parseServiceResponse( serviceBodyRange, service, conversation, re
 	elseif service == v5.SERVICE_RELEASE_SESSION_LOCK then
 		result.sessionLockReleased = serviceBodyRange:range( 0, 1 )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM then
-		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
-		updateStreamTable:recordCreateResponse( tcpStream, result )
+		result.createUpdateStreamResult = parseCreateUpdateStreamResponse( serviceBodyRange, conversation )
 	elseif service == v5.SERVICE_CREATE_UPDATE_STREAM_AND_SET then
-		result.createUpdateStreamResult = { updateStreamId = parseUpdateStreamId( serviceBodyRange ) }
-		updateStreamTable:recordCreateResponse( tcpStream, result )
+		result.createUpdateStreamResult = parseCreateUpdateStreamResponse( serviceBodyRange, conversation )
 	elseif service == v5.SERVICE_STREAM_ADD_TOPIC then
-		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
-		updateStreamTable:recordCreateResponse( tcpStream, result )
+		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange, conversation )
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
-		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange )
-		updateStreamTable:recordCreateResponse( tcpStream, result )
+		result.createUpdateStreamResult = parseUpdateStreamAddTopicResponse( serviceBodyRange, conversation )
 	end
 
 	-- Calculate the response time

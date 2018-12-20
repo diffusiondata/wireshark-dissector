@@ -115,6 +115,7 @@ dptProto.fields.jsonWithBytes = ProtoField.bytes( "dpt.service.json.with.bytes",
 dptProto.fields.jsonWithoutNumber = ProtoField.uint32( "dpt.service.json.without.number", "Without number" )
 dptProto.fields.jsonWithoutPointer = ProtoField.string( "dpt.service.json.without.pointer", "Without" )
 dptProto.fields.topicId = ProtoField.uint32( "dpt.service.topicInfo.topicId", "Topic ID" )
+dptProto.fields.updateStream = ProtoField.bytes( "dpt.service.update.stream", "Update stream" )
 dptProto.fields.streamId = ProtoField.uint32( "dpt.service.streamId", "Stream ID" )
 dptProto.fields.partitionId = ProtoField.uint32( "dpt.service.partitionId", "Partition ID" )
 dptProto.fields.generation = ProtoField.uint32( "dpt.service.generation", "Generation" )

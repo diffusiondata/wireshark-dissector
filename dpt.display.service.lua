@@ -293,6 +293,22 @@ local function addUpdateSourceInformation( parentNode, info )
 	end
 end
 
+local function addUpdateStreamInfo( parentNode, info )
+	if info == nil then
+		return
+	end
+
+	local streamNode = parentNode:add( dptProto.fields.updateStream, info.updateStreamId.range, "", "Update stream:" )
+	streamNode:add( dptProto.fields.topicId, info.updateStreamId.topicId.range, info.updateStreamId.topicId.int )
+	streamNode:add( dptProto.fields.streamId, info.updateStreamId.instance.range, info.updateStreamId.instance.int )
+	streamNode:add( dptProto.fields.partitionId, info.updateStreamId.partition.range, info.updateStreamId.partition.int )
+	streamNode:add( dptProto.fields.generation, info.updateStreamId.generation.range, info.updateStreamId.generation.int )
+	if info.path ~= nil then
+		local pathNode = streamNode:add( dptProto.fields.path, info.path )
+		pathNode:set_generated()
+	end
+end
+
 -- Add service information to command service messages
 local function addServiceInformation( parentTreeNode, service, client )
 	if service ~= nil and service.range ~= nil then
@@ -503,24 +519,10 @@ local function addServiceInformation( parentTreeNode, service, client )
 			if service.createUpdateStreamResult.addResult ~= nil then
 				serviceNode:add( dptProto.fields.topicAddResult, service.createUpdateStreamResult.addResult.range )
 			end
-			if service.createUpdateStreamResult.path ~= nil then
-				local pathNode = serviceNode:add( dptProto.fields.path, service.createUpdateStreamResult.path )
-				pathNode:set_generated()
-			end
-			serviceNode:add( dptProto.fields.topicId, service.createUpdateStreamResult.updateStreamId.topicId.range, service.createUpdateStreamResult.updateStreamId.topicId.int )
-			serviceNode:add( dptProto.fields.streamId, service.createUpdateStreamResult.updateStreamId.instance.range, service.createUpdateStreamResult.updateStreamId.instance.int )
-			serviceNode:add( dptProto.fields.partitionId, service.createUpdateStreamResult.updateStreamId.partition.range, service.createUpdateStreamResult.updateStreamId.partition.int )
-			serviceNode:add( dptProto.fields.generation, service.createUpdateStreamResult.updateStreamId.generation.range, service.createUpdateStreamResult.updateStreamId.generation.int )
+			addUpdateStreamInfo( serviceNode, service.createUpdateStreamResult.updateStreamInfo )
 		end
 		if service.updateStreamRequest ~= nil then
-			if service.updateStreamRequest.path ~= nil then
-				local pathNode = serviceNode:add( dptProto.fields.path, service.updateStreamRequest.path )
-				pathNode:set_generated()
-			end
-			serviceNode:add( dptProto.fields.topicId, service.updateStreamRequest.updateStreamId.topicId.range, service.updateStreamRequest.updateStreamId.topicId.int )
-			serviceNode:add( dptProto.fields.streamId, service.updateStreamRequest.updateStreamId.instance.range, service.updateStreamRequest.updateStreamId.instance.int )
-			serviceNode:add( dptProto.fields.partitionId, service.updateStreamRequest.updateStreamId.partition.range, service.updateStreamRequest.updateStreamId.partition.int )
-			serviceNode:add( dptProto.fields.generation, service.updateStreamRequest.updateStreamId.generation.range, service.updateStreamRequest.updateStreamId.generation.int )
+			addUpdateStreamInfo( serviceNode, service.updateStreamRequest.updateStreamInfo )
 		end
 
 		-- Add generated information
