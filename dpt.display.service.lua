@@ -512,6 +512,16 @@ local function addServiceInformation( parentTreeNode, service, client )
 			serviceNode:add( dptProto.fields.partitionId, service.createUpdateStreamResult.updateStreamId.partition.range, service.createUpdateStreamResult.updateStreamId.partition.int )
 			serviceNode:add( dptProto.fields.generation, service.createUpdateStreamResult.updateStreamId.generation.range, service.createUpdateStreamResult.updateStreamId.generation.int )
 		end
+		if service.updateStreamRequest ~= nil then
+			if service.updateStreamRequest.path ~= nil then
+				local pathNode = serviceNode:add( dptProto.fields.path, service.updateStreamRequest.path )
+				pathNode:set_generated()
+			end
+			serviceNode:add( dptProto.fields.topicId, service.updateStreamRequest.updateStreamId.topicId.range, service.updateStreamRequest.updateStreamId.topicId.int )
+			serviceNode:add( dptProto.fields.streamId, service.updateStreamRequest.updateStreamId.instance.range, service.updateStreamRequest.updateStreamId.instance.int )
+			serviceNode:add( dptProto.fields.partitionId, service.updateStreamRequest.updateStreamId.partition.range, service.updateStreamRequest.updateStreamId.partition.int )
+			serviceNode:add( dptProto.fields.generation, service.updateStreamRequest.updateStreamId.generation.range, service.updateStreamRequest.updateStreamId.generation.int )
+		end
 
 		-- Add generated information
 		if service.responseTime ~= nil then

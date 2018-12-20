@@ -912,7 +912,7 @@ local function parseUpdateStreamId( range )
 			instance = { range = instanceRange, int = instance },
 			partition = { range = partitionIdRange, int = partitionId },
 			generation = { range = generationRange, int = generation }
-		}
+		}, r
 end
 
 local function parseUpdateStreamAddTopicResponse( range )
@@ -921,6 +921,25 @@ local function parseUpdateStreamAddTopicResponse( range )
 		addResult = { range = creationResultRange, int = creationResult },
 		updateStreamId = parseUpdateStreamId( remaining )
 	}
+end
+
+local function parseUpdateStreamRequest( range )
+	local updateStreamId, remaining = parseUpdateStreamId( range )
+	local bytes = lengthPrefixedBytes( remaining )
+
+	local result = {
+		updateStreamId = updateStreamId,
+		update = {
+			content = bytes
+		}
+	}
+
+	local updateStream = updateStreamTable:getUpdateStream( updateStreamId )
+	if updateStream ~= nil then
+		result.path = updateStream.path
+	end
+
+	return result
 end
 
 local function parseServiceRequest( serviceBodyRange, service, conversation, result )
@@ -1060,6 +1079,10 @@ local function parseServiceRequest( serviceBodyRange, service, conversation, res
 	elseif service == v5.SERVICE_STREAM_ADD_AND_SET_TOPIC then
 		result.updateInfo = parseStreamAddAndSetTopicRequest( serviceBodyRange )
 		updateStreamTable:recordCreateRequest( tcpStream, result )
+	elseif service == v5.SERVICE_STREAM_SET_TOPIC then
+		result.updateStreamRequest = parseUpdateStreamRequest( serviceBodyRange )
+	elseif service == v5.SERVICE_STREAM_APPLY_DELTA then
+		result.updateStreamRequest = parseUpdateStreamRequest( serviceBodyRange )
 	end
 	return result
 end
